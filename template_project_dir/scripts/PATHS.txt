@@ -1,0 +1,1 @@
+/om3/group/saxelab/LAB_STANDARD_fMRI_CODE/fmri_analysis/template_project_dir
