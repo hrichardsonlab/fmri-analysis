@@ -1,6 +1,6 @@
 
-### fmri_analysis
-These are the scripts for the entire fmri analysis pipeline, in python and bash:
+### fMRI pipeline
+These folders have the scripts for running the fMRI analysis pipeline, written in python and bash:
 
 * Converting from raw DICOMS to run-separated data in BIDS specification
 * Preprocessing (
