@@ -28,8 +28,7 @@ Usage() {
 # define directories
 dataDir="/EBC/rawData/TEBC-5y"									# location of raw data
 toolDir="/EBC/processing/tools"									# location of shared tools (dcm2bids)
-originalDir="/EBC/preprocessedData/TEBC-5y/BIDs_data_original"	# BIDs_data_original is the data as it comes from the scanner
-bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data" 				# BIDs_data with modifications to the diffusion data (used for subsequent analyses)
+bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot" 		# BIDs_data has some modifications to the diffusion data
 tmpDir="${bidsDir}/tmp"											# temporary directory to transfer raw data to for BIDS conversion
 
 # define number of dicoms per functional run for data checking
@@ -37,12 +36,11 @@ pixar_dicoms=324
 sesame_dicoms=394
 
 # define config file to use for bids conversion
-config=${toolDir}/dcm2bids/TEBC-5Y_config_file.json
+config=${toolDir}/dcm2bids/TEBC-5Y_config_file-pilot.json
 
 # create BIDS directories if they don't exist
-if [ ! -d ${originalDir} ] || [ ! -d ${bidsDir} ]
+if [ ! -d ${bidsDir} ]
 then
-	mkdir -p ${originalDir}
 	mkdir -p ${bidsDir}
 fi
 
@@ -53,7 +51,7 @@ then
 fi
 
 # create dataset description file if it doesn't exist
-if [ ! -f ${originalDir}/dataset_description.json ]
+if [ ! -f ${bidsDir}/dataset_description.json ]
 then
 	echo '{' >> ${bidsDir}/dataset_description.json
 	echo ' "BIDSVersion": "1.0.0",' >> ${bidsDir}/dataset_description.json
@@ -61,17 +59,14 @@ then
 	echo ' "Name": "TheirWorld Edinburgh Birth Cohort (TEBC)",' >> ${bidsDir}/dataset_description.json
 	echo ' "ReferencesAndLinks": ["Boardman JP, Hall J, Thrippleton MJ, Reynolds RM, Bogaert D, Davidson DJ, Schwarze J, Drake AJ, Chandran S, Bastin ME, et al. 2020. Impact of preterm birth on brain development and long-term outcome: protocol for a cohort study in Scotland. BMJ Open.  10. doi: 10.1136/bmjopen-2019-035854."]' >> ${bidsDir}/dataset_description.json
 	echo '}' >> ${bidsDir}/dataset_description.json
-	
-	# copy the dataset description to other BIDS directory
-	cp ${originalDir}/dataset_description.json ${bidsDir}
 fi
 
-# ITERATE FOR ALL SUBJECTS IN THE TXT FILE
+# iterate for all subjects in the text file
 while read p
 do
 	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# raw data folder name
-	NEWNAME=` basename ${p} |  cut -d "-" -f 3 `		# subj number from folder name
-
+	NEWNAME=` basename ${p} | awk -F- '{print $NF}' `	# subj number from folder name
+	
 		if [ -d ${dataDir}/${ORIGINALNAME} ] # if the subject has a raw data folder
 		then
 			
@@ -80,10 +75,10 @@ do
 			echo "Copying ${ORIGINALNAME} to temporary directory within BIDS_data folder for conversion"
 			echo
 			
-			cp -r ${dataDir}/${ORIGINALNAME} ${tmpDir}
+			cp -R ${dataDir}/${ORIGINALNAME} ${tmpDir}
 			
 			# remove some of the DTI directories
-			rm -r ${tmpDir}/${ORIGINALNAME}/*/*_DTI_AP_*/
+			rm -R ${tmpDir}/${ORIGINALNAME}/*/*_DTI_AP_*/
 			
 			# identify all functional runs
 			pixar_runs=$(ls -d ${tmpDir}/${ORIGINALNAME}/*/*_pixar*/)
@@ -128,49 +123,54 @@ do
 			eval "$(conda shell.bash hook)"
 			conda activate ${toolDir}/dcm2bids
 			
-			# convert to BIDS [more options: dcm2bids --help]
-				# -d: directory with dicom data
-				# -p: participant ID
-				# -s: session ID
-				# -c: configuration file
-				# -o: output directory
-			dcm2bids -d ${tmpDir}/${ORIGINALNAME}/*/ -p ${NEWNAME} -s 01 -c ${config} -o ${originalDir}
+			# the sequence names were different for first pilot participant so a different config file is required
+			if [ ${NEWNAME} == "001" ] # if first subject
+			then
+				echo "Processing sub-001 using different configuration file"
+				echo
+				
+				dcm2bids -d ${tmpDir}/${ORIGINALNAME}/*/ -p ${NEWNAME} -s 01 -c ${toolDir}/dcm2bids/TEBC-5Y_config_file-sub-001.json -o ${tmpDir}
+			else
+				# convert to BIDS [more options: dcm2bids --help]
+					# -d: directory with dicom data
+					# -p: participant ID
+					# -s: session ID
+					# -c: configuration file
+					# -o: output directory
+				dcm2bids -d ${tmpDir}/${ORIGINALNAME}/*/ -p ${NEWNAME} -s 01 -c ${config} -o ${tmpDir}
+			fi
 			
 			# deactivate conda environment
 			conda deactivate
 			
 			# if participant only has 1 run of pixar data, rename to run-01 (default is no run info)
-			if [ -f ${originalDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.nii.gz ]
+			if [ -f ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.nii.gz ]
 			then
-				# rename files
-				mv ${originalDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.nii.gz ${originalDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_run-01_bold.nii.gz
-				mv ${originalDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.json ${originalDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_run-01_bold.json
+				# remame files
+				mv ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.nii.gz ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_run-01_bold.nii.gz
+				mv ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.json ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_run-01_bold.json
 			fi
 			
-			# remove temporary conversion directories
-			rm -r ${originalDir}/tmp_dcm2bids
-			rm -r ${tmpDir}/${ORIGINALNAME}
+			# remove tmp conversion directories
+			rm -R ${tmpDir}/tmp_dcm2bids
+			rm -R ${tmpDir}/${ORIGINALNAME}
 			
 			# copy original BIDS data to BIDS_data folder
-			cp -r ${originalDir}/sub-${NEWNAME} ${bidsDir}
+			cp -r ${tmpDir}/sub-${NEWNAME} ${bidsDir}
 			
 			# remove the default diffusion data files
 			rm ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/*.nii.gz
 			rm ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/*.bv*
 			
 			# generate new diffusion files
-			/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${originalDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.nii.gz -fslgrad ${originalDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bvec ${originalDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bval -shells 0,500,1000,2000 ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.nii.gz -export_grad_fsl ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bvec ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bval
+			/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.nii.gz -fslgrad ${tmpDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bvec ${tmpDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bval -shells 0,500,1000,2000 ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.nii.gz -export_grad_fsl ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bvec ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bval
 			
 			# give other users permissions to the generated folder
 			chmod -R a+rwx ${bidsDir}/sub-${NEWNAME}
-		
+			
 		fi
 	
 done <$1
 
 # remove temporary data conversion directory
-rm -r ${bidsDir}/tmp
-
-# remove BIDs_data_original
-rm -r ${originalDir}
-
+rm -r ${tmpDir}

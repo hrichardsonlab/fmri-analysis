@@ -20,7 +20,7 @@ Usage() {
 	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /EBC/ directory."
 	echo
-	echo "This script only need to be run once when setting up your project folder."
+	echo "This script only needs to be run once when setting up your project folder."
 	echo
     echo "Script created by Melissa Thye"
     echo
@@ -33,7 +33,7 @@ if [[ ! "$PWD" =~ "/EBC/" ]];
 fi
 
 # if the PATHS.txt document does not exist where expected, terminate the script and show usage documentation
-if [[ ! -f  "../PATHS.txt" ]]; 
+if [[ ! -f  "../../PATHS.txt" ]]; 
 	then Usage
 fi
 
@@ -41,7 +41,7 @@ fi
 masterDir="/EBC/processing/singularity_images"
 
 # study folder to create symlink
-projDir=`cat ../PATHS.txt`
+projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 
 # make the study directory if it doesn't exist

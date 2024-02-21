@@ -1,10 +1,12 @@
 #!/bin/bash
 
 ################################################################################
-# RUN FMRIPREP ON BIDS DATA ALREADY RUN THROUGH FREESURFER
+# RUN FREESURFER ON BIDS DATA
+#
+# This step must be run before the data can be fully processed through fMRIPrep
 #
 # The fMRIPrep singularity was installed using the following code:
-# 	singularity build /EBC/code/singularity_images/fmriprep-23.2.0.simg docker://nipreps/fmriprep:23.2.0
+# 	singularity build /EBC/processing/singularity_images/fmriprep-23.2.0.simg docker://nipreps/fmriprep:23.2.0
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
@@ -12,12 +14,12 @@ Usage() {
     echo
 	echo
     echo "Usage:"
-    echo "./run_fmriprep.sh <list of subjects>"
+    echo "./run_freesurfer.sh <list of subjects>"
     echo
     echo "Example:"
-    echo "./run_fmriprep.sh list.txt"
+    echo "./run_freesurfer.sh list.txt"
     echo
-    echo "list.txt is a file containing the participants to run fMRIPrep on:"
+    echo "list.txt is a file containing the participants to run Freesurfer on:"
     echo "001"
     echo "002"
 	echo "..."
@@ -46,6 +48,12 @@ singularityDir="${projDir}/singularity_images"
 bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
 derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
 
+# create derivatives directory if it doesn't exist
+if [ ! -d ${derivDir} ]
+then 
+	mkdir -p ${derivDir}
+fi
+
 # export freesurfer license file location
 export license=/EBC/local/infantFS/freesurfer/license.txt
 
@@ -59,38 +67,46 @@ export SINGULARITYENV_TEMPLATEFLOW_HOME=${singularityDir}/fmriprep/.cache/templa
 
 # display subjects
 echo
-echo "Running fMRIPrep for..."
+echo "Running Freesurfer via fMRIPrep for..."
 echo "${subjs}"
 
-# ITERATE FOR ALL SUBJECTS IN THE TXT FILE
+# iterate for all subjects in the text file
 while read p
 do
+	
 	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# data folder name
 	NAME=` basename ${p} |  cut -d "-" -f 3 `			# subj number from folder name
 	
-	echo
-	echo "Running fMRIprep for sub-${NAME}"
-	echo
+	# check whether the file already exists
+	if [ ! -f ${derivDir}/sub-${NAME}/sourcedata/freesurfer/sub-${NAME}/mri/aparc+aseg.mgz ]
+	then
 
-	# run singularity
-	singularity run -C -B /EBC:/EBC,${singularityDir}:/opt/templateflow	\
-	${singularityDir}/fmriprep-23.2.0.simg 								\
-	${bidsDir} ${derivDir}/sub-${NAME}									\
-	participant															\
-	--participant-label ${NAME}											\
-	--skip_bids_validation												\
-	--nthreads 16														\
-	--omp-nthreads 16													\
-	--ignore slicetiming												\
-	--fd-spike-threshold 1												\
-	--dvars-spike-threshold 1.5											\
-	--output-space MNI152NLin2009cAsym:res-2 T1w						\
-	--derivatives ${derivDir}/sub-${NAME}								\
-	--stop-on-first-crash												\
-	-w ${singularityDir}												\
-	--fs-license-file ${license}  > ${derivDir}/sub-${NAME}/log_fmriprep_sub-${NAME}.txt
-	
-	# give other users permissions to created files
-	chmod -R a+wrx ${derivDir}/sub-${NAME}
+		echo
+		echo "Running anatomical workflow contained in fMRIprep for sub-${NAME}"
+		echo
+		
+		# make output subject derivatives directory
+		mkdir -p ${derivDir}/sub-${NAME}
+
+		# run singularity
+		singularity run -C -B /EBC:/EBC,${singularityDir}:/opt/templateflow \
+		${singularityDir}/fmriprep-23.2.0.simg 								\
+		${bidsDir} ${derivDir}/sub-${NAME}									\
+		participant															\
+		--participant-label ${NAME}											\
+		--skip_bids_validation												\
+		--nthreads 16														\
+		--omp-nthreads 16													\
+		--anat-only															\
+		--output-space MNI152NLin2009cAsym:res-2 T1w						\
+		--derivatives ${derivDir}/sub-${NAME}								\
+		--stop-on-first-crash												\
+		-w ${singularityDir}												\
+		--fs-license-file ${license}  > ${derivDir}/sub-${NAME}/log_freesurfer_sub-${NAME}.txt
+		
+		# give other users permissions to created files
+		chmod -R a+wrx ${derivDir}/sub-${NAME}
+
+	fi
 
 done <$1

@@ -48,7 +48,7 @@ subjs=$(cat $1)
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
-codeDir="${projDir}/code/05.motion_exclusions"
+codeDir="${projDir}/scripts/06.motion_exclusions"
 derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
 qcDir="${projDir}/data_checking"
 
@@ -74,7 +74,7 @@ echo
 echo "Creating data checking directory and running mark motion exclusions.py script for..."
 echo "${subjs}"
 
-# ITERATE FOR ALL SUBJECTS IN THE TXT FILE
+# iterate for all subjects in the text file
 while read p
 do
 

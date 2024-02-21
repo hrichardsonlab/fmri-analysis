@@ -43,13 +43,20 @@ subjs=$(cat $1)
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="$projDir/singularity_images"
-bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
-qcDir="/EBC/preprocessedData/TEBC-5y/derivatives/mriqc"
+bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot"
+qcDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot/mriqc"
 
-# create QC directory if it doesn't exist
+# create QC and dvars directory if they don't exist
 if [ ! -d ${qcDir} ]
 then 
 	mkdir -p ${qcDir}
+	mkdir ${qcDir}/dvars
+fi
+
+# delete dvars tsv file if it already exists
+if [ -f ${qcDir}/dvars.tsv ]
+then 
+	rm ${qcDir}/dvars.tsv
 fi
 
 # display subjects
@@ -57,9 +64,9 @@ echo
 echo "Running MRIQC for..."
 echo "${subjs}"
 
-# change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
-export SINGULARITY_TMPDIR=$singularityDir
-export SINGULARITY_CACHEDIR=$singularityDir
+# change the location of the singularity cache
+export SINGULARITY_TMPDIR=${singularityDir}
+export SINGULARITY_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # run MRIQC (https://mriqc.readthedocs.io/en/latest/running.html#singularity-containers)
@@ -74,6 +81,36 @@ participant																								\
 -m T1w bold																								\
 -w ${singularityDir}
 
+# extract dvars timeseries
+echo
+echo "extracting DVARS values..."
+echo 
+
+# copy dvars files from mriqc functional workflow directory
+cp ${singularityDir}/mriqc_wf/funcMRIQC/ComputeIQMs/*/ComputeDVARS/*_dvars.tsv ${qcDir}/dvars
+
+# extract standardized dvars values from files in QC directory
+files=(`ls -1 ${qcDir}/dvars/*_dvars.tsv`)
+
+# for each file in the QC directory, generate a subject file with name and dvar timeseries
+for f in ${files[@]}
+do
+	# extract sub and task info from file name
+	sub=` basename ${f} | cut -d '_' -f 1,3,4 `
+	echo ${sub}
+	# print sub and task info to temporary file
+	printf ${sub} ${f} >> ${qcDir}/${sub}.tsv
+	# add a line in the text file
+	printf "\n" >> ${qcDir}/${sub}.tsv
+	# extract first column from dvars file (standardized dvars), skipping the header row
+	awk '{print $1}' ${f} | tail -n +2 >> ${qcDir}/${sub}.tsv
+done
+
+# combine temporary sub files into dvars file
+paste ${qcDir}/sub*.tsv >> ${qcDir}/dvars.tsv
+# remove temporary sub fles
+rm ${qcDir}/sub*.tsv
+
 ## generate group reports
 singularity run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
 ${singularityDir}/mriqc-23.1.0.simg																		\
@@ -83,3 +120,5 @@ ${bidsDir} ${qcDir} group 																				\
 # remove hidden files in singularity directory to avoid space issues
 rm ${singularityDir}/.mriqc*
 rm -r ${singularityDir}/.bids*
+rm -r ${singularityDir}/mriqc_wf*
+rm -r ${singularityDir}/reportlets

@@ -79,4 +79,3 @@ do
 	cp ${bidsDir}/sub-${NAME}/ses-01/func/sub-${NAME}_ses-01_scans.tsv ${derivDir}/sub-${NAME}/sub-${NAME}/ses-01/func
 	
 done <$1
-
