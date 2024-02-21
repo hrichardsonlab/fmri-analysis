@@ -1,24 +1,15 @@
-
 ### fMRI pipeline
 These folders have the scripts for running the fMRI analysis pipeline, written in python and bash:
 
 * Converting from raw DICOMS to run-separated data in BIDS specification
-* Preprocessing (
-  * Separating brain from skull, calculating brain tissue segmentation, spatial normalization
-  * Motion correction
-  * Confound estimation
+* Preprocessing using fMRIPrep
+  * The data are first run through the anatomical-only workflow using freesurfer within fMRIPrep because some participants only have structural data
+  * The data are then run through the rest of the fMRIPrep workflow including:
+	* Separating brain from skull, calculating brain tissue segmentation, spatial normalization
+	* Confound estimation
+* Motion estimation for data exclusion
 * First-level modeling
 * Subject-level modeling
 * Group-level modeling
 
-
-There are non-standard but template scripts for: 
-univariate ROI analyses 
-multivariate ROI analyses 
-
-And information regarding FLAME and RANDOMISE methods of group-level / whole-brain analyses
-
-
-Also in this repository are the scripts that can be used for anonymization of an fMRI dataset. For details, see the data sharing wiki: 
-https://github.mit.edu/Saxelab/lab/wiki/Data-Sharing-Cookbook 
 
