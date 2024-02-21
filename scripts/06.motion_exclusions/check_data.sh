@@ -50,7 +50,7 @@ projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/06.motion_exclusions"
 derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
-qcDir="${projDir}/data_checking"
+qcDir="${projDir}/data/data_checking"
 
 # create data checking directory if it doesn't exist
 if [ ! -d ${qcDir} ]
