@@ -12,4 +12,4 @@ These folders have the scripts for running the fMRI analysis pipeline, written i
 * Subject-level modeling
 * Group-level modeling
 
-
+See the Wiki page for more detailed information about running each step of the pipeline.
