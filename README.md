@@ -9,7 +9,6 @@ These folders have the scripts for running the fMRI analysis pipeline, written i
 	* Confound estimation
 * Motion estimation for data exclusion
 * First-level modeling
-* Subject-level modeling
-* Group-level modeling
+* Second-level modeling
 
 See the Wiki page for more detailed information about running each step of the pipeline.
