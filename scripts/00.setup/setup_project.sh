@@ -13,8 +13,8 @@
 Usage() {
     echo
 	echo
-    echo "Usage:"
-    echo "./setup_project PROJECT_NAME"
+	echo "Usage:"
+	echo "./setup_project PROJECT_NAME"
 	echo
 	echo "You must provide a PROJECT_NAME (with no spaces) so the associated project folder can be generated"
 	echo
@@ -23,9 +23,9 @@ Usage() {
 	echo
 	echo "This script only needs to be run once when setting up your project folder."
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] && Usage
 

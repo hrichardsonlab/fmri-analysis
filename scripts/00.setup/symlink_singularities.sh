@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# CREATE SYMBOLIC LINKS FROM /EBC/code/singularity_images : 
+# CREATE SYMBOLIC LINKS TO SHARED SINGULARITIES IN /EBC/processing/singularity_images
 #
 # We want singularity images accessible but we don't want a bunch of copies
 # so this creates a symbolic link for all the content of the lab standard 
@@ -12,8 +12,8 @@
 Usage() {
     echo
 	echo
-    echo "Usage:"
-    echo "./symlink_singularities"
+	echo "Usage:"
+	echo "./symlink_singularities"
 	echo
 	echo "You must have a PATHS.txt file in your project folder with the path to your project folder within the text file."
 	echo
@@ -22,9 +22,9 @@ Usage() {
 	echo
 	echo "This script only needs to be run once when setting up your project folder."
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
