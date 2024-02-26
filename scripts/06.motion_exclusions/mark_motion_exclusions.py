@@ -1,38 +1,31 @@
 # import modules
 from bids.layout import BIDSLayout
 import bids.variables.kollekshuns
+from nipype.algorithms import rapidart
 import pandas as pd
-from shutil import copyfile
 import numpy as np
 from collections import defaultdict
+from nipype import Workflow, Node
+import os
 import os.path as op
 import sys
 import glob
-import os
 
 # define function that will tag motion outlier volumes/runs based on defined threshold
 def mark_motion_exclusions(sub, derivDir):
+    # print current subject
+    print('running motion exclusion script for ', sub)
     
     layout = BIDSLayout(derivDir)
     
-    # find the BIDS scans file and make a backup before we start mucking with it
-    # scansfiles = glob.glob(op.join(derivDir, '*' + sub, '*_scans.tsv'))
+    # find the BIDS scans file and make a backup
     scansfiles = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', '*_scans.tsv'))
     scansfile = scansfiles[0]
-
-    # copy original scansfiles to a hidden directory in data/ instead of in BIDS
-    # (.orig files are not BIDS compatible)
-    scansfile_base = op.basename(scansfile)
-    copy_orig_dir = op.join(derivDir, 'data/.scansfiles_orig')
-    if not op.exists(copy_orig_dir):
-        os.makedirs(copy_orig_dir)
-    copy_orig_scansfile_path = op.join(copy_orig_dir, scansfile_base)
-    if ~op.isfile(copy_orig_scansfile_path + '.orig'):
-        copyfile(scansfile, copy_orig_scansfile_path + '.orig')
-               
-    # read the TSV file into a dataframe, then create one useful dataframe
+    
+    # read the scans.tsv file into a dataframe, then create one useful dataframe
     df_tsv = pd.read_csv(scansfile, sep='\t')
-   
+    
+    # extract subject, task, and run information from filenames in scans.tsv file
     df_tsv['task'] = df_tsv['filename'].str.split('task-', expand=True).loc[:,1]
     df_tsv['task'] = df_tsv['task'].str.split('_run', expand=True).loc[:,0]
     df_tsv['task'] = df_tsv['task'].str.split('_bold', expand=True).loc[:,0]
@@ -57,15 +50,65 @@ def mark_motion_exclusions(sub, derivDir):
             task = row['task']
             run = row['run']
             subject = row['subject']
-            filestr = '*task-' + task + '_run-*' + str(run) + '_desc-confounds*.tsv'
-            f = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', filestr))
-            confound_file = f[0]
+            
+            # identify confound file (has FD/DVARS info)
+            confounds_filestr = '*task-' + task + '_run-*' + str(run) + '_desc-confounds*.tsv'
+            cf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', confounds_filestr))
+            confound_file = cf[0]
+            
+            # identify preprocessed bold data
+            preproc_filestr = '*task-' + task + '_run-*' + str(run) + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
+            pf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', preproc_filestr))
+            preproc_file = pf[0]
+            
+            # identify mask data
+            mask_filestr = '*_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'
+            mf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', mask_filestr))
+            mask_file = mf[0]
 
         # read in confounds file
         dfConfounds = pd.read_csv(confound_file, sep='\t')
+        
+        # extract and write realignment parameters in a format for art
+        mp_filestr = sub + '_ses-01_task-' + task + '_run-' + str(run) + '_mcparams.tsv'
+        mp_name = op.join(derivDir, sub, sub, 'ses-01', 'func', mp_filestr)
+        print('saving motion parameter file for ' + sub + '_run-' + str(run))
+        pd.read_table(confound_file).to_csv(mp_name, sep='\t',
+                                           header = False,
+                                           index = False, 
+                                           columns=['trans_x', 'trans_y', 'trans_z', 'rot_x', 'rot_y', 'rot_z'])
 
+            
+        # read in motion parameters file
+        mp = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', mp_filestr))
+        motion_params = mp[0]
+        
+        # use rapidart to detect outliers in realigned files
+        art = Node(rapidart.ArtifactDetect(mask_type = 'file',
+                                           mask_file =  mask_file, # specifies a brain mask file (should be an image consisting of 0s and 1s)
+                                           realigned_files = preproc_file,
+                                           realignment_parameters = motion_params,
+                                           use_norm = True, # use a composite of the motion parameters in order to determine outliers
+                                           norm_threshold = 2, # threshold to use to detect motion-related outliers when composite motion is being used
+                                           zintensity_threshold = 3, # intensity Z-threshold use to detection images that deviate from the mean
+                                           parameter_source = 'SPM',
+                                           use_differences = [True, False]), # use differences between successive motion (first element) and intensity parameter (second element) estimates in order to determine outliers
+                    name=op.join(task + str(run))) # create a different output directory name for each run
+        
+        # define path to subj directory
+        subDir = op.join(derivDir, sub, sub, 'ses-01', 'func')
+        
+        # create a rapidart workflow
+        wf = Workflow(name = 'art',
+                      base_dir = subDir)
+        
+        # add nodes
+        wf.add_nodes([art])
+                          
+        wf.run()
+        
         # extract standarized dvars and calculate TRs over 1.5 DVARS limit
-        DVARS=dfConfounds.std_dvars[1:]
+        DVARS = dfConfounds.std_dvars[1:]
         meanDVARS = np.mean(DVARS)
         DVARSoverlim = DVARS > 1.5
         DVARSartifacts = DVARSoverlim.sum()
@@ -98,7 +141,6 @@ def mark_motion_exclusions(sub, derivDir):
 def main():
     sub = sys.argv[1] # first argument passed to script (in singularity call)
     derivDir = sys.argv[2] # second argument passed to script (derivatives folder)
-    print('Marking motion exclusions in scans.tsv file for ' + sub + ' in derivatives folder: ' + derivDir)
     mark_motion_exclusions(sub, derivDir)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
