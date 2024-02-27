@@ -13,8 +13,8 @@
 Usage() {
     echo
 	echo
-	echo "Usage:"
-	echo "./setup_project PROJECT_NAME"
+    echo "Usage:"
+    echo "./setup_project PROJECT_NAME"
 	echo
 	echo "You must provide a PROJECT_NAME (with no spaces) so the associated project folder can be generated"
 	echo
@@ -23,15 +23,17 @@ Usage() {
 	echo
 	echo "This script only needs to be run once when setting up your project folder."
 	echo
-	echo "Script created by Melissa Thye"
-	echo
-	exit
+    echo "Script created by Melissa Thye"
+    echo
+    exit
 }
 [ "$1" = "" ] && Usage
 
+# define cohort
+cohort="TEBC-5y"
+
 # define directories
-dataDir="/EBC/processing/subj_lists/TEBC-5y"	# location of shared data files
-codeDir="/EBC/processing/scripts/TEBC-5y"		# location of shared scripts
+dataDir="/EBC/processing"	# location of shared files
 
 # define project as text provided after script call
 proj=$1
@@ -68,5 +70,6 @@ echo
 echo "copying scripts and data files to project directory"
 echo
 
-cp -r ${codeDir}/. ${proj}/scripts
-cp -r ${dataDir}/. ${proj}/data/subj_lists
+cp -r ${dataDir}/scripts/${cohort}/. ${proj}/scripts
+cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/data/subj_lists
+cp -r ${dataDir}/event_files/${cohort}/. ${proj}/data/event_files
