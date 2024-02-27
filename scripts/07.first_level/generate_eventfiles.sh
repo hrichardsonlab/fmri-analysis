@@ -62,10 +62,10 @@ do
 		echo
 		
 		# delete events.tsv files if they already exists
-		#if [ -f ${subDir}/*events.tsv ]
-		#then 
+		if [ -f ${subDir}/*run-01_events.tsv ]
+		then 
 			rm ${subDir}/*events.tsv
-		#fi
+		fi
 		
 		# copy the event files saved in the data directory
 		awk 'NR > 0' ${projDir}/data/event_files/pixar-mind_body.tsv >> ${subDir}/sub-${NAME}_ses-${ses}_task-pixar_run-01_events.tsv
