@@ -1,6 +1,5 @@
 # import modules
 from bids.layout import BIDSLayout
-import bids.variables.kollekshuns
 from nipype.algorithms import rapidart
 import pandas as pd
 import numpy as np
@@ -18,7 +17,7 @@ def mark_motion_exclusions(sub, derivDir):
     
     layout = BIDSLayout(derivDir)
     
-    # find the BIDS scans file and make a backup
+    # find the BIDS scans file
     scansfiles = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', '*_scans.tsv'))
     scansfile = scansfiles[0]
     
@@ -46,22 +45,46 @@ def mark_motion_exclusions(sub, derivDir):
     
     # extract motion info from confounds file and merge with dataframe
     for index, row in df_merge.iterrows():
-        if  not pd.isnull(row['run']):
+        if  not pd.isnull(row['task']): # if the row has a task listed
             task = row['task']
             run = row['run']
             subject = row['subject']
             
-            # identify confound file (has FD/DVARS info)
-            confounds_filestr = '*task-' + task + '_run-*' + str(run) + '_desc-confounds*.tsv'
+            # if there is only 1 run for this task (no run info specified: sesame data)
+            if not run:
+                # name of confound file (has FD/DVARS info)
+                confounds_filestr = '*task-' + task + '_desc-confounds*.tsv'
+                
+                # name of preprocessed bold data
+                preproc_filestr = '*task-' + task + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
+                
+                # name of motion parameters file (will be written out in next step)
+                mp_filestr = sub + '_ses-01_task-' + task + '_mcparams.tsv'
+                
+                outname = task # create a different output directory name for each run
+                
+            # if there's multiple runs (pixar data)
+            else: 
+                # name of confound file (has FD/DVARS info)
+                confounds_filestr = '*task-' + task + '_run-*' + str(run) + '_desc-confounds*.tsv'
+                
+                # name of preprocessed bold data
+                preproc_filestr = '*task-' + task + '_run-*' + str(run) + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
+                
+                # name of motion parameters file (will be written out in next step)
+                mp_filestr = sub + '_ses-01_task-' + task + '_run-' + str(run) + '_mcparams.tsv'
+                
+                outname = task + str(run) # create a different output directory name for each run
+
+            # read in confound file (has FD/DVARS info)
             cf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', confounds_filestr))
             confound_file = cf[0]
             
-            # identify preprocessed bold data
-            preproc_filestr = '*task-' + task + '_run-*' + str(run) + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
+            # read in preprocessed bold data
             pf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', preproc_filestr))
             preproc_file = pf[0]
             
-            # identify mask data
+            # identify and read in mask data (same across all runs)
             mask_filestr = '*_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'
             mf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', mask_filestr))
             mask_file = mf[0]
@@ -70,9 +93,8 @@ def mark_motion_exclusions(sub, derivDir):
         dfConfounds = pd.read_csv(confound_file, sep='\t')
         
         # extract and write realignment parameters in a format for art
-        mp_filestr = sub + '_ses-01_task-' + task + '_run-' + str(run) + '_mcparams.tsv'
         mp_name = op.join(derivDir, sub, sub, 'ses-01', 'func', mp_filestr)
-        print('saving motion parameter file for ' + sub + '_run-' + str(run))
+        print('saving motion parameter file for ' + sub + '_' + task + str(run))
         pd.read_table(confound_file).to_csv(mp_name, sep='\t',
                                            header = False,
                                            index = False, 
@@ -90,10 +112,10 @@ def mark_motion_exclusions(sub, derivDir):
                                            realignment_parameters = motion_params,
                                            use_norm = True, # use a composite of the motion parameters in order to determine outliers
                                            norm_threshold = 2, # threshold to use to detect motion-related outliers when composite motion is being used
-                                           zintensity_threshold = 3, # intensity Z-threshold use to detection images that deviate from the mean
+                                           zintensity_threshold = 3, # intensity Z-threshold used to detect images that deviate from the mean
                                            parameter_source = 'SPM',
                                            use_differences = [True, False]), # use differences between successive motion (first element) and intensity parameter (second element) estimates in order to determine outliers
-                    name=op.join(task + str(run))) # create a different output directory name for each run
+                    name=op.join(outname)) # create a different output directory name for each run
         
         # define path to subj directory
         subDir = op.join(derivDir, sub, sub, 'ses-01', 'func')
@@ -102,7 +124,7 @@ def mark_motion_exclusions(sub, derivDir):
         wf = Workflow(name = 'art',
                       base_dir = subDir)
         
-        # add nodes
+        # add node to workflow
         wf.add_nodes([art])
                           
         wf.run()

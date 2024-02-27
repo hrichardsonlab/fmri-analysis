@@ -1,7 +1,5 @@
 # import modules
-from nilearn import plotting
 from nilearn import image
-from nilearn import masking
 import nilearn
 import argparse
 import pandas as pd

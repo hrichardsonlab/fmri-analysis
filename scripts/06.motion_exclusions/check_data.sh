@@ -4,7 +4,8 @@
 # MARK RUNS THAT EXCEED MOTION THRESHOLDS
 #
 # This script moves select fMRIPrep output files to a data checking directory for ease of QC
-# It then runs the mark_motion_exclusions.py script within the nipype singularity
+# It then runs the concat_brain_masks.py and mark_motion_exclusions.py scripts within a nipype singularity/cache
+# concat_brain_masks.py outputs an averaged, binarized EPI mask from whatever functional data each subject has
 # mark_motion_exclusions.py uses framewise displacement and standardized dvars to identify outlier volumes
 # If more than 1/3rd of the volumes in a given run are tagged, the run is marked for exclusion in a generated tsv file (in subject derivatives folder and data checking directory)
 #
@@ -52,7 +53,7 @@ ses=01
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/06.motion_exclusions"
-derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
+derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
 qcDir="${projDir}/data/data_checking"
 
 # create data checking directory if it doesn't exist
@@ -61,7 +62,7 @@ then
 	mkdir -p ${qcDir}
 fi
 
-# delete data checking scans.tsv file if it already exists
+# delete data checking scans-group.tsv file if it already exists
 if [ -f ${qcDir}/scans-group.tsv ]
 then 
 	rm ${qcDir}/scans-group.tsv
@@ -105,15 +106,15 @@ do
 	-w ${singularityDir}
 	
 	# give other users permissions to created files
-	chmod a+wrx ${derivDir}/sub-${NAME}/sub-${NAME}/ses-01/func/sub-${NAME}_ses-${ses}_scans.tsv
-	chmod a+wrx ${derivDir}/sub-${NAME}/sub-${NAME}/ses-01/func/sub-${NAME}_ses-${ses}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz
+	chmod a+wrx ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
+	chmod a+wrx ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz
 	
 	# add scan information to data checking scans file
 	if [ ! -f ${qcDir}/scans-group.tsv ] # on first loop, take header information from first subject
 	then
-		awk 'NR == 0' ${derivDir}/sub-${NAME}/sub-${NAME}/ses-01/func/sub-${NAME}_ses-01_scans.tsv >> ${qcDir}/scans-group.tsv
+		awk 'NR == 0' ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv >> ${qcDir}/scans-group.tsv
 	else
-		awk 'NR > 1' ${derivDir}/sub-${NAME}/sub-${NAME}/ses-01/func/sub-${NAME}_ses-01_scans.tsv >> ${qcDir}/scans-group.tsv
+		awk 'NR > 1' ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv >> ${qcDir}/scans-group.tsv
 	fi
 
 done <$1
