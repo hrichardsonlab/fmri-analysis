@@ -6,7 +6,7 @@
 # This step must be run before the data can be fully processed through fMRIPrep
 #
 # The fMRIPrep singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/fmriprep-23.2.1.simg docker://nipreps/fmriprep:23.2.0
+# 	singularity build /EBC/processing/singularity_images/fmriprep-23.2.1.simg docker://nipreps/fmriprep:23.2.1
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
