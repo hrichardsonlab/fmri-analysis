@@ -6,7 +6,7 @@
 # This step must be run before the data can be fully processed through fMRIPrep
 #
 # The fMRIPrep singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/fmriprep-23.2.0.simg docker://nipreps/fmriprep:23.2.0
+# 	singularity build /EBC/processing/singularity_images/fmriprep-23.2.1.simg docker://nipreps/fmriprep:23.2.0
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
@@ -78,7 +78,7 @@ do
 	NAME=` basename ${p} |  cut -d "-" -f 3 `			# subj number from folder name
 	
 	# check whether the file already exists
-	if [ ! -f ${derivDir}/sub-${NAME}/sourcedata/freesurfer/sub-${NAME}/mri/aparc+aseg.mgz ]
+	if [ ! -f ${derivDir}/sourcedata/freesurfer/sub-${NAME}/mri/aparc+aseg.mgz ]
 	then
 
 		echo
@@ -87,11 +87,11 @@ do
 		
 		# make output subject derivatives directory
 		mkdir -p ${derivDir}/sub-${NAME}
-
+		
 		# run singularity
 		singularity run -C -B /EBC:/EBC,${singularityDir}:/opt/templateflow \
-		${singularityDir}/fmriprep-23.2.0.simg 								\
-		${bidsDir} ${derivDir}/sub-${NAME}									\
+		${singularityDir}/fmriprep-23.2.1.simg 								\
+		${bidsDir} ${derivDir}												\
 		participant															\
 		--participant-label ${NAME}											\
 		--skip_bids_validation												\
@@ -99,10 +99,14 @@ do
 		--omp-nthreads 16													\
 		--anat-only															\
 		--output-space MNI152NLin2009cAsym:res-2 T1w						\
-		--derivatives ${derivDir}/sub-${NAME}								\
+		--derivatives ${derivDir}											\
 		--stop-on-first-crash												\
 		-w ${singularityDir}												\
 		--fs-license-file ${license}  > ${derivDir}/sub-${NAME}/log_freesurfer_sub-${NAME}.txt
+		
+		# move subject report and freesurfer output files to appropriate directories
+		mv ${derivDir}/*dseg.tsv ${derivDir}/sourcedata/freesurfer
+		mv ${derivDir}/sub-${NAME}.html ${derivDir}/sub-${NAME}
 		
 		# give other users permissions to created files
 		chmod -R a+wrx ${derivDir}/sub-${NAME}

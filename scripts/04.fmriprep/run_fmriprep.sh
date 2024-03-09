@@ -4,7 +4,7 @@
 # RUN FMRIPREP ON BIDS DATA ALREADY RUN THROUGH FREESURFER
 #
 # The fMRIPrep singularity was installed using the following code:
-# 	singularity build /EBC/code/singularity_images/fmriprep-23.2.0.simg docker://nipreps/fmriprep:23.2.0
+# 	singularity build /EBC/code/singularity_images/fmriprep-23.2.1.simg docker://nipreps/fmriprep:23.2.0
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
@@ -74,8 +74,8 @@ do
 
 	# run singularity
 	singularity run -C -B /EBC:/EBC,${singularityDir}:/opt/templateflow	\
-	${singularityDir}/fmriprep-23.2.0.simg 								\
-	${bidsDir} ${derivDir}/sub-${NAME}									\
+	${singularityDir}/fmriprep-23.2.1.simg  							\
+	${bidsDir} ${derivDir}												\
 	participant															\
 	--participant-label ${NAME}											\
 	--skip_bids_validation												\
@@ -85,7 +85,7 @@ do
 	--fd-spike-threshold 1												\
 	--dvars-spike-threshold 1.5											\
 	--output-space MNI152NLin2009cAsym:res-2 T1w						\
-	--derivatives ${derivDir}/sub-${NAME}								\
+	--derivatives ${derivDir}											\
 	--stop-on-first-crash												\
 	-w ${singularityDir}												\
 	--fs-license-file ${license}  > ${derivDir}/sub-${NAME}/log_fmriprep_sub-${NAME}.txt

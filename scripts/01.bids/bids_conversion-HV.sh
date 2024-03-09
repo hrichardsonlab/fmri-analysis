@@ -61,7 +61,7 @@ then
 	echo '}' >> ${bidsDir}/dataset_description.json
 fi
 
-# iterate for all subjects in the text file
+# ITERATE FOR ALL SUBJECTS IN THE TXT FILE
 while read p
 do
 	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# raw data folder name
