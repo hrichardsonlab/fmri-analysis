@@ -35,8 +35,8 @@ subjs=$(cat $1)
 ses=01
 
 # define directories
-bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
-derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
+bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot"
+derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
 
 # ITERATE FOR ALL SUBJECTS IN THE TXT FILE
 while read p
@@ -53,10 +53,10 @@ do
 		echo
 		
 		# delete scans.tsv file if it already exists
-		if [ -f ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ]
+		if [ -f ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ]
 		then 
 			rm ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
-			rm ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
+			rm ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
 		fi
 		
 		# print run info to scan.tsv file
@@ -79,7 +79,7 @@ do
 	fi
 	
 	# copy scans.tsv to derivDir
-	cp ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func
+	cp ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ${derivDir}/sub-${NAME}/ses-${ses}/func
 	
 done <$1
 

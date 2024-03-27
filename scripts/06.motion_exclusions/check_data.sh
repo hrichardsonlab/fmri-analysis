@@ -53,7 +53,7 @@ ses=01
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/06.motion_exclusions"
-derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
+derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
 qcDir="${projDir}/data/data_checking"
 
 # create data checking directory if it doesn't exist
@@ -89,10 +89,10 @@ do
 	mkdir -p ${qcDir}/sub-${NAME}
 	
 	# copy fMRIPrep output images to data checking directory for QC
-	cp ${derivDir}/sub-${NAME}/sub-${NAME}/figures/*reconall_T1w.svg ${qcDir}/sub-${NAME}
-	cp ${derivDir}/sub-${NAME}/sub-${NAME}/figures/*MNI152NLin2009cAsym_desc-preproc_T1w.svg ${qcDir}/sub-${NAME}
-	cp ${derivDir}/sub-${NAME}/sub-${NAME}/figures/*desc-coreg_bold.svg ${qcDir}/sub-${NAME}
-	cp ${derivDir}/sub-${NAME}/sub-${NAME}/figures/*desc-sdc_bold.svg ${qcDir}/sub-${NAME}
+	cp ${derivDir}/sub-${NAME}/figures/*reconall_T1w.svg ${qcDir}/sub-${NAME}
+	cp ${derivDir}/sub-${NAME}/figures/*MNI152NLin2009cAsym_desc-preproc_T1w.svg ${qcDir}/sub-${NAME}
+	cp ${derivDir}/sub-${NAME}/figures/*desc-coreg_bold.svg ${qcDir}/sub-${NAME}
+	cp ${derivDir}/sub-${NAME}/figures/*desc-sdc_bold.svg ${qcDir}/sub-${NAME}
 	
 	# run singularity to create average functional mask
 	singularity exec -C -B /EBC:/EBC																			\
@@ -106,15 +106,15 @@ do
 	-w ${singularityDir}
 	
 	# give other users permissions to created files
-	chmod a+wrx ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
-	chmod a+wrx ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz
+	chmod a+wrx ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
+	chmod a+wrx ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz
 	
 	# add scan information to data checking scans file
 	if [ ! -f ${qcDir}/scans-group.tsv ] # on first loop, take header information from first subject
 	then
-		awk 'NR == 0' ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv >> ${qcDir}/scans-group.tsv
+		awk 'NR == 0' ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv >> ${qcDir}/scans-group.tsv
 	else
-		awk 'NR > 1' ${derivDir}/sub-${NAME}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv >> ${qcDir}/scans-group.tsv
+		awk 'NR > 1' ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv >> ${qcDir}/scans-group.tsv
 	fi
 
 done <$1

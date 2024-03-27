@@ -81,14 +81,18 @@ do
 	--skip_bids_validation												\
 	--nthreads 16														\
 	--omp-nthreads 16													\
+	--dummy-scans 0														\
 	--ignore slicetiming												\
 	--fd-spike-threshold 1												\
 	--dvars-spike-threshold 1.5											\
-	--output-space MNI152NLin2009cAsym:res-2 T1w						\
+	--output-space MNI152NLin2009cAsym:res-2							\
 	--derivatives ${derivDir}											\
 	--stop-on-first-crash												\
 	-w ${singularityDir}												\
 	--fs-license-file ${license}  > ${derivDir}/sub-${NAME}/log_fmriprep_sub-${NAME}.txt
+	
+	# move subject report and freesurfer output files to appropriate directories
+	mv ${derivDir}/sub-${NAME}.html ${derivDir}/sub-${NAME}
 	
 	# give other users permissions to created files
 	chmod -R a+wrx ${derivDir}/sub-${NAME}

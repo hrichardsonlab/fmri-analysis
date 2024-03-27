@@ -18,7 +18,7 @@ def mark_motion_exclusions(sub, derivDir):
     layout = BIDSLayout(derivDir)
     
     # find the BIDS scans file
-    scansfiles = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', '*_scans.tsv'))
+    scansfiles = glob.glob(op.join(derivDir, sub, 'ses-01', 'func', '*_scans.tsv'))
     scansfile = scansfiles[0]
     
     # read the scans.tsv file into a dataframe, then create one useful dataframe
@@ -40,8 +40,7 @@ def mark_motion_exclusions(sub, derivDir):
     df_merge.loc[:,'#Artifacts_FD'] = None
     df_merge.loc[:,'MeanDVARS'] = None
     df_merge.loc[:,'#Artifacts_DVARS'] = None
-    df_merge.loc[:,'OtherExclusion'] = False
-    df_merge.loc[:,'OtherExclusionReason'] = None
+    df_merge.loc[:,'#Artifacts_ART'] = None
     
     # extract motion info from confounds file and merge with dataframe
     for index, row in df_merge.iterrows():
@@ -74,35 +73,40 @@ def mark_motion_exclusions(sub, derivDir):
                 # name of motion parameters file (will be written out in next step)
                 mp_filestr = sub + '_ses-01_task-' + task + '_run-' + str(run) + '_mcparams.tsv'
                 
+                # name of motion parameters file (written out by rapidart)
+                art_filestr = '*outliers.txt'
+                af = op.join(derivDir, sub, 'ses-01', 'func', 'art', task+str(run), art_filestr)
+                
                 outname = task + str(run) # create a different output directory name for each run
 
             # read in confound file (has FD/DVARS info)
-            cf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', confounds_filestr))
+            cf = glob.glob(op.join(derivDir, sub, 'ses-01', 'func', confounds_filestr))
             confound_file = cf[0]
             
             # read in preprocessed bold data
-            pf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', preproc_filestr))
+            pf = glob.glob(op.join(derivDir, sub, 'ses-01', 'func', preproc_filestr))
             preproc_file = pf[0]
             
             # identify and read in mask data (same across all runs)
             mask_filestr = '*_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'
-            mf = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', mask_filestr))
+            mf = glob.glob(op.join(derivDir, sub, 'ses-01', 'func', mask_filestr))
             mask_file = mf[0]
+            
 
         # read in confounds file
         dfConfounds = pd.read_csv(confound_file, sep='\t')
+        nVols = len(dfConfounds) # record number of volumes to calculate threshold for excluding data
         
         # extract and write realignment parameters in a format for art
-        mp_name = op.join(derivDir, sub, sub, 'ses-01', 'func', mp_filestr)
+        mp_name = op.join(derivDir, sub, 'ses-01', 'func', mp_filestr)
         print('saving motion parameter file for ' + sub + '_' + task + str(run))
         pd.read_table(confound_file).to_csv(mp_name, sep='\t',
                                            header = False,
                                            index = False, 
                                            columns=['trans_x', 'trans_y', 'trans_z', 'rot_x', 'rot_y', 'rot_z'])
-
             
         # read in motion parameters file
-        mp = glob.glob(op.join(derivDir, sub, sub, 'ses-01', 'func', mp_filestr))
+        mp = glob.glob(op.join(derivDir, sub, 'ses-01', 'func', mp_filestr))
         motion_params = mp[0]
         
         # use rapidart to detect outliers in realigned files
@@ -111,14 +115,14 @@ def mark_motion_exclusions(sub, derivDir):
                                            realigned_files = preproc_file,
                                            realignment_parameters = motion_params,
                                            use_norm = True, # use a composite of the motion parameters in order to determine outliers
-                                           norm_threshold = 2, # threshold to use to detect motion-related outliers when composite motion is being used
+                                           norm_threshold = 1, # threshold to use to detect motion-related outliers when composite motion is being used
                                            zintensity_threshold = 3, # intensity Z-threshold used to detect images that deviate from the mean
                                            parameter_source = 'SPM',
                                            use_differences = [True, False]), # use differences between successive motion (first element) and intensity parameter (second element) estimates in order to determine outliers
                     name=op.join(outname)) # create a different output directory name for each run
         
         # define path to subj directory
-        subDir = op.join(derivDir, sub, sub, 'ses-01', 'func')
+        subDir = op.join(derivDir, sub, 'ses-01', 'func')
         
         # create a rapidart workflow
         wf = Workflow(name = 'art',
@@ -128,6 +132,10 @@ def mark_motion_exclusions(sub, derivDir):
         wf.add_nodes([art])
                           
         wf.run()
+        
+        # read in art output to count number of artefact timepoints
+        art_file = glob.glob(af)[0]
+        nArt=len(pd.read_csv(art_file, header=None))
         
         # extract standarized dvars and calculate TRs over 1.5 DVARS limit
         DVARS = dfConfounds.std_dvars[1:]
@@ -146,10 +154,11 @@ def mark_motion_exclusions(sub, derivDir):
         df_merge.loc[index, '#Artifacts_FD'] = FDartifacts
         df_merge.loc[index, 'MeanDVARS'] = meanDVARS
         df_merge.loc[index, '#Artifacts_DVARS'] = DVARSartifacts
+        df_merge.loc[index, '#Artifacts_ART'] = nArt
 
         # sum of bools is number of true values. count of bool array is length
-        # mark run for exclusion if more than 1/3rd of vols are identified as motion
-        if (FDoverlim.sum() / FDoverlim.count() >= 0.33) or (DVARSoverlim.sum() / DVARSoverlim.count() >= 0.33):
+        # mark run for exclusion if more than 1/3rd of vols are identified as motion using FD, DVARS, or ART timepoints
+        if (FDoverlim.sum() / FDoverlim.count() >= 0.33) or (DVARSoverlim.sum() / DVARSoverlim.count() >= 0.33) or (nArt / nVols >= 0.33):
             df_merge.loc[index, 'MotionExclusion'] = True
             print('Motion Exclusion: ' + row['filename'])
     
@@ -157,7 +166,7 @@ def mark_motion_exclusions(sub, derivDir):
     df_merge.to_csv(scansfile, sep = '\t', 
                     index = False, 
                     columns=['filename', 'task', 'run', 'subject', 'MotionExclusion', 'MeanFD',
-                             '#Artifacts_FD', 'MeanDVARS', '#Artifacts_DVARS', 'OtherExclusion', 'OtherExclusionReason'])
+                             '#Artifacts_FD', 'MeanDVARS', '#Artifacts_DVARS', '#Artifacts_ART'])
 
 # define function which takes information from singularity call, prints it to terminal, and then runs the function defined above
 def main():
