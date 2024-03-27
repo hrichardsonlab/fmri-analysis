@@ -53,7 +53,7 @@ do
 		echo
 		
 		# delete scans.tsv file if it already exists
-		if [ -f ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ]
+		if [ -f ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ] || [ -f ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ] 
 		then 
 			rm ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
 			rm ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv

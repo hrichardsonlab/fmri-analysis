@@ -60,6 +60,10 @@ def mark_motion_exclusions(sub, derivDir):
                 # name of motion parameters file (will be written out in next step)
                 mp_filestr = sub + '_ses-01_task-' + task + '_mcparams.tsv'
                 
+                # name of motion parameters file (written out by rapidart)
+                art_filestr = '*outliers.txt'
+                af = op.join(derivDir, sub, 'ses-01', 'func', 'art', task, art_filestr)
+                
                 outname = task # create a different output directory name for each run
                 
             # if there's multiple runs (pixar data)
@@ -99,7 +103,6 @@ def mark_motion_exclusions(sub, derivDir):
         
         # extract and write realignment parameters in a format for art
         mp_name = op.join(derivDir, sub, 'ses-01', 'func', mp_filestr)
-        print('saving motion parameter file for ' + sub + '_' + task + str(run))
         pd.read_table(confound_file).to_csv(mp_name, sep='\t',
                                            header = False,
                                            index = False, 
@@ -135,7 +138,14 @@ def mark_motion_exclusions(sub, derivDir):
         
         # read in art output to count number of artefact timepoints
         art_file = glob.glob(af)[0]
-        nArt=len(pd.read_csv(art_file, header=None))
+        
+        if op.getsize(art_file) == 0: # if no timepoints tagged as artifact
+            nArt=0
+        else:
+            nArt=len(pd.read_csv(art_file, header=None))
+        
+        # print number of artifact timepoints
+        print('identified ' + str(nArt) + ' artifacts saved in ' + art_file)
         
         # extract standarized dvars and calculate TRs over 1.5 DVARS limit
         DVARS = dfConfounds.std_dvars[1:]
