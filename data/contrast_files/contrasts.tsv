@@ -1,0 +1,3 @@
+task	desc	conds	weights
+pixar	Mind-Body	Mind Body	1 -1
+pixar	Faces-Scenes	Faces Scenes	1 -1

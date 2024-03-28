@@ -47,6 +47,9 @@ then
 	echo
 	echo "./run_first-level.sh pipeline-pixar_events.py list.txt"
 	echo
+	
+	# end script and show full usage documentation
+	Usage
 fi
 
 if [ ! ${2##*.} == "txt" ]
@@ -57,6 +60,9 @@ then
 	echo
 	echo "./run_first-level.sh pipeline-pixar_events.py list.txt"
 	echo
+	
+	# end script and show full usage documentation	
+	Usage
 fi
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
@@ -66,6 +72,9 @@ fi
 
 # extract name of pipeline for output directory
 outname=` basename ${pipeline} | cut -d '-' -f 2 | cut -d '.' -f 1 `
+
+# define session (should always be 01, could alternatively comment out if no session info/directory in BIDS data)
+ses=01
 
 # define directories
 projDir=`cat ../../PATHS.txt`
@@ -105,14 +114,15 @@ do
 	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# data folder name
 	NAME=` basename ${p} |  cut -d "-" -f 3 `			# subj number from folder name
 		
-
 	# run first-level workflow using script specified in script call
 	singularity exec -C -B /EBC:/EBC						\
 	${singularityDir}/nipype.simg							\
 	/neurodocker/startup.sh python ${codeDir}/${pipeline}	\
+	${projDir}												\
 	-f ${derivDir}											\
 	-w ${outDir}/processing 								\
 	-o ${outDir}											\
+	--ss ${ses}												\
 	-s sub-${NAME}
 	
 done <$2

@@ -72,4 +72,5 @@ echo
 
 cp -r ${dataDir}/scripts/${cohort}/. ${proj}/scripts
 cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/data/subj_lists
-cp -r ${dataDir}/event_files/${cohort}/. ${proj}/data/event_files
+cp -r ${dataDir}/event_files ${proj}/data
+cp -r ${dataDir}/contrast_files ${proj}/data
