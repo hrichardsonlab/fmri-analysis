@@ -80,14 +80,15 @@ ses=01
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/07.first_level"
-derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
-outDir="${projDir}/results/${outname}"
+bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
+derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
+outDir="${projDir}/analysis/${outname}"
 
 # create working and output directories if they don't exist
-if [ ! -d ${outDir} ]
+if [ ! -d ${outDir} ] || [ ! -d ${outDir}/processing ]
 then 
 	echo
-	echo "Creating project results directory: ${outDir}"
+	echo "Creating project analysis directory: ${outDir}"
 	echo
 	
 	mkdir -p ${outDir}
@@ -107,22 +108,14 @@ echo
 echo "Running" ${pipeline} "pipeline for..."
 echo "${subjs}"
 
-# ITERATE FOR ALL SUBJECTS IN THE TXT FILE
-while read p
-do
-
-	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# data folder name
-	NAME=` basename ${p} |  cut -d "-" -f 3 `			# subj number from folder name
-		
-	# run first-level workflow using script specified in script call
-	singularity exec -C -B /EBC:/EBC						\
-	${singularityDir}/nipype.simg							\
-	/neurodocker/startup.sh python ${codeDir}/${pipeline}	\
-	${projDir}												\
-	-f ${derivDir}											\
-	-w ${outDir}/processing 								\
-	-o ${outDir}											\
-	--ss ${ses}												\
-	-s sub-${NAME}
-	
-done <$2
+# run first-level workflow using script specified in script call
+singularity exec -C -B /EBC:/EBC						\
+${singularityDir}/nipype.simg							\
+/neurodocker/startup.sh python ${codeDir}/${pipeline}	\
+${projDir}												\
+-b ${bidsDir}											\
+-d ${derivDir}											\
+-w ${outDir}/processing									\
+-o ${outDir}											\
+-ss ${ses}												\
+-s ${subjs}

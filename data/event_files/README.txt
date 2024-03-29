@@ -13,3 +13,5 @@ Several important things to note:
 - Each task events file REQUIRES a corresponding task data file. The events file name must have the name of the corresponding data file indicated in it's name (e.g., sub-001_ses-01_task-pixar_run-01_events.tsv)
 
 - Columns indicating the onset and duration are required. Optionally, a trial_type column can be included - this is almost always needed to indicate which events the onset and durations refer to.
+
+- Event onsets for pixar assume a 10s delay between the start of acquisition and the start of the movie.

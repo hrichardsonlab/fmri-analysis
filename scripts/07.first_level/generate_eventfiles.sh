@@ -41,8 +41,8 @@ ses=01
 
 # define directories
 projDir=`cat ../../PATHS.txt`
-bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot"
-derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
+bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
+derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
 
 # ITERATE FOR ALL SUBJECTS IN THE TXT FILE
 while read p
