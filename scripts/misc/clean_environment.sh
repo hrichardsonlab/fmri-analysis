@@ -20,11 +20,10 @@ Usage() {
     echo
     exit
 }
-[ "$1" = "" ] && Usage
 
 if [ ! -f ../../PATHS.txt ]
 then Usage
-done
+fi
 
 # define directories
 projDir=`cat ../../PATHS.txt`

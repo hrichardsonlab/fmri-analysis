@@ -1,0 +1,10 @@
+bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot
+derivDir	/EBC/preprocessedData/TEBC-5y/derivatives/pilot
+task	pixar
+sessions	01
+smoothing	5
+hpf	100
+events	Mind-Body
+dropvols	0
+regressors	art, aCompCor
+overwrite	yes
