@@ -32,8 +32,8 @@ bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot" 		# BIDs_data has some m
 tmpDir="${bidsDir}/tmp"											# temporary directory to transfer raw data to for BIDS conversion
 
 # define number of dicoms per functional run for data checking
-pixar_dicoms=324
-sesame_dicoms=394
+pixar_dicoms=214  # 324 in complete run
+sesame_dicoms=260 # 394 in complete run
 
 # define config file to use for bids conversion
 config=${toolDir}/dcm2bids/TEBC-5Y_config_file-pilot.json
