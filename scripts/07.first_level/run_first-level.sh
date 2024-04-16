@@ -90,8 +90,8 @@ then Usage
 fi
 
 # extract project and analysis name from config file
-proj_name=` basename ${config} | cut -d '-' -f 2 | cut -d '_' -f 1 `
-analysis_name=` basename ${config} | cut -d '_' -f 2 | cut -d '.' -f 1 `
+proj_name=` basename ${config} | cut -d '-' -f 2 | cut -d '_' -f 1 ` # name provided after hyphen and before underscore
+analysis_name=` basename ${config} | cut -d '_' -f 2 | cut -d '.' -f 1 ` # name provided after underscore
 
 # define directories
 projDir=`cat ../../PATHS.txt`
