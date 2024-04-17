@@ -49,12 +49,12 @@ else
 fi
 
 # print confirmation of sample and directory
-echo 'Generating events.tsv files for' ${sample} 'data in' ${derivDir}
+echo 'Generating scans.tsv files for' ${sample} 'data in' ${derivDir}
 
 # iterate over subjects
 while read p
 do
-	sub=$(echo ${p} |awk '{print $1}')
+	sub=$(echo ${p} | awk '{print $1}')
 	
 	# define subject derivatives directory depending on whether data are organized in session folders
 	if [[ ${sessions} == 'yes' ]]

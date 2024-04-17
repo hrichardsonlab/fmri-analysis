@@ -43,17 +43,34 @@ if [[ ! "$PWD" =~ "/EBC/" ]]
 then Usage
 fi
 
+# define session (should always be 01 for EBC data, could alternatively put 'None' for non-EBC data)
+ses=01
+
 # define subjects from text document
 subjs=$(cat $1) 
 
-# define session (should always be 01, could alternatively comment out if no session info/directory in BIDS data)
-ses=01
+# extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
+sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
+echo ${sample}
+
+# define data directories depending on sample information
+if [[ ${sample} == 'pilot' ]]
+then
+	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
+elif [[ ${sample} == 'HV' ]]
+then
+	derivDir="/EBC/preprocessedData/TEBC-5y-adultpilot/derivatives"
+else
+	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
+fi
+
+# print confirmation of sample and directory
+echo 'Checking data files for' ${sample} 'data in' ${derivDir}
 
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/06.motion_exclusions"
-derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
 qcDir="${projDir}/data/data_checking"
 
 # create data checking directory if it doesn't exist
@@ -78,43 +95,51 @@ echo
 echo "Checking data for..."
 echo "${subjs}"
 
-# ITERATE FOR ALL SUBJECTS IN THE TXT FILE
+# iterate over subjects
 while read p
 do
-
-	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# data folder name
-	NAME=` basename ${p} |  cut -d "-" -f 3 `			# subj number from folder name
-		
+	sub=$(echo ${p} | awk '{print $1}')
+	
+	# define subject derivatives directory depending on whether data are organized in session folders
+	if [[ ${ses} != 'None' ]]
+	then
+		subDir="${derivDir}/sub-${sub}/ses-01/func"
+		scan_file="${subDir}/sub-${sub}_ses-01_scans.tsv"
+	else
+		subDir="${derivDir}/sub-${sub}/func"
+		scan_file="${subDir}/sub-${sub}_scans.tsv"
+	fi
+			
 	# make subject data checking directory
-	mkdir -p ${qcDir}/sub-${NAME}
+	mkdir -p ${qcDir}/sub-${sub}
 	
 	# copy fMRIPrep output images to data checking directory for QC
-	cp ${derivDir}/sub-${NAME}/figures/*reconall_T1w.svg ${qcDir}/sub-${NAME}
-	cp ${derivDir}/sub-${NAME}/figures/*MNI152NLin2009cAsym_desc-preproc_T1w.svg ${qcDir}/sub-${NAME}
-	cp ${derivDir}/sub-${NAME}/figures/*desc-coreg_bold.svg ${qcDir}/sub-${NAME}
-	cp ${derivDir}/sub-${NAME}/figures/*desc-sdc_bold.svg ${qcDir}/sub-${NAME}
+	cp ${derivDir}/sub-${sub}/figures/*reconall_T1w.svg ${qcDir}/sub-${sub}
+	cp ${derivDir}/sub-${sub}/figures/*MNI152NLin2009cAsym_desc-preproc_T1w.svg ${qcDir}/sub-${sub}
+	cp ${derivDir}/sub-${sub}/figures/*desc-coreg_bold.svg ${qcDir}/sub-${sub}
+	cp ${derivDir}/sub-${sub}/figures/*desc-sdc_bold.svg ${qcDir}/sub-${sub}
 	
 	# run singularity to create average functional mask
-	singularity exec -C -B /EBC:/EBC																			\
-	${singularityDir}/nipype.simg																				\
-	/neurodocker/startup.sh python ${codeDir}/concat_brain_masks.py	-f ${derivDir} -s sub-${NAME} -ss ${ses}
+	# singularity exec -C -B /EBC:/EBC																			\
+	# ${singularityDir}/nipype.simg																				\
+	# /neurodocker/startup.sh python ${codeDir}/concat_brain_masks.py	-f ${derivDir} -s sub-${sub} -ss ${ses}
 	
-	# run singularity to generate files with motion information for run exclusion
-	singularity exec -C -B /EBC:/EBC															\
-	${singularityDir}/nipype.simg 																\
-	/neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py sub-${NAME} ${derivDir}	\
-	-w ${singularityDir}
+	# # run singularity to generate files with motion information for run exclusion
+	# singularity exec -C -B /EBC:/EBC															\
+	# ${singularityDir}/nipype.simg 																\
+	# /neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py sub-${sub} ${derivDir}	\
+	# -w ${singularityDir}
 	
 	# give other users permissions to created files
-	chmod a+wrx ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
-	chmod a+wrx ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz
-	
+	chmod a+wrx ${scan_file}
+	chmod a+wrx ${subDir}/*_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz
+
 	# add scan information to data checking scans file
 	if [ ! -f ${qcDir}/scans-group.tsv ] # on first loop, take header information from first subject
 	then
-		awk 'NR == 0' ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv >> ${qcDir}/scans-group.tsv
+		awk 'NR>0' ${scan_file} >> ${qcDir}/scans-group.tsv
 	else
-		awk 'NR > 1' ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv >> ${qcDir}/scans-group.tsv
+		awk 'NR>1' ${scan_file} >> ${qcDir}/scans-group.tsv
 	fi
 
 done <$1

@@ -43,7 +43,7 @@ def concat_masks(derivDir, sub, ses=None):
                 # load the mask file
                 mask_img = image.load_img(maskfiles[maskI])
                 # add the mask file to the concatenated mask
-                concat_mask_img = image.math_img("img1 + img2", img1 = concat_mask_img, img2 = mask_img)
+                concat_mask_img = image.math_img('img1 + img2', img1 = concat_mask_img, img2 = mask_img)
 
         # binarize the concatenated mask file
         concat_mask_data = concat_mask_img.get_fdata() # get image data (as floating point data)
@@ -58,12 +58,12 @@ def argparser():
     # create an instance of ArgumentParser
     parser = argparse.ArgumentParser()
     # attach argument specifications to the parser
-    parser.add_argument("-f", dest="derivDir",
-                        help="Output directory of fmriprep")
-    parser.add_argument("-s", dest="sub",
-                        help="subject ID")                
-    parser.add_argument("-ss", dest="ses", default=None,
-                        help="Session to process (default: None)")
+    parser.add_argument('-f', dest='derivDir',
+                        help='Output directory of fmriprep')
+    parser.add_argument('-s', dest='sub',
+                        help='subject ID')                
+    parser.add_argument('-ss', dest='ses', default=None,
+                        help='Session to process (default: None)')
     return parser
 
 # define function that checks inputs against parser function
@@ -73,7 +73,7 @@ def main(argv=None):
     
     # print if the fMRIPrep directory is not found
     if not op.exists(args.derivDir):
-        raise IOError("fMRIprep directory {} not found.".format(args.derivDir))
+        raise IOError('fMRIprep directory {} not found.'.format(args.derivDir))
     
     # run concat_masks function with different inputs depending on what was passed to the parser function
     if not args.ses == None: # if session argument was passed, pass to function
@@ -82,5 +82,5 @@ def main(argv=None):
         concat_masks(args.derivDir, args.sub)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
