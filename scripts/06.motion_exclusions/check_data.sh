@@ -46,32 +46,32 @@ fi
 # define session (should always be 01 for EBC data, could alternatively put 'None' for non-EBC data)
 ses=01
 
-# define subjects from text document
-subjs=$(cat $1) 
-
-# extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
-sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
-echo ${sample}
-
-# define data directories depending on sample information
-if [[ ${sample} == 'pilot' ]]
-then
-	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
-elif [[ ${sample} == 'HV' ]]
-then
-	derivDir="/EBC/preprocessedData/TEBC-5y-adultpilot/derivatives"
-else
-	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
-fi
-
-# print confirmation of sample and directory
-echo 'Checking data files for' ${sample} 'data in' ${derivDir}
-
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/06.motion_exclusions"
 qcDir="${projDir}/data/data_checking"
+
+# define subjects from text document
+subjs=$(cat $1) 
+
+# extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
+sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
+cohort=` basename $1 | cut -d '_' -f 1 `
+
+# define data directories depending on sample information
+if [[ ${sample} == 'pilot' ]]
+then
+	derivDir="/EBC/preprocessedData/${cohort}/derivatives/pilot"
+elif [[ ${sample} == 'HV' ]]
+then
+	derivDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
+else
+	derivDir="/EBC/preprocessedData/${cohort}/derivatives"
+fi
+
+# print confirmation of sample and directory
+echo 'Checking data files for' ${sample} 'data in' ${derivDir}
 
 # create data checking directory if it doesn't exist
 if [ ! -d ${qcDir} ]
@@ -120,15 +120,15 @@ do
 	cp ${derivDir}/sub-${sub}/figures/*desc-sdc_bold.svg ${qcDir}/sub-${sub}
 	
 	# run singularity to create average functional mask
-	# singularity exec -C -B /EBC:/EBC																			\
-	# ${singularityDir}/nipype.simg																				\
-	# /neurodocker/startup.sh python ${codeDir}/concat_brain_masks.py	-f ${derivDir} -s sub-${sub} -ss ${ses}
+	singularity exec -C -B /EBC:/EBC																			\
+	${singularityDir}/nipype.simg																				\
+	/neurodocker/startup.sh python ${codeDir}/concat_brain_masks.py	-f ${derivDir} -s sub-${sub} -ss ${ses}
 	
-	# # run singularity to generate files with motion information for run exclusion
-	# singularity exec -C -B /EBC:/EBC															\
-	# ${singularityDir}/nipype.simg 																\
-	# /neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py sub-${sub} ${derivDir}	\
-	# -w ${singularityDir}
+	# run singularity to generate files with motion information for run exclusion
+	singularity exec -C -B /EBC:/EBC															\
+	${singularityDir}/nipype.simg 																\
+	/neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py sub-${sub} ${derivDir}	\
+	-w ${singularityDir}
 	
 	# give other users permissions to created files
 	chmod a+wrx ${scan_file}

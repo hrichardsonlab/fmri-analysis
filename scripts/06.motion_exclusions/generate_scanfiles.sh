@@ -33,28 +33,29 @@ sessions='yes'
 
 # extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
 sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
+cohort=` basename $1 | cut -d '_' -f 1 `
 
 # define data directories depending on sample information
 if [[ ${sample} == 'pilot' ]]
 then
-	bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot"
-	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	derivDir="/EBC/preprocessedData/${cohort}/derivatives/pilot"
 elif [[ ${sample} == 'HV' ]]
 then
-	bidsDir="/EBC/preprocessedData/TEBC-5y-adultpilot/BIDs_data"
-	derivDir="/EBC/preprocessedData/TEBC-5y-adultpilot/derivatives"
+	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	derivDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
 else
-	bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
-	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
+	derivDir="/EBC/preprocessedData/${cohort}/derivatives"
 fi
 
 # print confirmation of sample and directory
-echo 'Generating scans.tsv files for' ${sample} 'data in' ${derivDir}
+echo 'Generating events.tsv files for' ${sample} 'data in' ${derivDir}
 
 # iterate over subjects
 while read p
 do
-	sub=$(echo ${p} | awk '{print $1}')
+	sub=$(echo ${p} |awk '{print $1}')
 	
 	# define subject derivatives directory depending on whether data are organized in session folders
 	if [[ ${sessions} == 'yes' ]]
