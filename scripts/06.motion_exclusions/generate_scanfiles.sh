@@ -11,7 +11,7 @@
 Usage() {
     echo
     echo "Usage:"
-    echo "./generate_scanfiles.sh <list of subject folders to convert>"
+    echo "./generate_scanfiles.sh <list of subjects>"
     echo
     echo "Example:"
     echo "./generate_scanfiles.sh list.txt"
@@ -28,42 +28,63 @@ Usage() {
 }
 [ "$1" = "" ] && Usage
 
-# define subjects from text document
-subjs=$(cat $1)
+# indicate whether session folders are used (always 'yes' for EBC data)
+sessions='yes'
 
-# define session (should always be 01 for EBC data)
-ses=01
+# extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
+sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
 
-# define directories
-bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
-derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
+# define data directories depending on sample information
+if [[ ${sample} == 'pilot' ]]
+then
+	bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot"
+	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
+elif [[ ${sample} == 'HV' ]]
+then
+	bidsDir="/EBC/preprocessedData/TEBC-5y-adultpilot/BIDs_data"
+	derivDir="/EBC/preprocessedData/TEBC-5y-adultpilot/derivatives"
+else
+	bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
+	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
+fi
 
-# ITERATE FOR ALL SUBJECTS IN THE TXT FILE
+# print confirmation of sample and directory
+echo 'Generating events.tsv files for' ${sample} 'data in' ${derivDir}
+
+# iterate over subjects
 while read p
 do
-	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# data folder name
-	NAME=` basename ${p} |  cut -d "-" -f 3 `			# subj number from folder name
+	sub=$(echo ${p} |awk '{print $1}')
+	
+	# define subject derivatives directory depending on whether data are organized in session folders
+	if [[ ${sessions} == 'yes' ]]
+	then
+		subDir_bids="${bidsDir}/sub-${sub}/ses-01/func"
+		subDir_deriv="${derivDir}/sub-${sub}/ses-01/func"
+		scan_file="sub-${sub}_ses-01_scans.tsv"
+	else
+		subDir_bids="${bidsDir}/sub-${sub}/func"
+		subDir_deriv="${derivDir}/sub-${sub}/func"
+		scan_file="sub-${sub}_scans.tsv"
+	fi
 	
 	# create scan.tsv file for each subject who has functional data
-	if [ -d ${bidsDir}/sub-${NAME}/ses-${ses}/func ] # if the subject has a functional data folder
+	if [ -d ${subDir_bids} ] # if the subject has a functional data folder
 	then
-	
-		echo
-		echo "Generating scans.tsv file for sub-${NAME}"
-		echo
-		
+		echo "Generating scans.tsv file for sub-${sub}"
+
 		# delete scans.tsv file if it already exists
-		if [ -f ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ] || [ -f ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ] 
+		if [ -f ${subDir_bids}/${scan_file} ] || [ -f ${subDir_deriv}/${scan_file} ] 
 		then 
-			rm ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
-			rm ${derivDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
+			rm ${subDir_bids}/${scan_file}
+			rm ${subDir_deriv}/${scan_file}
 		fi
 		
 		# print run info to scan.tsv file
-		printf "filename" >> ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
+		printf "filename" >>  ${subDir_bids}/${scan_file}
 	
 		# list of functional files
-		files=(`ls ${bidsDir}/sub-${NAME}/ses-${ses}/func/*nii.gz`)
+		files=(`ls ${subDir_bids}/*nii.gz`)
 		
 		# for each file in the func directory, add filename to scans.tsv file
 		for f in ${files[@]}
@@ -74,12 +95,12 @@ do
 			# add file name (with directory) to scans.tsv file
 			name=""
 			name='\nfunc/'${current}
-			printf ${name} >> ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv
+			printf ${name} >> ${subDir_bids}/${scan_file}
 		done
 	fi
 	
 	# copy scans.tsv to derivDir
-	cp ${bidsDir}/sub-${NAME}/ses-${ses}/func/sub-${NAME}_ses-${ses}_scans.tsv ${derivDir}/sub-${NAME}/ses-${ses}/func
+	cp ${subDir_bids}/${scan_file} ${subDir_deriv}/${scan_file}
 	
 done <$1
 
