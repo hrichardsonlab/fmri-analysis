@@ -35,7 +35,7 @@ echo "Cleaning up temporary workflow directories in..." ${singularityDir}
 echo
 
 # remove temporary directories
-rm -r ${singularityDir}/fmriprep-23_2_wf/sub_${NAME}_wf
+rm -r ${singularityDir}/fmriprep-23_2_wf
 rm -r ${singularityDir}/rootfs*
 rm -r ${singularityDir}/20*
 rm -r ${singularityDir}/fmriprep
