@@ -25,20 +25,51 @@ Usage() {
 }
 [ "$1" = "" ] && Usage
 
-# define directories
-dataDir="/EBC/rawData/TEBC-5y"									# location of raw data
-toolDir="/EBC/processing/tools"									# location of shared tools (dcm2bids)
-bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data" 				# BIDs_data with modifications to the diffusion data (used for subsequent analyses)
-tmpDir="${bidsDir}/tmp"											# temporary directory to transfer raw data to for BIDS conversion
+# indicate whether session folders are used (always 'yes' for EBC data)
+sessions='yes'
+
+# extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
+sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
+cohort=` basename $1 | cut -d '_' -f 1 `
+
+# define location of shared tools (dcm2bids)
+toolDir="/EBC/processing/tools"
+
+# define data directories depending on sample information
+if [[ ${sample} == 'pilot' ]]
+then
+	# define data directories
+	dataDir="/EBC/rawData/${cohort}"
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	
+	# define config file to use for bids conversion
+	config=${toolDir}/dcm2bids/${cohort}_config_file-pilot.json
+elif [[ ${sample} == 'HV' ]]
+then
+	# define data directories
+	dataDir="/EBC/rawData/${cohort}-adultpilot"
+	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	# define config file to use for bids conversion
+	config=${toolDir}/dcm2bids/${cohort}_config_file.json
+else
+	# define data directories
+	dataDir="/EBC/rawData/${cohort}"
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
+	# define config file to use for bids conversion
+	config=${toolDir}/dcm2bids/${cohort}_config_file.json
+fi
+
+# define temporary directory to transfer raw data to for BIDS conversion 
+tmpDir="${bidsDir}/tmp"
+
+# print confirmation of sample and directory
+echo 'Converting' ${sample} 'data to BIDS format in' ${bidsDir}
 
 # define number of dicoms per functional run for data checking
 pixar_dicoms=214  # 324 in complete run
 sesame_dicoms=260 # 394 in complete run
 
-# define config file to use for bids conversion
-config=${toolDir}/dcm2bids/TEBC-5Y_config_file.json
-
-# create BIDS directories if they don't exist
+# create BIDS directory if it doesn't exist
 if [ ! -d ${bidsDir} ]
 then
 	mkdir -p ${bidsDir}
@@ -90,7 +121,7 @@ do
 				echo "Checking pixar run" ${pr}
 			
 				# check whether run has too few dicoms and if so remove prior to conversion
-				if [ ! "$(ls ${pr} | wc -l)" = ${pixar_dicoms} ] 
+				if [[ ! "$(ls ${pr} | wc -l)" -ge ${pixar_dicoms} ]]
 				then
 					echo
 					echo ${pr} "is an incomplete run and will be excluded from BIDS conversion"
@@ -105,7 +136,7 @@ do
 				echo "Checking sesame run" ${sr}
 			
 				# check whether run has too few dicoms and if so remove prior to conversion
-				if [ ! "$(ls ${sr} | wc -l)" = ${sesame_dicoms} ] 
+				if [[ ! "$(ls ${sr} | wc -l)" -ge ${sesame_dicoms} ]]
 				then
 					echo
 					echo ${sr} "is an incomplete run and will be excluded from BIDS conversion"
@@ -129,17 +160,26 @@ do
 				# -s: session ID
 				# -c: configuration file
 				# -o: output directory
-			dcm2bids -d ${tmpDir}/${ORIGINALNAME}/*/ -p ${NEWNAME} -s 01 -c ${config} -o ${tmpDir}
+			if [[ ${sessions} == 'yes' ]]
+			then
+				dcm2bids -d ${tmpDir}/${ORIGINALNAME}/*/ -p ${NEWNAME} -s 01 -c ${config} -o ${tmpDir}
+				subDir="sub-${NEWNAME}/ses-01"
+				file_prefix="sub-${NEWNAME}_ses-01"
+			else
+				dcm2bids -d ${tmpDir}/${ORIGINALNAME}/*/ -p ${NEWNAME} -c ${config} -o ${tmpDir}
+				subDir="sub-${NEWNAME}"
+				file_prefix="sub-${NEWNAME}"
+			fi
 			
 			# deactivate conda environment
 			conda deactivate
 			
 			# if participant only has 1 run of pixar data, rename to run-01 (default is no run info)
-			if [ -f ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.nii.gz ]
+			if [ -f ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.nii.gz ]
 			then
 				# remame files
-				mv ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.nii.gz ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_run-01_bold.nii.gz
-				mv ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_bold.json ${tmpDir}/sub-${NEWNAME}/ses-01/func/sub-${NEWNAME}_ses-01_task-pixar_run-01_bold.json
+				mv ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.nii.gz ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_run-01_bold.nii.gz
+				mv ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.json ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_run-01_bold.json
 			fi
 			
 			# remove tmp conversion directories
@@ -150,11 +190,11 @@ do
 			cp -r ${tmpDir}/sub-${NEWNAME} ${bidsDir}
 			
 			# remove the default diffusion data files
-			rm ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/*.nii.gz
-			rm ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/*.bv*
+			rm ${bidsDir}/${subDir}/dwi/*.nii.gz
+			rm ${bidsDir}/${subDir}/dwi/*.bv*
 			
 			# generate new diffusion files
-			/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.nii.gz -fslgrad ${tmpDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bvec ${tmpDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bval -shells 0,500,1000,2000 ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.nii.gz -export_grad_fsl ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bvec ${bidsDir}/sub-${NEWNAME}/ses-01/dwi/sub-${NEWNAME}_ses-01_dwi.bval
+			/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz -fslgrad ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bval -shells 0,500,1000,2000 ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz -export_grad_fsl ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bval
 			
 			# give other users permissions to the generated folder
 			chmod -R a+rwx ${bidsDir}/sub-${NEWNAME}

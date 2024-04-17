@@ -4,7 +4,7 @@
 # RUN MRIQC ON BIDS FORMATTED DATA
 #
 # The MRIQC singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/mriqc-23.1.0.simg docker://nipreps/mriqc:23.1.0
+# 	singularity build /EBC/processing/singularity_images/mriqc-24.0.0.simg docker://nipreps/mriqc:24.0.0
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
@@ -37,14 +37,31 @@ if [[ ! "$PWD" =~ "/EBC/" ]]
 then Usage
 fi
 
-# define subjects from text document
-subjs=$(cat $1) 
-
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="$projDir/singularity_images"
-bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
-qcDir="/EBC/preprocessedData/TEBC-5y/derivatives/mriqc"
+
+# define subjects from text document
+subjs=$(cat $1) 
+
+# extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
+sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
+cohort=` basename $1 | cut -d '_' -f 1 `
+
+# define data directories depending on sample information
+if [[ ${sample} == 'pilot' ]]
+then
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	qcDir="/EBC/preprocessedData/${cohort}/derivatives/pilot/mriqc"
+elif [[ ${sample} == 'HV' ]]
+then
+	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	qcDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives/mriqc"
+
+else
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
+	qcDir="/EBC/preprocessedData/${cohort}/derivatives/mriqc"
+fi
 
 # create QC and dvars directory if they don't exist
 if [ ! -d ${qcDir} ]
@@ -72,7 +89,7 @@ unset PYTHONPATH
 # run MRIQC (https://mriqc.readthedocs.io/en/latest/running.html#singularity-containers)
 ## generate subject reports
 singularity run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
-${singularityDir}/mriqc-23.1.0.simg																		\
+${singularityDir}/mriqc-24.0.0.simg																		\
 ${bidsDir} ${qcDir}																						\
 participant																								\
 --participant_label ${subjs}																			\
@@ -113,7 +130,7 @@ rm ${qcDir}/sub*.tsv
 
 ## generate group reports
 singularity run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
-${singularityDir}/mriqc-23.1.0.simg																		\
+${singularityDir}/mriqc-24.0.0.simg																		\
 ${bidsDir} ${qcDir} group 																				\
 -m T1w bold
 

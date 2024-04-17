@@ -14,9 +14,9 @@ Usage() {
     echo
 	echo
     echo "Usage:"
-    echo "./setup_project PROJECT_NAME"
+    echo "./setup_project cohort PROJECT_NAME"
 	echo
-	echo "You must provide a PROJECT_NAME (with no spaces) so the associated project folder can be generated"
+	echo "You must provide (1) the cohort for analysis and (2) a PROJECT_NAME (with no spaces) so the associated project folder can be generated"
 	echo
 	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /EBC/ directory."
@@ -27,16 +27,16 @@ Usage() {
     echo
     exit
 }
-[ "$1" = "" ] && Usage
+[ "$1" = "" ] | [ "$2" = "" ] && Usage
 
 # define cohort
-cohort="TEBC-5y"
+cohort=$1
+
+# define project as text provided after script call
+proj=$2
 
 # define directories
 dataDir="/EBC/processing"	# location of shared files
-
-# define project as text provided after script call
-proj=$1
 
 # delete the project directory if it already exists
 if [ -d ${proj} ]
@@ -70,7 +70,7 @@ echo
 echo "copying scripts and data files to project directory"
 echo
 
-cp -r ${dataDir}/scripts/${cohort}/. ${proj}/scripts
+cp -r ${dataDir}/scripts/fMRI/. ${proj}/scripts
 cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/data/subj_lists
 cp -r ${dataDir}/event_files ${proj}/data
 cp -r ${dataDir}/contrast_files ${proj}/data

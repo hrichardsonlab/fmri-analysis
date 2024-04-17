@@ -1,0 +1,192 @@
+ {
+   "descriptions": [
+      {
+         "dataType": "anat",
+         "modalityLabel": "T1w",
+         "criteria": {
+            "SidecarFilename": "*t1_mprage*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-MTon_echo-1",
+         "criteria": {
+            "EchoNumber": 1,
+            "SidecarFilename": "*MTSatOn_7y*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-MTon_echo-2",
+         "criteria": {
+            "EchoNumber": 2,
+            "SidecarFilename": "*MTSatOn_7y*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-MTon_echo-3",
+         "criteria": {
+            "EchoNumber": 3,
+            "SidecarFilename": "*MTSatOn_7y*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-MToff_echo-1",
+         "criteria": {
+            "EchoNumber": 1,
+            "SidecarFilename": "*MTSatOff_7y*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-MToff_echo-2",
+         "criteria": {
+            "EchoNumber": 2,
+            "SidecarFilename": "*MTSatOff_7y*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-MToff_echo-3",
+         "criteria": {
+            "EchoNumber": 3,
+            "SidecarFilename": "*MTSatOff_7y*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-T1w_echo-1",
+         "criteria": {
+            "EchoNumber": 1,
+            "SidecarFilename": "*MTSatT1w_7y*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-T1w_echo-2",
+         "criteria": {
+            "EchoNumber": 2,
+            "SidecarFilename": "*MTSatT1w_7y*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "MTS",
+         "customLabels": "acq-T1w_echo-3",
+         "criteria": {
+            "EchoNumber": 3,
+            "SidecarFilename": "*MTSatT1w_7y*"
+         }
+      },
+      {
+         "dataType": "dwi",
+         "modalityLabel": "dwi",
+         "criteria": {
+            "SidecarFilename": "*DTI_AP*"
+         }
+      },
+      {
+         "dataType": "anat",
+         "modalityLabel": "T2w",
+         "criteria": {
+            "SidecarFilename": "*t2_space*"
+         }
+      },
+      {
+         "dataType": "func",
+         "modalityLabel": "bold",
+         "customLabels": "task-pixar_run-01",
+         "sidecarChanges": {
+            "TaskName": "pixar"
+         },
+         "criteria": {
+            "SidecarFilename": "*s3_AP_pixar-1*"
+         }
+      },
+      {
+         "dataType": "func",
+         "modalityLabel": "bold",
+         "customLabels": "task-pixar_run-02",
+         "sidecarChanges": {
+            "TaskName": "pixar"
+         },
+         "criteria": {
+            "SidecarFilename": "*s3_AP_pixar-2*"
+         }
+      },
+      {
+         "dataType": "func",
+         "modalityLabel": "bold",
+         "customLabels": "task-sesame",
+         "sidecarChanges": {
+            "TaskName": "sesame"
+         },
+         "criteria": {
+            "SidecarFilename": "*s3_AP_sesame*"
+         }
+      },
+      {
+         "dataType": "fmap",
+         "modalityLabel": "epi",
+         "IntendedFor": 10,
+         "customLabels": "dir-PA",
+         "criteria": {
+            "SidecarFilename": "*DTI_rev_PA*"
+         }
+      },
+      {
+         "dataType": "fmap",
+         "modalityLabel": "magnitude1",
+         "IntendedFor": [
+            12,
+            13,
+            14
+         ],
+         "criteria": {
+            "SidecarFilename": "*_gre_field_mapping_*_e*",
+            "EchoTime": 0.00492,
+            "ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
+         }
+      },
+      {
+         "dataType": "fmap",
+         "modalityLabel": "magnitude2",
+         "IntendedFor": [
+            12,
+            13,
+            14
+         ],
+         "criteria": {
+            "SidecarFilename": "*_gre_field_mapping_*_e*",
+            "EchoTime": 0.00738,
+            "ImageType": ["ORIGINAL", "PRIMARY", "M", "ND"]
+         }
+      },
+      {
+         "dataType": "fmap",
+         "modalityLabel": "phasediff",
+         "IntendedFor": [
+            12,
+            13,
+            14
+         ],
+         "criteria": {
+            "SidecarFilename": "*_gre_field_mapping_*_p*"
+         },
+         "sidecarChanges": {
+            "EchoTime1": 0.00492,
+            "EchoTime2": 0.00738
+         }
+      }
+   ]
+}
