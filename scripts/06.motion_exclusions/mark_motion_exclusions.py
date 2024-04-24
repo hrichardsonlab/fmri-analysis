@@ -46,11 +46,15 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, fd_thresh, dvars_thresh, a
     df_tsv['task'] = df_tsv['filename'].str.split('task-', expand=True).loc[:,1]
     df_tsv['task'] = df_tsv['task'].str.split('_run', expand=True).loc[:,0]
     df_tsv['task'] = df_tsv['task'].str.split('_bold', expand=True).loc[:,0]
-    df_tsv['run'] = df_tsv['filename'].str.split('run-', expand=True).loc[:,1]
+    df_tsv['run'] = df_tsv['filename'].str.split(df_tsv['task'][0], expand=True).loc[:,1]
     df_tsv['run'] = df_tsv['run'].str.split('_bold', expand=True).loc[:,0]
+    if not df_tsv['run'][0]: # if no run information
+        df_tsv['run'] = None
+    else:
+        df_tsv['run'] = df_tsv['run'].str.split('-', expand=True).loc[:,1]
     df_tsv['subject'] = df_tsv['filename'].str.split('func/', expand=True).loc[:,1]
     df_tsv['subject'] = df_tsv['subject'].str.split('_ses', expand=True).loc[:,0]
-    
+
     # dataframe with motion information columns that will be populated with info from confounds file
     df_merge = df_tsv
     df_merge.loc[:,'MotionExclusion'] = False
@@ -68,7 +72,7 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, fd_thresh, dvars_thresh, a
             subject = row['subject']
             
             # if there is only 1 run for this task (no run info specified: sesame data)
-            if not run:
+            if run == None:
                 # name of confound file (has FD/DVARS info)
                 confounds_filestr = '*task-' + task + '_desc-confounds*.tsv'
                 

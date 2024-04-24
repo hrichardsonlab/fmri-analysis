@@ -50,7 +50,7 @@ ses=01
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
-qcDir="${projDir}/data/data_checking"
+qcDir="${projDir}/analysis/data_checking"
 
 # extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
 sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
@@ -68,7 +68,7 @@ else
 fi
 
 # print confirmation of sample and directory
-echo 'Getting run information for' ${sample} 'data in' ${bidsDir}
+echo "Getting outlier information for" ${sample} "participants..."
 
 # create data checking directory if it doesn't exist
 if [ ! -d ${qcDir} ]

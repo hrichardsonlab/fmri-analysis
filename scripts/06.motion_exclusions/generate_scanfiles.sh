@@ -50,7 +50,7 @@ else
 fi
 
 # print confirmation of sample and directory
-echo 'Generating events.tsv files for' ${sample} 'data in' ${derivDir}
+echo 'Generating scans.tsv files for' ${sample} 'data in' ${derivDir}
 
 # iterate over subjects
 while read p

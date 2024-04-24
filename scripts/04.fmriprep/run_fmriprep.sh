@@ -108,6 +108,7 @@ do
 	--fs-license-file ${license}  > ${derivDir}/sub-${NAME}/log_fmriprep_sub-${NAME}.txt
 
 	# move subject report and freesurfer output files to appropriate directories
+	mv ${derivDir}/*dseg.tsv ${derivDir}/sourcedata/freesurfer
 	mv ${derivDir}/sub-${NAME}.html ${derivDir}/sub-${NAME}
 	
 	# give other users permissions to created files
