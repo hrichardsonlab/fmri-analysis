@@ -19,7 +19,7 @@ Usage() {
     echo "./run_first-level.sh <pipeline script> <configuration file name> <list of subjects>"
     echo
     echo "Example:"
-    echo "./run_first-level.sh pipeline_events.py config-events.tsv list.txt"
+    echo "./run_first-level.sh pipeline_events.py config-pixar_mind-body.tsv list.txt"
     echo
 	echo "the config file name (not path!) should be provided"
 	echo
@@ -37,6 +37,11 @@ Usage() {
     exit
 }
 [ "$1" = "" ] | [ "$2" = "" ] | [ "$3" = "" ] && Usage
+
+# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
+if [[ ! "$PWD" =~ "/EBC/" ]]
+then Usage
+fi
 
 # check that inputs are expected file types
 if [ ! ${pipeline##*.} == "py" ]
@@ -83,11 +88,6 @@ pipeline=$1
 config=$2
 subjs=$(cat $3 | awk '{print $1}') 
 runs=$(cat $3 | awk '{print $2}') 
-
-# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
-if [[ ! "$PWD" =~ "/EBC/" ]]
-then Usage
-fi
 
 # extract project and analysis name from config file
 proj_name=` basename ${config} | cut -d '-' -f 2 | cut -d '_' -f 1 ` # name provided after hyphen and before underscore

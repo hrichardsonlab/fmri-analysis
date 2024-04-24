@@ -139,11 +139,14 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         confounds = pd.read_csv(confound_file, sep='\t', na_values='n/a')
         
         # for each regressor
-        # NOTE: we are not using framewise displacement or the realigment motion parameters as regressors as is often done with adult fMRI
         regressors = []            
         for regressor in regressor_names:
             if regressor == 'framewise_displacement':
+                print('Processing {} regressor'.format(regressor))
                 regressors.append(confounds[regressor].fillna(0)[dropvols:])
+            elif regressor == 'std_dvars':
+                regressors.append(confounds[regressor].fillna(0)[dropvols:])
+                print('Processing {} regressor'.format(regressor))
             else:
                 regressors.append(confounds[regressor][dropvols:])
 
@@ -212,6 +215,8 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     modelspec.inputs.time_repetition = TR
     modelspec.inputs.high_pass_filter_cutoff = hpf
     wf.connect(modelinfo, 'out', modelspec, 'subject_info')
+    
+    print('Using a high pass filter cutoff of {}'.format(modelspec.inputs.high_pass_filter_cutoff))
     
     # if drop values requested (likely always no for us)
     if dropvols !=0:
