@@ -4,10 +4,10 @@
 # MARK RUNS THAT EXCEED MOTION THRESHOLDS
 #
 # This script moves select fMRIPrep output files to a data checking directory for ease of QC
-# It then runs the concat_brain_masks.py and mark_motion_exclusions.py scripts within a nipype singularity/cache
-# concat_brain_masks.py outputs an averaged, binarized EPI mask from whatever functional data each subject has
+# It then runs the concat_brain_masks.py and mark_motion_exclusions.py scripts within a nipype singularity
+# concat_brain_masks.py outputs an averaged, binarized EPI mask using whatever functional data each subject has
 # mark_motion_exclusions.py uses framewise displacement and standardized dvars to identify outlier volumes
-# If more than 1/3rd of the volumes in a given run are tagged, the run is marked for exclusion in a generated tsv file (in subject derivatives folder and data checking directory)
+# If more than the specified proportion of the volumes in a run are tagged, the run is marked for exclusion in a generated tsv file (in subject derivatives folder and data checking directory)
 #
 # The nipype singularity was installed using the following code:
 # 	singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
@@ -18,10 +18,10 @@ Usage() {
     echo
 	echo
     echo "Usage:"
-    echo "./check_data.sh <list of subjects>"
+    echo "./check_data.sh <configuration file name> <list of subjects>"
     echo
     echo "Example:"
-    echo "./check_data.sh list.txt"
+    echo "./check_data.sh config-pixar_mind-body.tsv list.txt"
     echo
     echo "list.txt is a file containing the participants to check:"
     echo "001"
@@ -36,54 +36,47 @@ Usage() {
     echo
     exit
 }
-[ "$1" = "" ] && Usage
+[ "$1" = "" ] | [ "$2" = "" ] && Usage
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/EBC/" ]]
 then Usage
 fi
 
-# define session (should always be 01 for EBC data, could alternatively put 'None' for non-EBC data)
-ses=01
+if [ ! ${1##*.} == "tsv" ]
+then
+	echo
+	echo "The configuration file was not found."
+	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
+	echo
+	echo "./check_data.sh config-pixar_mind-body.tsv list.txt"
+	echo
+	
+	# end script and show full usage documentation	
+	Usage
+fi
+
+if [ ! ${2##*.} == "txt" ]
+then
+	echo
+	echo "The list of participants was not found."
+	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
+	echo
+	echo "./check_data.sh config-pixar_mind-body.tsv list.txt"
+	echo
+	
+	# end script and show full usage documentation	
+	Usage
+fi
+
+# define configuration options and subjects from files passed in script call
+config=$1
+subjs=$(cat $2 | awk '{print $1}') 
 
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/06.motion_exclusions"
-qcDir="${projDir}/data/data_checking"
-
-# define subjects from text document
-subjs=$(cat $1) 
-
-# extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
-sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
-cohort=` basename $1 | cut -d '_' -f 1 `
-
-# define data directories depending on sample information
-if [[ ${sample} == 'pilot' ]]
-then
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives/pilot"
-elif [[ ${sample} == 'HV' ]]
-then
-	derivDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
-else
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives"
-fi
-
-# print confirmation of sample and directory
-echo 'Checking data files for' ${sample} 'data in' ${derivDir}
-
-# create data checking directory if it doesn't exist
-if [ ! -d ${qcDir} ]
-then 
-	mkdir -p ${qcDir}
-fi
-
-# delete data checking scans-group.tsv file if it already exists
-if [ -f ${qcDir}/scans-group.tsv ]
-then 
-	rm ${qcDir}/scans-group.tsv
-fi
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
 export SINGULARITY_TMPDIR=${singularityDir}
@@ -99,47 +92,21 @@ echo "${subjs}"
 while read p
 do
 	sub=$(echo ${p} | awk '{print $1}')
-	
-	# define subject derivatives directory depending on whether data are organized in session folders
-	if [[ ${ses} != 'None' ]]
-	then
-		subDir="${derivDir}/sub-${sub}/ses-01/func"
-		scan_file="${subDir}/sub-${sub}_ses-01_scans.tsv"
-	else
-		subDir="${derivDir}/sub-${sub}/func"
-		scan_file="${subDir}/sub-${sub}_scans.tsv"
-	fi
 			
-	# make subject data checking directory
-	mkdir -p ${qcDir}/sub-${sub}
-	
-	# copy fMRIPrep output images to data checking directory for QC
-	cp ${derivDir}/sub-${sub}/figures/*reconall_T1w.svg ${qcDir}/sub-${sub}
-	cp ${derivDir}/sub-${sub}/figures/*MNI152NLin2009cAsym_desc-preproc_T1w.svg ${qcDir}/sub-${sub}
-	cp ${derivDir}/sub-${sub}/figures/*desc-coreg_bold.svg ${qcDir}/sub-${sub}
-	cp ${derivDir}/sub-${sub}/figures/*desc-sdc_bold.svg ${qcDir}/sub-${sub}
-	
 	# run singularity to create average functional mask
-	singularity exec -C -B /EBC:/EBC																			\
-	${singularityDir}/nipype.simg																				\
-	/neurodocker/startup.sh python ${codeDir}/concat_brain_masks.py	-f ${derivDir} -s sub-${sub} -ss ${ses}
+	singularity exec -C -B /EBC:/EBC								\
+	${singularityDir}/nipype.simg									\
+	/neurodocker/startup.sh python ${codeDir}/concat_brain_masks.py \
+	-s ${sub} \
+	-c ${projDir}/${config}
 	
 	# run singularity to generate files with motion information for run exclusion
-	singularity exec -C -B /EBC:/EBC															\
-	${singularityDir}/nipype.simg 																\
-	/neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py sub-${sub} ${derivDir}	\
+	singularity exec -C -B /EBC:/EBC									\
+	${singularityDir}/nipype.simg 										\
+	/neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py \
+	-p ${projDir}														\
+	-s ${sub} 															\
+	-c ${projDir}/${config} 											\
 	-w ${singularityDir}
-	
-	# give other users permissions to created files
-	chmod a+wrx ${scan_file}
-	chmod a+wrx ${subDir}/*_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz
 
-	# add scan information to data checking scans file
-	if [ ! -f ${qcDir}/scans-group.tsv ] # on first loop, take header information from first subject
-	then
-		awk 'NR>0' ${scan_file} >> ${qcDir}/scans-group.tsv
-	else
-		awk 'NR>1' ${scan_file} >> ${qcDir}/scans-group.tsv
-	fi
-
-done <$1
+done <$2

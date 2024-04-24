@@ -96,7 +96,7 @@ fi
 while read p
 do
 	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# raw data folder name
-	NEWNAME=` basename ${p} |  cut -d "-" -f 3 `		# subj number from folder name
+	NEWNAME=` basename ${p} | awk -F- '{print $NF}' `	# subj number from folder name
 
 		if [ -d ${dataDir}/${ORIGINALNAME} ] # if the subject has a raw data folder
 		then

@@ -10,18 +10,20 @@ import glob
 
 # define mask concatenation function
 # inputs: derivatives directory, subject, session
-def concat_masks(derivDir, sub, ses=None): 
+def concat_masks(derivDir, sub, ses): 
     # print current subject
-    print('concatenating BOLD masks for ', sub)
+    print('concatenating BOLD masks for sub-{}'.format(sub))
     
     # define output filename and path, depending on whether session information is in BIDS directory/file names
-    if ses: 
+    if ses != 'no':
+        print('Session information provided. Assuming data are organized into session folders.')
+        
         # define path to inputs (subjects preprocessed functional data)
-        subDir = op.join(derivDir, sub, 'ses-' + ses, 'func')
+        subDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-' + ses, 'func')
         concat_img_fname = '{}/{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
-    else: 
+    else: # if session was 'no'
         # define path to inputs (subjects preprocessed functional data)
-        subDir = op.join(derivDir, sub, 'func')
+        subDir = op.join(derivDir, 'sub-{}'.format(sub), 'func')
         concat_img_fname = '{}/{}_MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub)
     
     # identify all mask files (there should be 1 per functional run)
@@ -29,7 +31,7 @@ def concat_masks(derivDir, sub, ses=None):
 
     # if no mask files were found
     if len(maskfiles) == 0:
-        print('No brain masks found for ', sub)
+        print('No brain masks found for sub-{}'.format(sub))
     # if mask files were found
     else:
         basemask = maskfiles[0] # take the first mask file as the base image
@@ -58,29 +60,30 @@ def argparser():
     # create an instance of ArgumentParser
     parser = argparse.ArgumentParser()
     # attach argument specifications to the parser
-    parser.add_argument('-f', dest='derivDir',
-                        help='Output directory of fmriprep')
     parser.add_argument('-s', dest='sub',
-                        help='subject ID')                
-    parser.add_argument('-ss', dest='ses', default=None,
-                        help='Session to process (default: None)')
+                        help='subject ID')
+    parser.add_argument('-c', dest='config',
+                        help='Configuration file')                                 
     return parser
 
 # define function that checks inputs against parser function
 def main(argv=None):
+    # call argparser function that defines command line inputs
     parser = argparser()
     args = parser.parse_args(argv)
-    
-    # print if the fMRIPrep directory is not found
-    if not op.exists(args.derivDir):
-        raise IOError('fMRIprep directory {} not found.'.format(args.derivDir))
-    
-    # run concat_masks function with different inputs depending on what was passed to the parser function
-    if not args.ses == None: # if session argument was passed, pass to function
-        concat_masks(args.derivDir, args.sub, args.ses) 
-    else: # if no session argument was passed, leave session argument as default (FALSE)
-        concat_masks(args.derivDir, args.sub)
+        
+    # read in configuration file and parse inputs
+    config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0)
+    derivDir=config_file.loc['derivDir',1]
+    ses=config_file.loc['sessions',1]
 
+    # print if the fMRIPrep directory is not found
+    if not op.exists(derivDir):
+        raise IOError('Derivatives directory {} not found.'.format(derivDir))       
+    
+    # run concat_masks function with different inputs depending on config options
+    concat_masks(derivDir, args.sub, ses)
+    
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
     main()
