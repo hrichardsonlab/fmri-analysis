@@ -96,7 +96,7 @@ analysis_name=` basename ${config} | cut -d '_' -f 2 | cut -d '.' -f 1 ` # name 
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
-codeDir="${projDir}/scripts/07.first_level"
+codeDir="${projDir}/scripts/06.first_level"
 outDir="${projDir}/analysis/${proj_name}/${analysis_name}"
 
 # create working and output directories if they don't exist

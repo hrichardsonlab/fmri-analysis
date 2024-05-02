@@ -76,7 +76,7 @@ subjs=$(cat $2 | awk '{print $1}')
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
-codeDir="${projDir}/scripts/06.motion_exclusions"
+codeDir="${projDir}/scripts/05.motion_exclusions"
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
 export SINGULARITY_TMPDIR=${singularityDir}
