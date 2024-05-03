@@ -101,6 +101,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         import os
         import os.path as op
         import pandas as pd
+        import numpy as np
         from nibabel import load
         
         # read in events, confound, and art outlier files
@@ -117,8 +118,11 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         nVols = load(mni_file).shape[3]
         # get middle volume to define halves
         midVol = int(nVols/2)
-        # calculate middle timepoint of run in seconds using TR (important for studies where TR != 1)
-        mid_run_time = midVol*TR
+        # number of volumes to drop per run (drop 6s total: 3s from each run)
+        drop_nVols = int((6/TR)/2)
+        
+        # list of volumes to drop around midpoint (6s total, 3s on each side of midVol)
+        droppedVols = np.arange(midVol-drop_nVols, midVol+drop_nVols, 1)
 
         # process full run if splithalf not requested
         if splithalf_id == 0:
@@ -129,24 +133,26 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         # process first half of data
         if splithalf_id == 1:
             print('Splitting first half of the run for analysis')
+            # take first volume to last volume, dropping final 3s of run
             t_min=0
-            t_size=midVol
+            t_size=midVol-drop_nVols
             
-            stimuli = stimuli[stimuli.onset < mid_run_time] # remove events that happen in the second half
-            confounds = confounds.head(midVol) # select confound variables from first half
-            outliers = outliers[outliers < midVol] # remove outliers from second half
+            stimuli = stimuli[stimuli.onset < min(droppedVols+1)*TR] # remove events that happen in the second half
+            confounds = confounds.head(midVol-drop_nVols) # select confound variables from first half
+            outliers = outliers[outliers < min(droppedVols)] # remove outliers from second half
             
         # process second half of data
         if splithalf_id == 2:
             print('Splitting second half of the run for analysis')
-            t_min=midVol
-            t_size=midVol
+            # drop first 3s of run
+            t_min=midVol+drop_nVols
+            t_size=midVol-drop_nVols
 
-            stimuli = stimuli[stimuli.onset > mid_run_time] # remove events that happen in the first half
-            stimuli.onset = stimuli.onset-mid_run_time # calculate onsets relative to start of run
-            confounds = confounds.tail(midVol) # select confound variables from second half
-            outliers = outliers[outliers > midVol] # remove outliers from first half
-            outliers = outliers-midVol # outlier volume ids relative to start of run
+            stimuli = stimuli[stimuli.onset > max(droppedVols+1)*TR] # remove events that happen in the first half
+            stimuli.onset = stimuli.onset-max(droppedVols+1)*TR # calculate onsets relative to start of run
+            confounds = confounds.tail(midVol-drop_nVols) # select confound variables from second half
+            outliers = outliers[outliers > max(droppedVols)] # remove outliers from first half
+            outliers = outliers-max(droppedVols+1) # outlier volume ids relative to start of run
 
         # save outliers (split or not) as text file in workDir for modeling
         outliers.to_csv(outlier_file, index=False, header=False)
@@ -217,12 +223,12 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         for regressor in regressor_names:
             if regressor == 'framewise_displacement':
                 print('Processing {} regressor'.format(regressor))
-                regressors.append(confounds[regressor].fillna(0)[dropvols:])
+                regressors.append(confounds[regressor].fillna(0).iloc[dropvols:])
             elif regressor == 'std_dvars':
-                regressors.append(confounds[regressor].fillna(0)[dropvols:])
                 print('Processing {} regressor'.format(regressor))
+                regressors.append(confounds[regressor].fillna(0).iloc[dropvols:])
             else:
-                regressors.append(confounds[regressor][dropvols:])
+                regressors.append(confounds[regressor].iloc[dropvols:])
 
         info = [Bunch(
             conditions=trial_types,
@@ -409,16 +415,16 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     gensubs = Node(Function(function=substitutes), name='substitute_gen')
     wf.connect(contrastgen, 'contrasts', gensubs, 'contrasts')
 
-    # stats should equal number of conditions...
+    # extract components from working directory cache and store it at a different location
     sinker = Node(DataSink(), name='datasink')
     sinker.inputs.base_directory = outDir
     sinker.inputs.regexp_substitutions = [('_event_file.*run_id_', 'run'),
+                                          ('*splithalf_id_', 'splithalf')
                                           ('model/sub.*_run-', 'model/run'),
-                                          ('model/*splithalf_id_', 'model/splithalves'),
-                                          ('design/*splithalf_id_', 'design/splithalves'),
+                                          ('*splithalf0', ''),
                                           ('_bold_space-MNI','/MNI'),
                                           ('_space-MNI','/MNI')]
-
+                                          
     # define where output files are returned and where they are saved
     wf.connect(gensubs, 'out', sinker, 'substitutions')
     wf.connect(modelgen, 'design_file', sinker, 'design.@design_file')
