@@ -5,7 +5,7 @@ Adapted script from original notebook:
 https://github.com/poldrack/fmri-analysis-vm/blob/master/analysis/postFMRIPREPmodelling/First%20and%20Second%20Level%20Modeling%20(FSL).ipynb
 
 More information on what this script is doing - beyond the commented code - is provided on the lab's github wiki page
-Nesting of functions: main > argparser > process_subject > create_firstlevel_workflow > data_grabber > gen_model_info > read_contrasts > substitutes
+Nesting of functions: main > argparser > process_subject > create_firstlevel_workflow > data_grabber > process_data_files > gen_model_info > read_contrasts > substitutes
 
 Requirement: BIDS dataset (including events.tsv), derivatives directory with fMRIPrep outputs, and modeling files
 
@@ -419,9 +419,9 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     sinker = Node(DataSink(), name='datasink')
     sinker.inputs.base_directory = outDir
     sinker.inputs.regexp_substitutions = [('_event_file.*run_id_', 'run'),
-                                          ('*splithalf_id_', 'splithalf')
+                                          ('_splithalf_id_0', ''),
+                                          ('_splithalf_id_', '_splithalf'),
                                           ('model/sub.*_run-', 'model/run'),
-                                          ('*splithalf0', ''),
                                           ('_bold_space-MNI','/MNI'),
                                           ('_space-MNI','/MNI')]
                                           
