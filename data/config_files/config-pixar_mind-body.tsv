@@ -9,10 +9,12 @@ art_z_thresh	3
 ntmpts_exclude	.33
 smoothing	5
 hpf	100
+detrend	no
+standardize	no
 events	Mind-Body
 dropvols	0
 regressors	art, aCompCor
 splithalf	yes
 search_spaces DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
 top_nvox	80
-overwrite	yes
+overwrite	no

@@ -19,7 +19,7 @@ Usage() {
     echo "./run_first-level.sh <pipeline script> <configuration file name> <list of subjects>"
     echo
     echo "Example:"
-    echo "./run_first-level.sh pipeline_events.py config-pixar_mind-body.tsv list.txt"
+    echo "./run_first-level.sh firstlevel_pipeline.py config-pixar_mind-body.tsv list.txt"
     echo
 	echo "the config file name (not path!) should be provided"
 	echo
@@ -50,7 +50,7 @@ then
 	echo "The pipeline script was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
 	echo
-	echo "./run_first-level.sh pipeline_events.py config-events.tsv list.txt"
+	echo "./run_first-level.sh firstlevel_pipeline.py config-events.tsv list.txt"
 	echo
 	
 	# end script and show full usage documentation
@@ -63,7 +63,7 @@ then
 	echo "The configuration file was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
 	echo
-	echo "./run_first-level.sh pipeline_events.py config-events.tsv list.txt"
+	echo "./run_first-level.sh firstlevel_pipeline.py config-events.tsv list.txt"
 	echo
 	
 	# end script and show full usage documentation	
@@ -76,7 +76,7 @@ then
 	echo "The list of participants was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
 	echo
-	echo "./run_first-level.sh pipeline_events.py config-events.tsv list.txt"
+	echo "./run_first-level.sh firstlevel_pipeline.py config-events.tsv list.txt"
 	echo
 	
 	# end script and show full usage documentation	

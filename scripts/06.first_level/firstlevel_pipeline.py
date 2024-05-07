@@ -48,7 +48,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     infosource.synchronize = True
     
     # enable/disable smoothing based on value provided in config file
-    if smoothing_kernel_size != 0: # if smoothing kernel size is greater than 0
+    if smoothing_kernel_size != 0: # if smoothing kernel size is not 0
         # use spatial smoothing
         run_smoothing=True
         print('Spatial smoothing will be run using a {}mm smoothing kernel.'.format(smoothing_kernel_size))
@@ -97,7 +97,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     wf.connect(infosource, 'run_id', datasource, 'run_id')
     
     # define function to process data into halves for analysis (if requested in config file)
-    def process_data_files(sub, mni_file, event_file, confound_file, art_file, run_id, splithalf_id, TR, workDir):
+    def process_data_files(sub, mni_file, event_file, confound_file, art_file, run_id, splithalf_id, TR, outDir):
         import os
         import os.path as op
         import pandas as pd
@@ -107,10 +107,13 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         # read in events, confound, and art outlier files
         stimuli = pd.read_csv(event_file, sep='\t')
         confounds = pd.read_csv(confound_file, sep='\t', na_values='n/a')
-        outliers = pd.read_csv(art_file, header=None)[0]
+        try:
+            outliers = pd.read_csv(art_file, header=None)[0].astype(int)
+        except EmptyDataError: # generate empty dataframe if no outlier volumes (i.e., empty text file)
+            outliers = pd.DataFrame()
         
         # make processing art directory and specify splithalf outlier file name (used by process_data_files and modelspec functions)
-        artDir = op.join(workDir, 'art_files')
+        artDir = op.join(outDir, 'art_files')
         os.makedirs(artDir, exist_ok=True)
         outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf{}.txt'.format(sub, run_id, splithalf_id))
         
@@ -154,7 +157,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             outliers = outliers[outliers > max(droppedVols)] # remove outliers from first half
             outliers = outliers-max(droppedVols+1) # outlier volume ids relative to start of run
 
-        # save outliers (split or not) as text file in workDir for modeling
+        # save outliers (split or not) as text file in outDir for modeling
         outliers.to_csv(outlier_file, index=False, header=False)
         
         # return processed data - either split or full run depending on 'splithalf' parameter in config file
@@ -170,7 +173,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
 
     # from infosource and datasource node add event and confound files and splithalf_id as input to splitdata node
     splitdata.inputs.TR = TR
-    splitdata.inputs.workDir = workDir
+    splitdata.inputs.outDir = outDir
     splitdata.inputs.sub = sub
     wf.connect(infosource, 'event_file', splitdata, 'event_file')
     wf.connect(infosource, 'run_id', splitdata, 'run_id')
@@ -273,13 +276,13 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     wf.connect(splitdata, 'stimuli', modelinfo, 'stimuli')
     wf.connect(splitdata, 'confounds', modelinfo, 'confounds')
               
-    # if drop values requested (likely always no for us)
+    # if drop volumes requested (likely always no for us)
     if dropvols != 0:
         roi = Node(fsl.ExtractROI(t_min=dropvols, t_size=-1), name='extractroi')
-        # pass these data to the smooth node, if smoothing was requested
+        # drop volumes from smoothed data if smoothing was requested
         if run_smoothing:
             wf.connect(smooth, 'outputnode.smoothed_files', roi, 'in_file')
-        # pass these data to the workflow skipping smoothing if not requested
+        # drop volumes from unsmoothed data if smoothing was not requested
         else: 
             wf.connect(mni_split, 'roi_file', roi, 'in_file')
     
@@ -298,8 +301,8 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     
     print('Using a high pass filter cutoff of {}'.format(modelspec.inputs.high_pass_filter_cutoff))
     
-    # if drop values requested (likely always no for us)
-    if dropvols !=0:
+    # pass data to modelspec depending on whether dropvols and/or smoothing were requested
+    if dropvols !=0: # if drop volumes requested (likely always no for us)
         # pass dropped value files (smoothed or not depending on logic above) as functional runs to modelspec
         wf.connect(roi, 'roi_file', modelspec, 'functional_runs')
     else:
@@ -311,6 +314,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             wf.connect(mni_split, 'roi_file', modelspec, 'functional_runs')
             
     if 'art' in regressor_opts:
+        print('ART identified motion spikes will be used as nuisance regressors')
         wf.connect(splitdata, 'outlier_file', modelspec, 'outlier_files') # generated using rapidart in motion exclusions script
     
     # define function to read in and parse task contrasts
@@ -376,7 +380,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     masker = MapNode(fsl.ApplyMask(), name='masker', iterfield=['in_file'])
     wf.connect(datasource, 'mni_mask', masker, 'mask_file')
 
-    # if drop vols was requested
+    # if drop volumes was requested
     if dropvols !=0:
         wf.connect(roi, 'roi_file', masker, 'in_file')
     else:
@@ -421,12 +425,15 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     sinker.inputs.regexp_substitutions = [('_event_file.*run_id_', 'run'),
                                           ('_splithalf_id_0', ''),
                                           ('_splithalf_id_', '_splithalf'),
-                                          ('model/sub.*_run-', 'model/run'),
-                                          ('_bold_space-MNI','/MNI'),
-                                          ('_space-MNI','/MNI')]
+                                          ('_smooth0/',''),
+                                          ('_roi',''),
+                                          ('MNI152NLin2009cAsym_res-2_desc','MNI')]
                                           
-    # define where output files are returned and where they are saved
+    # define where output files are saved
     wf.connect(gensubs, 'out', sinker, 'substitutions')
+    wf.connect(mni_split, 'roi_file', sinker, 'preproc.@roi_file')
+    if run_smoothing:
+        wf.connect(smooth, 'outputnode.smoothed_files', sinker, 'preproc.@')
     wf.connect(modelgen, 'design_file', sinker, 'design.@design_file')
     wf.connect(modelgen, 'con_file', sinker, 'design.@tcon_file')
     wf.connect(modelgen, 'design_cov', sinker, 'design.@cov')
