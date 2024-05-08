@@ -139,4 +139,4 @@ ${singularityDir}/nipype_sandbox						\
 -o ${outDir}											\
 -s ${subjs}												\
 -r ${runs}												\
--c ${projDir}/${config}
+-c ${projDir}/${config} | tee ${projDir}/analysis/${proj_name}/${analysis_name}_logfile.txt

@@ -16,6 +16,7 @@ from nipype.interfaces.base import Bunch
 from nipype import Workflow, Node, IdentityInterface, Function, DataSink, JoinNode, MapNode
 import os
 import os.path as op
+import numpy as np
 import argparse
 from bids.layout import BIDSLayout
 from niflow.nipype1.workflows.fmri.fsl import create_susan_smooth
@@ -116,7 +117,10 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         # make processing art directory and specify splithalf outlier file name (used by process_data_files and modelspec functions)
         artDir = op.join(outDir, 'art_files')
         os.makedirs(artDir, exist_ok=True)
-        outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf{}.txt'.format(sub, run_id, splithalf_id))
+        if splithalf_id == 0:
+            outlier_file = op.join(artDir, 'sub-{}_run-{:02d}.txt'.format(sub, run_id))
+        else:
+            outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf{}.txt'.format(sub, run_id, splithalf_id))
         
         # get number of volumes in functional run
         nVols = load(mni_file).shape[3]
@@ -577,7 +581,7 @@ def main(argv=None):
     readme_file=op.join(outDir, 'README.txt')
     
     # read in configuration file and parse inputs
-    config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0)
+    config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     bidsDir=config_file.loc['bidsDir',1]
     derivDir=config_file.loc['derivDir',1]
     task=config_file.loc['task',1]
@@ -616,7 +620,10 @@ def main(argv=None):
         os.mkdir(workDir)      
         shutil.copy(readme_file, outDir)  # copy README to new output directory
         readme_file=op.join(outDir, 'README.txt') # re-identify current analysis README file
-        
+    
+    # import sys
+    # sys.stdout = open(op.join(outDir, 'logfile.txt'), 'w')
+    
     # print if BIDS directory is not found
     if not op.exists(bidsDir):
         raise IOError('BIDS directory {} not found.'.format(bidsDir))
