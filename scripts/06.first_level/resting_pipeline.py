@@ -87,17 +87,15 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
         if smoothDir:
             smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
             if os.path.exists(smooth_file):
-                print('Previously smoothed data file has been found and will be used for confound regression')
+                print('Previously smoothed data file has been found and will be used: {}'.format(mni_file))
                 mni_file = smooth_file
             else:
-                print('A resultsDir was specified in the config file but no smoothed data files were found.')
+                print('WARNING: A resultsDir was specified in the config file but no smoothed data files were found.')
         else:
             print('No resultsDir specified in the config file. Using fMRIPrep outputs')
-            
-        print('Using the following file for confound regression: {}'.format(mni_file))
         
         # save mni_file
-        preprocDir = op.join(outDir, 'run{}'.format(run_id), 'preproc')
+        preprocDir = op.join(outDir, 'preproc', 'run{}'.format(run_id))
         os.makedirs(preprocDir, exist_ok=True)
         shutil.copy(mni_file, preprocDir)  
 
@@ -267,7 +265,8 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
                                         high_pass=hpf_hz, t_r=TR, mask_img=mni_mask)
        
         # save denoised_data
-        denoiseDir = op.join(outDir, 'run{}'.format(run_id))
+        denoiseDir = op.join(outDir, 'denoised', 'run{}'.format(run_id))
+        os.makedirs(denoiseDir, exist_ok=True)
         denoise_file = op.join(denoiseDir, 'sub-{}_run-{:02d}_denoised_bold.nii.gz'.format(sub, run_id))
         nib.save(denoised_data, denoise_file)
         
@@ -301,7 +300,8 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
     # extract components from working directory cache and store it at a different location
     sinker = Node(DataSink(), name='datasink')
     sinker.inputs.base_directory = outDir
-    sinker.inputs.regexp_substitutions = [('_smooth0/','')]
+    sinker.inputs.regexp_substitutions = [('_run_id_', 'run'),
+                                          ('_smooth0/','')]
     
     # define where output files are saved
     if run_smoothing:
