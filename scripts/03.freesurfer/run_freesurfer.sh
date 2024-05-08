@@ -43,6 +43,12 @@ fi
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 
+# convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
+if [ ! -d ${singularityDir}/fmriprep_sandbox ]
+then
+	singularity build --sandbox ${singularityDir}/fmriprep_sandbox ${singularityDir}/fmriprep-23.2.1.simg
+fi
+
 # define subjects from text document
 subjs=$(cat $1) 
 
@@ -106,7 +112,7 @@ do
 
 		# run singularity
 		singularity run -C -B /EBC:/EBC,${singularityDir}:/opt/templateflow \
-		${singularityDir}/fmriprep-23.2.1.simg  							\
+		${singularityDir}/fmriprep_sandbox  								\
 		${bidsDir} ${derivDir}												\
 		participant															\
 		--participant-label ${NAME}											\

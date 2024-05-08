@@ -99,6 +99,12 @@ singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/06.first_level"
 outDir="${projDir}/analysis/${proj_name}/${analysis_name}"
 
+# convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
+if [ ! -d ${singularityDir}/nipype_sandbox ]
+then
+	singularity build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype.simg
+fi
+
 # create working and output directories if they don't exist
 if [ ! -d ${outDir} ] || [ ! -d ${outDir}/processing ]
 then 
@@ -126,7 +132,7 @@ echo "${subjs}"
 
 # run first-level workflow using script specified in script call
 singularity exec -C -B /EBC:/EBC						\
-${singularityDir}/nipype.simg							\
+${singularityDir}/nipype_sandbox						\
 /neurodocker/startup.sh python ${codeDir}/${pipeline}	\
 -p ${projDir}											\
 -w ${outDir}/processing									\

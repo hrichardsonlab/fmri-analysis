@@ -41,6 +41,12 @@ fi
 projDir=`cat ../../PATHS.txt`
 singularityDir="$projDir/singularity_images"
 
+# convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
+if [ ! -d ${singularityDir}/mriqc_sandbox ]
+then
+	singularity build --sandbox ${singularityDir}/mriqc_sandbox ${singularityDir}/mriqc-24.0.0.simg
+fi
+
 # define subjects from text document
 subjs=$(cat $1) 
 
@@ -89,7 +95,7 @@ unset PYTHONPATH
 # run MRIQC (https://mriqc.readthedocs.io/en/latest/running.html#singularity-containers)
 ## generate subject reports
 singularity run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
-${singularityDir}/mriqc-24.0.0.simg																		\
+${singularityDir}/mriqc_sandbox																			\
 ${bidsDir} ${qcDir}																						\
 participant																								\
 --participant_label ${subjs}																			\
@@ -130,7 +136,7 @@ rm ${qcDir}/sub*.tsv
 
 ## generate group reports
 singularity run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
-${singularityDir}/mriqc-24.0.0.simg																		\
+${singularityDir}/mriqc_sandbox																			\
 ${bidsDir} ${qcDir} group 																				\
 -m T1w bold
 

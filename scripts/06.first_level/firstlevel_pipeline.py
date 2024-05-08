@@ -101,6 +101,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         import os
         import os.path as op
         import pandas as pd
+        from pandas.errors import EmptyDataError
         import numpy as np
         from nibabel import load
         

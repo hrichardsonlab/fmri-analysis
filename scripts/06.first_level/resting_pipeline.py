@@ -18,7 +18,6 @@ import argparse
 from bids.layout import BIDSLayout
 from niflow.nipype1.workflows.fmri.fsl import create_susan_smooth
 import pandas as pd
-from pandas.errors import EmptyDataError
 import glob
 import shutil
 from datetime import datetime
@@ -143,6 +142,7 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
         import os
         import os.path as op        
         import pandas as pd
+        from pandas.errors import EmptyDataError
         import numpy as np
         
         # read in confound file
@@ -233,9 +233,8 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
         else:
             standardize_opt = False            
             
-        denoised_data = image.clean_img(imgs, confounds=nuisance_regs, detrend=detrend_opt, standardize=standardize_opt, 
-                                        high_pass=hpf_hz, t_r=TR, mask_img=mni_mask)
-     
+        denoised_data = image.clean_img(imgs, confounds=nuisance_regs, detrend=detrend_opt, standardize=standardize_opt, high_pass=hpf_hz, t_r=TR, mask_img=mni_mask)
+      
         # save denoised_data
         denoiseDir = op.join(outDir, 'run{}'.format(run_id))
         os.makedirs(denoiseDir, exist_ok=True)

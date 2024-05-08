@@ -78,6 +78,12 @@ projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/05.motion_exclusions"
 
+# convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
+if [ ! -d ${singularityDir}/nipype_sandbox ]
+then
+	singularity build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype.simg
+fi
+
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
 export SINGULARITY_TMPDIR=${singularityDir}
 export SINGULARITY_CACHEDIR=${singularityDir}
@@ -95,14 +101,14 @@ do
 			
 	# run singularity to create average functional mask
 	singularity exec -C -B /EBC:/EBC								\
-	${singularityDir}/nipype.simg									\
+	${singularityDir}/nipype_sandbox								\
 	/neurodocker/startup.sh python ${codeDir}/concat_brain_masks.py \
 	-s ${sub} \
 	-c ${projDir}/${config}
 	
 	# run singularity to generate files with motion information for run exclusion
 	singularity exec -C -B /EBC:/EBC									\
-	${singularityDir}/nipype.simg 										\
+	${singularityDir}/nipype_sandbox 									\
 	/neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py \
 	-p ${projDir}														\
 	-s ${sub} 															\
