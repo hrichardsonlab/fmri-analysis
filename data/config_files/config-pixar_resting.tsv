@@ -1,6 +1,6 @@
 bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data
 derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
-resultsDir
+resultsDir	/EBC/home/mthye/TEBC-5y/analysis/pixar/mind-body
 task	pixar
 sessions	01
 FD_thresh	1
@@ -8,7 +8,7 @@ DVARS_thresh	1.5
 art_norm_thresh	1
 art_z_thresh	3
 ntmpts_exclude	.33
-smoothing	5
+smoothing	0
 hpf	100
 detrend	no
 standardize	no
@@ -16,7 +16,7 @@ events	Mind-Body
 contrast	yes
 dropvols	0
 regressors	art, aCompCor
-splithalf	yes
+splithalf	no
 search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
 top_nvox	80
 overwrite	no

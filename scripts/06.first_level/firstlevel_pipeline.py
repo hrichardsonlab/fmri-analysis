@@ -27,7 +27,7 @@ from datetime import datetime
 
 # define first level workflow function
 def create_firstlevel_workflow(projDir, derivDir, workDir, outDir, 
-                               sub, task, ses, runs, events_files, events, contrast_opts,
+                               sub, task, ses, runs, events_files, events, contrast, contrast_opts,
                                regressor_opts, smoothing_kernel_size, hpf, TR, dropvols, splithalves, sparse,
                                name='sub-{}_task-{}_levelone'):
     """Processing pipeline"""
@@ -51,11 +51,11 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     # enable/disable smoothing based on value provided in config file
     if smoothing_kernel_size != 0: # if smoothing kernel size is not 0
         # use spatial smoothing
-        run_smoothing=True
+        run_smoothing = True
         print('Spatial smoothing will be run using a {}mm smoothing kernel.'.format(smoothing_kernel_size))
     else: 
         # don't do spatial smoothing
-        run_smoothing=False
+        run_smoothing = False
         print('Spatial smoothing will not be run.')
         
     # define data grabber function
@@ -90,7 +90,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                                              'mni_file',
                                              'mni_mask'],
                                function=data_grabber),
-                      name='datasource')
+                               name='datasource')
     datasource.inputs.sub = sub
     datasource.inputs.task = task
     datasource.inputs.derivDir = derivDir
@@ -114,12 +114,12 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         except EmptyDataError: # generate empty dataframe if no outlier volumes (i.e., empty text file)
             outliers = pd.DataFrame()
         
-        # make processing art directory and specify splithalf outlier file name (used by process_data_files and modelspec functions)
+        # make art directory and specify splithalf outlier file name (used by process_data_files and modelspec functions)
         artDir = op.join(outDir, 'art_files')
         os.makedirs(artDir, exist_ok=True)
-        if splithalf_id == 0:
+        if splithalf_id == 0: # if processing full run (splithalf = 'no' in config file)
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}.txt'.format(sub, run_id))
-        else:
+        else: # if splitting run in half (splithalf = 'yes' in config file)
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf{}.txt'.format(sub, run_id, splithalf_id))
         
         # get number of volumes in functional run
@@ -141,30 +141,30 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         # process first half of data
         if splithalf_id == 1:
             print('Splitting first half of the run for analysis')
-            # take first volume to last volume, dropping final 3s of run
+            # take first volume to middle volume, dropping final 3s of run
             t_min=0
             t_size=midVol-drop_nVols
             
-            stimuli = stimuli[stimuli.onset < min(droppedVols+1)*TR] # remove events that happen in the second half
+            stimuli = stimuli[stimuli.onset < min(droppedVols+1)*TR] # select events that happen in the first half
             confounds = confounds.head(midVol-drop_nVols) # select confound variables from first half
-            outliers = outliers[outliers < min(droppedVols)] # remove outliers from second half
+            outliers = outliers[outliers < min(droppedVols)] # select outliers from first half
             
         # process second half of data
         if splithalf_id == 2:
             print('Splitting second half of the run for analysis')
-            # drop first 3s of run
+            # take middle volume to last volume, dropping first 3s of run
             t_min=midVol+drop_nVols
             t_size=midVol-drop_nVols
 
-            stimuli = stimuli[stimuli.onset > max(droppedVols+1)*TR] # remove events that happen in the first half
+            stimuli = stimuli[stimuli.onset > max(droppedVols+1)*TR] # select events that happen in the second half
             stimuli.onset = stimuli.onset-max(droppedVols+1)*TR # calculate onsets relative to start of run
             confounds = confounds.tail(midVol-drop_nVols) # select confound variables from second half
-            outliers = outliers[outliers > max(droppedVols)] # remove outliers from first half
+            outliers = outliers[outliers > max(droppedVols)] # select outliers from second half
             outliers = outliers-max(droppedVols+1) # outlier volume ids relative to start of run
 
         # save outliers (split or not) as text file in outDir for modeling
         outliers.to_csv(outlier_file, index=False, header=False)
-        
+
         # return processed data - either split or full run depending on 'splithalf' parameter in config file
         return t_min, t_size, stimuli, confounds, outlier_file
          
@@ -212,19 +212,29 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     def gen_model_info(stimuli, events, confounds, regressor_names, dropvols):
         """Defines `SpecifyModel` information from BIDS events."""
         from nipype.interfaces.base import Bunch
+        import re
         
-        # identify trial types specified in config file
-        trial_types = stimuli[stimuli.trial_type.isin(['{}'.format(e) for e in events])].trial_type.unique()
+        # identify trial types specified in config file for contrast generation
+        if re.search('ROIs', events[0]): # if ROI timecourses were specified
+            print('Using ROIs as conditions in model generation')
+            trial_types=stimuli.trial_type.unique()
+        
+        else: 
+            trial_types = stimuli[stimuli.trial_type.isin(['{}'.format(e) for e in events])].trial_type.unique()
        
         print('Configuring model to analyse the following events within the run: {}'.format(trial_types))
              
         # extract onset and duration for each trial type
         onset = []
         duration = []
+        amplitudes = []
         for trial in trial_types:
             # extract onset and duration information
             onset.append(stimuli[stimuli.trial_type == trial].onset.tolist())
             duration.append(stimuli[stimuli.trial_type == trial].duration.tolist())
+            if re.search('ROIs', events[0]):
+                # extract amplitude information for timecourse regression
+                amplitudes.append(stimuli[stimuli.trial_type == trial].amplitudes.tolist())
 
         # for each regressor
         regressors = []            
@@ -238,14 +248,24 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             else:
                 regressors.append(confounds[regressor].iloc[dropvols:])
 
-        info = [Bunch(
-            conditions=trial_types,
-            onsets=onset,
-            durations=duration,
-            regressors=regressors,
-            regressor_names=regressor_names,
-        )]
-        
+        if re.search('ROIs', events[0]):
+            info = [Bunch(
+                conditions=trial_types,
+                onsets=onset,
+                durations=duration,
+                amplitudes=amplitudes,
+                regressors=regressors,
+                regressor_names=regressor_names,
+            )]
+        else:
+            info = [Bunch(
+                conditions=trial_types,
+                onsets=onset,
+                durations=duration,
+                regressors=regressors,
+                regressor_names=regressor_names,
+            )]
+
         return info
 
     modelinfo = Node(Function(function=gen_model_info), name='modelinfo')
@@ -275,7 +295,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     # pass regressor names to model info
     modelinfo.inputs.regressor_names=regressor_names
     
-    print('Using the following regressors in the model: {}'.format(modelinfo.inputs.regressor_names))
+    print('Using the following nuisance regressors in the model: {}'.format(modelinfo.inputs.regressor_names))
     
     # from infosource and datasource node add event and confound files and splithalf_id as input to modelinfo node
     wf.connect(splitdata, 'stimuli', modelinfo, 'stimuli')
@@ -323,40 +343,47 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         wf.connect(splitdata, 'outlier_file', modelspec, 'outlier_files') # generated using rapidart in motion exclusions script
     
     # define function to read in and parse task contrasts
-    def read_contrasts(projDir, task, contrast_opts):
+    def read_contrasts(projDir, task, contrast, contrast_opts):
         import os.path as op
         import pandas as pd 
 
         contrasts = []
-        contrasts_file = op.join(projDir, 'data', 'contrast_files', 'contrasts.tsv')
         
-        # if contrasts file not found
-        if not op.exists(contrasts_file):
-            raise FileNotFoundError('Contrasts file {} not found.'.format(contrasts_file))
-        
-        # read in contrasts file
-        contrast_info = pd.read_csv(contrasts_file, sep='\t')
-        
-        # select contrasts of interest specified in config file
-        contrast_info = contrast_info[contrast_info['desc'].isin(contrast_opts)]
-        
-        # for each row
-        for index, row in contrast_info.iterrows():
-            # skip a row specifies a contrast for a different task (i.e., not pixar)
-            if row[0] != task:
-                continue
+        if contrast == 'yes':
+            print('Setting up contrasts')
+            # read in data contrast file
+            contrasts_file = op.join(projDir, 'data', 'contrast_files', 'contrasts.tsv')
             
-            # extract task contrasts
-            contrasts.append([
-                row[1],
-                'T',
-                [cond for cond in row[2].split(' ')],
-                [float(w) for w in row[3].split(' ')]
-            ])
-        
-        # raise if there are no contrasts in the file for the current task
-        if not contrasts:
-            raise AttributeError('No contrasts found for task {}'.format(task))
+            # if contrasts file not found
+            if not op.exists(contrasts_file):
+                raise FileNotFoundError('Contrasts file {} not found.'.format(contrasts_file))
+            
+            # read in contrasts file
+            contrast_info = pd.read_csv(contrasts_file, sep='\t')
+            
+            # select contrasts of interest specified in config file
+            contrast_info = contrast_info[contrast_info['desc'].isin(contrast_opts)]
+            
+            # for each row
+            for index, row in contrast_info.iterrows():
+                # skip a row specifies a contrast for a different task (i.e., not pixar)
+                if row[0] != task:
+                    continue
+                
+                # extract task contrasts
+                contrasts.append([
+                    row[1],
+                    'T',
+                    [cond for cond in row[2].split(' ')],
+                    [float(w) for w in row[3].split(' ')]
+                ])
+            
+            # raise if there are no contrasts in the file for the current task
+            if not contrasts:
+                raise AttributeError('No contrasts found for task {}'.format(task))
+        else:
+            print('Skipping contrast generation')
+            
         return contrasts
 
     contrastgen = Node(Function(output_names=['contrasts'],
@@ -364,6 +391,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                        name='contrastgen')
     contrastgen.inputs.projDir = projDir
     contrastgen.inputs.task = task
+    contrastgen.inputs.contrast = contrast
     contrastgen.inputs.contrast_opts = contrast_opts
 
     # provide first-level design parameters
@@ -372,7 +400,8 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     level1design.inputs.bases = {'dgamma': {'derivs': False}}
     level1design.inputs.model_serial_correlations = True
     wf.connect(modelspec, 'session_info', level1design, 'session_info')
-    wf.connect(contrastgen, 'contrasts', level1design, 'contrasts')
+    if contrast == 'yes': # pass contrasts if requested in config file
+        wf.connect(contrastgen, 'contrasts', level1design, 'contrasts')
 
     # use FSL FEAT for GLM
     modelgen = Node(fsl.FEATModel(), name='modelgen')
@@ -432,6 +461,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                                           ('_splithalf_id_', '_splithalf'),
                                           ('_smooth0/',''),
                                           ('_roi',''),
+                                          ('_filmgls0',''),
                                           ('MNI152NLin2009cAsym_res-2_desc','MNI')]
                                           
     # define where output files are saved
@@ -457,11 +487,17 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
 
 # define function to extract subject-level data for workflow
 def process_subject(layout, projDir, derivDir, outDir, workDir, 
-                    sub, task, ses, sub_runs, events, contrast_opts,
+                    sub, task, ses, sub_runs, events, contrast, contrast_opts,
                     regressor_opts, smoothing_kernel_size, hpf, dropvols, splithalf, sparse):
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
+    import re
+    import pandas as pd
+    
+    # define subject output directory
+    suboutDir = op.join(outDir, 'sub-{}'.format(sub))
+    
     # identify scan and events files
     if ses != 'no': # if session was provided
         print('Session information provided. Assuming data are organized into session folders.')
@@ -505,7 +541,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
         keepruns = keepruns.loc[keepruns.index.repeat(2)] # duplicate runs
         splithalves=[1,2] * int(len(keepruns)/2) # create split half id for each run
     else:
-        splithalves=[0] * int(len(keepruns)) # create split half id for each run
+        splithalves=[0] * int(len(keepruns)) # create split half id 0 for each run
     
     # convert runs to list of values
     keepruns = list(keepruns.astype(int).values)
@@ -518,22 +554,53 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
     epi = layout.get(subject=sub, suffix='bold', task=task, return_type='file')[0] # take first file
     TR = layout.get_metadata(epi)['RepetitionTime'] # extract TR field
     
-    # extract events in each run of data
-    events_files = [] # initialize output
-    for run in keepruns: # for each retained run
-        ev_match = [evfile for evfile in events_all if 'run-{:02d}'.format(run) in evfile]
-        events_files.append(ev_match[0])
+    # select event files
+    if re.search('ROIs', events[0]): # if events files are ROI timecourses
+        print('ROI timecourses will be used as regressors')
         
-    # if no events identified (e.g., resting state data which is not currently collected)
+        # make directory to save tc files
+        tcDir = op.join(suboutDir , 'timecourses')
+        os.makedirs(tcDir, exist_ok=True)
+        
+        # process each timecourse file and combine into dataframe
+        ROI_tc = []
+        for t in events:
+            # read in timecourse file from project/data directory
+            tc_files = glob.glob(op.join(projDir, 'data', 'ROI_timecourses', '{}'.format(task), 'adult_TC-{}.tsv'.format(t)))
+            tc = pd.read_csv(tc_files[0], sep='\t')
+            # add an onset column with timesteps incrementing by TR (so onsets are married to volumes)
+            tc.insert(0, 'onset', np.arange(1,len(tc)+1, TR), len(tc)+1)
+            # pivot to long format
+            tc = tc.melt(ignore_index=True, id_vars=['onset'], var_name='trial_type', value_name='amplitudes')
+            # add duration column with durations (should be left to a single 0 if all events are being modeled as impulses)
+            tc.insert(2, 'duration', 0) 
+            # append timecourses to ROI_tc
+            ROI_tc.append(tc)
+        
+        # combine ROI timecourses into dataframe
+        tc_df = pd.concat(ROI_tc)
+        # save as tc regressor file in tcDir
+        tcreg_file = op.join(tcDir, 'sub-{}_ROI_timecourses.txt'.format(sub))
+        pd.DataFrame(tc_df).to_csv(tcreg_file, index=False, sep ='\t') 
+        
+        # assign timecourse files as events_files (duplicating for the number of kept runs because the same timecourses are used for each run)
+        events_files = [] # initialize output
+        events_files = np.repeat(tcreg_file, len(keepruns)).tolist()
+        
+    else: # if events files are trials within run
+        # extract events in each run of data
+        events_files = [] # initialize output
+        for run in keepruns: # for each retained run
+            ev_match = [evfile for evfile in events_all if 'run-{:02d}'.format(run) in evfile]
+            events_files.append(ev_match[0])
+
+    # if no events identified (e.g., resting state data)
     if not events_files:
         raise FileNotFoundError('No event files found for sub-{}'.format(sub))
 
-    # define subject output directory
-    suboutDir = op.join(outDir, 'sub-{}'.format(sub))
-
     # call firstlevel workflow with extracted subject-level data
     wf = create_firstlevel_workflow(projDir, derivDir, workDir, suboutDir, 
-                                    sub, task, ses, keepruns, events_files, events, contrast_opts,
+                                    sub, task, ses, keepruns, events_files, events, contrast, contrast_opts,
                                     regressor_opts, smoothing_kernel_size, hpf, TR, dropvols, splithalves, sparse)                                    
     return wf
 
@@ -588,6 +655,7 @@ def main(argv=None):
     ses=config_file.loc['sessions',1]
     smoothing_kernel_size=int(config_file.loc['smoothing',1])
     hpf=int(config_file.loc['hpf',1])
+    contrast=config_file.loc['contrast', 1]
     contrast_opts=config_file.loc['events',1].replace(' ','').split(',')
     events=config_file.loc['events',1].replace(' ','').replace(',','-').split('-')
     dropvols=int(config_file.loc['dropvols',1])
@@ -620,10 +688,7 @@ def main(argv=None):
         os.mkdir(workDir)      
         shutil.copy(readme_file, outDir)  # copy README to new output directory
         readme_file=op.join(outDir, 'README.txt') # re-identify current analysis README file
-    
-    # import sys
-    # sys.stdout = open(op.join(outDir, 'logfile.txt'), 'w')
-    
+
     # print if BIDS directory is not found
     if not op.exists(bidsDir):
         raise IOError('BIDS directory {} not found.'.format(bidsDir))
@@ -654,7 +719,7 @@ def main(argv=None):
               
         # create a process_subject workflow with the inputs defined above
         wf = process_subject(layout, args.projDir, derivDir, outDir, workDir, 
-                             sub, task, ses, sub_runs, events, contrast_opts,
+                             sub, task, ses, sub_runs, events, contrast, contrast_opts,
                              regressor_opts, smoothing_kernel_size, hpf, dropvols, splithalf, args.sparse)
    
         # configure workflow options

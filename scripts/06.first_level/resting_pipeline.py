@@ -47,11 +47,11 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
     # enable/disable smoothing based on value provided in config file
     if smoothing_kernel_size != 0: # if smoothing kernel size is not 0
         # use spatial smoothing
-        run_smoothing=True
+        run_smoothing = True
         print('Spatial smoothing will be run using a {}mm smoothing kernel unless prior outputs are found.'.format(smoothing_kernel_size))
     else: 
         # don't do spatial smoothing
-        run_smoothing=False
+        run_smoothing = False
         print('Spatial smoothing will not be run.')
         
     # define data grabber function
