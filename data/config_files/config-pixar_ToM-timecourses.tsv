@@ -1,6 +1,6 @@
 bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot
 derivDir	/EBC/preprocessedData/TEBC-5y/derivatives/pilot
-resultsDir
+resultsDir	
 task	pixar
 sessions	01
 FD_thresh	1
