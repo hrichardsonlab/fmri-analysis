@@ -59,8 +59,6 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
         """Quick filegrabber ala SelectFiles/DataGrabber"""
         import os
         import os.path as op
-        #import nibabel as nib
-        #from nilearn import image
         import shutil
         
         # define output filename and path, depending on whether session information is in directory/file names
@@ -158,7 +156,7 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
         else:
             regressor_names.append(element)
     
-    print('Using the following regressors in the model: {}'.format(regressor_names))
+    print('Using the following nuisance regressors in the model: {}'.format(regressor_names))
     
     # generate motion regressors using fmriprep confounds and rapidart outputs, if requested
     # the output is a numpy array containing motion related regressors as its columns
