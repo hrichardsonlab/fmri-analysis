@@ -27,7 +27,7 @@ from datetime import datetime
 
 # define first level workflow function
 def create_firstlevel_workflow(projDir, derivDir, workDir, outDir, 
-                               sub, task, ses, runs, events_files, events, contrast, contrast_opts,
+                               sub, task, ses, runs, events_files, events, contrast, contrast_opts, timecourses,
                                regressor_opts, smoothing_kernel_size, hpf, TR, dropvols, splithalves, sparse,
                                name='sub-{}_task-{}_levelone'):
     """Processing pipeline"""
@@ -98,7 +98,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     wf.connect(infosource, 'run_id', datasource, 'run_id')
     
     # define function to process data into halves for analysis (if requested in config file)
-    def process_data_files(sub, mni_file, event_file, confound_file, art_file, run_id, splithalf_id, TR, outDir):
+    def process_data_files(sub, mni_file, event_file, timecourses, confound_file, regressor_opts, art_file, run_id, splithalf_id, TR, outDir):
         import os
         import os.path as op
         import pandas as pd
@@ -106,12 +106,31 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         import numpy as np
         from nibabel import load
         
-        # read in events, confound, and art outlier files
-        stimuli = pd.read_csv(event_file, sep='\t')
+        # create a dictionary for mapping between config file and labels used in confounds file (more options can be added later)
+        regressor_dict = {'FD': 'framewise_displacement',
+                          'DVARS':'std_dvars',
+                          'aCompCor': ['a_comp_cor_00', 'a_comp_cor_01', 'a_comp_cor_02', 'a_comp_cor_03', 'a_comp_cor_04']}
+        
+        # extract the entries from the dictionary that match the key value provided in the config file
+        regressor_list=list({r: regressor_dict[r] for r in regressor_opts if r in regressor_dict}.values())
+        
+        # remove nested lists if present (e.g., aCompCor regressors)
+        regressor_names=[]
+        for element in regressor_list:
+            if type(element) is list:
+                for item in element:
+                    regressor_names.append(item)
+            else:
+                regressor_names.append(element)
+ 
+        # read in and filter confound file according to config file options
         confounds = pd.read_csv(confound_file, sep='\t', na_values='n/a')
+        confounds = confounds.filter(regressor_names)
+        
+        # read in art file, creating an empty dataframe if no outlier volumes (i.e., empty text file)
         try:
             outliers = pd.read_csv(art_file, header=None)[0].astype(int)
-        except EmptyDataError: # generate empty dataframe if no outlier volumes (i.e., empty text file)
+        except EmptyDataError:
             outliers = pd.DataFrame()
         
         # make art directory and specify splithalf outlier file name (used by process_data_files and modelspec functions)
@@ -122,6 +141,18 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         else: # if splitting run in half (splithalf = 'yes' in config file)
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf{}.txt'.format(sub, run_id, splithalf_id))
         
+        # read in events or timecourse file depending on config file options
+        if not 'no' in timecourses:
+            tc_reg = pd.read_csv(event_file, sep='\t')
+            # add timecourse regressors to list of regressor names
+            regressor_names.extend(list(tc_reg.columns))
+            # add timecourses to confounds dataframe
+            confounds = tc_reg.join(confounds)
+            # create empty stimuli dataframe
+            stimuli = []
+        else:
+            stimuli = pd.read_csv(event_file, sep='\t')
+
         # get number of volumes in functional run
         nVols = load(mni_file).shape[3]
         # get middle volume to define halves
@@ -145,7 +176,8 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             t_min=0
             t_size=midVol-drop_nVols
             
-            stimuli = stimuli[stimuli.onset < min(droppedVols+1)*TR] # select events that happen in the first half
+            if len(stimuli) != 0: # if there are stimuli
+                stimuli = stimuli[stimuli.onset < min(droppedVols+1)*TR] # select events that happen in the first half
             confounds = confounds.head(midVol-drop_nVols) # select confound variables from first half
             outliers = outliers[outliers < min(droppedVols)] # select outliers from first half
             
@@ -155,9 +187,10 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             # take middle volume to last volume, dropping first 3s of run
             t_min=midVol+drop_nVols
             t_size=midVol-drop_nVols
-
-            stimuli = stimuli[stimuli.onset > max(droppedVols+1)*TR] # select events that happen in the second half
-            stimuli.onset = stimuli.onset-max(droppedVols+1)*TR # calculate onsets relative to start of run
+            
+            if len(stimuli) != 0: # if there are stimuli
+                stimuli = stimuli[stimuli.onset > max(droppedVols+1)*TR] # select events that happen in the second half
+                stimuli.onset = stimuli.onset-max(droppedVols+1)*TR # calculate onsets relative to start of run
             confounds = confounds.tail(midVol-drop_nVols) # select confound variables from second half
             outliers = outliers[outliers > max(droppedVols)] # select outliers from second half
             outliers = outliers-max(droppedVols+1) # outlier volume ids relative to start of run
@@ -166,13 +199,14 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         outliers.to_csv(outlier_file, index=False, header=False)
 
         # return processed data - either split or full run depending on 'splithalf' parameter in config file
-        return t_min, t_size, stimuli, confounds, outlier_file
+        return t_min, t_size, stimuli, confounds, regressor_names, outlier_file
          
     # set up splitdata Node with specified outputs
     splitdata = Node(Function(output_names=['t_min',
                                             't_size',
                                             'stimuli',
                                             'confounds',
+                                            'regressor_names',
                                             'outlier_file'],
                               function=process_data_files), name='splitdata')
 
@@ -180,6 +214,8 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     splitdata.inputs.TR = TR
     splitdata.inputs.outDir = outDir
     splitdata.inputs.sub = sub
+    splitdata.inputs.regressor_opts = regressor_opts
+    splitdata.inputs.timecourses = timecourses
     wf.connect(infosource, 'event_file', splitdata, 'event_file')
     wf.connect(infosource, 'run_id', splitdata, 'run_id')
     wf.connect(infosource, 'splithalf_id', splitdata, 'splithalf_id')
@@ -209,32 +245,25 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         wf.connect(mni_split, 'roi_file', smooth, 'inputnode.in_files')
         
     # define model configuration function
-    def gen_model_info(stimuli, events, confounds, regressor_names, dropvols):
+    def gen_model_info(stimuli, events, timecourses, confounds, regressor_names, dropvols):
         """Defines `SpecifyModel` information from BIDS events."""
         from nipype.interfaces.base import Bunch
-        import re
         
-        # identify trial types specified in config file for contrast generation
-        if re.search('ROIs', events[0]): # if ROI timecourses were specified
-            print('Using ROIs as conditions in model generation')
-            trial_types=stimuli.trial_type.unique()
+        print('Using the following nuisance regressors in the model: {}'.format(regressor_names))
         
-        else: 
+        # if there are stimuli/events to process (ie not timecourse regressors)
+        if len(stimuli) != 0:
             trial_types = stimuli[stimuli.trial_type.isin(['{}'.format(e) for e in events])].trial_type.unique()
-       
-        print('Configuring model to analyse the following events within the run: {}'.format(trial_types))
              
-        # extract onset and duration for each trial type
-        onset = []
-        duration = []
-        amplitudes = []
-        for trial in trial_types:
-            # extract onset and duration information
-            onset.append(stimuli[stimuli.trial_type == trial].onset.tolist())
-            duration.append(stimuli[stimuli.trial_type == trial].duration.tolist())
-            if re.search('ROIs', events[0]):
-                # extract amplitude information for timecourse regression
-                amplitudes.append(stimuli[stimuli.trial_type == trial].amplitudes.tolist())
+            # extract onset and duration for each trial type
+            onset = []
+            duration = []
+            for trial in trial_types:
+                # extract onset and duration information
+                onset.append(stimuli[stimuli.trial_type == trial].onset.tolist())
+                duration.append(stimuli[stimuli.trial_type == trial].duration.tolist())
+
+            print('Configuring model to analyse the following events within the run: {}'.format(trial_types))
 
         # for each regressor
         regressors = []            
@@ -247,13 +276,10 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                 regressors.append(confounds[regressor].fillna(0).iloc[dropvols:])
             else:
                 regressors.append(confounds[regressor].iloc[dropvols:])
-
-        if re.search('ROIs', events[0]):
+        
+        # if ROI timecourses are being modelled
+        if not 'no' in timecourses:
             info = [Bunch(
-                conditions=trial_types,
-                onsets=onset,
-                durations=duration,
-                amplitudes=amplitudes,
                 regressors=regressors,
                 regressor_names=regressor_names,
             )]
@@ -268,39 +294,17 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
 
         return info
 
+    # could format as bids model json in the future (https://bids-standard.github.io/stats-models/walkthrough-1.html)
+    # need to add artifact volumes output from art in prior step [see below for how outlier_files were passed to modelspec]
     modelinfo = Node(Function(function=gen_model_info), name='modelinfo')
     modelinfo.inputs.dropvols = dropvols
     modelinfo.inputs.events = events
-
-    # could format as bids model json in the future (https://bids-standard.github.io/stats-models/walkthrough-1.html)
-    # need to add artifact volumes output from art in prior step [see below for how outlier_files were passed to modelspec]
-    
-    # create a dictionary for mapping between config file and labels used in confounds file (more options can be added later)
-    regressor_dict = {'FD': 'framewise_displacement',
-                      'DVARS':'std_dvars',
-                      'aCompCor': ['a_comp_cor_00', 'a_comp_cor_01', 'a_comp_cor_02', 'a_comp_cor_03', 'a_comp_cor_04']}
-    
-    # extract the entries from the dictionary that match the key value provided in the config file
-    regressor_list=list({r: regressor_dict[r] for r in regressor_opts if r in regressor_dict}.values())
-    
-    # remove nested lists if present (e.g., aCompCor regressors)
-    regressor_names=[]
-    for element in regressor_list:
-        if type(element) is list:
-            for item in element:
-                regressor_names.append(item)
-        else:
-            regressor_names.append(element)
-        
-    # pass regressor names to model info
-    modelinfo.inputs.regressor_names=regressor_names
-    
-    print('Using the following nuisance regressors in the model: {}'.format(modelinfo.inputs.regressor_names))
-    
-    # from infosource and datasource node add event and confound files and splithalf_id as input to modelinfo node
+    modelinfo.inputs.timecourses = timecourses
+    # from splitdata node add event and confound files and splithalf_id as input to modelinfo node
     wf.connect(splitdata, 'stimuli', modelinfo, 'stimuli')
     wf.connect(splitdata, 'confounds', modelinfo, 'confounds')
-              
+    wf.connect(splitdata, 'regressor_names', modelinfo, 'regressor_names') # pass regressor names to model info
+
     # if drop volumes requested (likely always no for us)
     if dropvols != 0:
         roi = Node(fsl.ExtractROI(t_min=dropvols, t_size=-1), name='extractroi')
@@ -383,7 +387,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                 raise AttributeError('No contrasts found for task {}'.format(task))
         else:
             print('Skipping contrast generation')
-            
+        
         return contrasts
 
     contrastgen = Node(Function(output_names=['contrasts'],
@@ -487,12 +491,11 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
 
 # define function to extract subject-level data for workflow
 def process_subject(layout, projDir, derivDir, outDir, workDir, 
-                    sub, task, ses, sub_runs, events, contrast, contrast_opts,
+                    sub, task, ses, sub_runs, events, contrast, contrast_opts, timecourses,
                     regressor_opts, smoothing_kernel_size, hpf, dropvols, splithalf, sparse):
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
-    import re
     import pandas as pd
     
     # define subject output directory
@@ -554,8 +557,8 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
     epi = layout.get(subject=sub, suffix='bold', task=task, return_type='file')[0] # take first file
     TR = layout.get_metadata(epi)['RepetitionTime'] # extract TR field
     
-    # select event files
-    if re.search('ROIs', events[0]): # if events files are ROI timecourses
+    # select timecourse files
+    if not 'no' in timecourses: # if timecourses were provided (ie not 'no')
         print('ROI timecourses will be used as regressors')
         
         # make directory to save tc files
@@ -563,30 +566,25 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
         os.makedirs(tcDir, exist_ok=True)
         
         # process each timecourse file and combine into dataframe
-        ROI_tc = []
-        for t in events:
-            # read in timecourse file from project/data directory
+        tc_dat= []
+        for t in timecourses:
+            # read in timecourse file from project/data directory and combined into 1 dataframe
             tc_files = glob.glob(op.join(projDir, 'data', 'ROI_timecourses', '{}'.format(task), 'adult_TC-{}.tsv'.format(t)))
             tc = pd.read_csv(tc_files[0], sep='\t')
-            # add an onset column with timesteps incrementing by TR (so onsets are married to volumes)
-            tc.insert(0, 'onset', np.arange(1,len(tc)+1, TR), len(tc)+1)
-            # pivot to long format
-            tc = tc.melt(ignore_index=True, id_vars=['onset'], var_name='trial_type', value_name='amplitudes')
-            # add duration column with durations (should be left to a single 0 if all events are being modeled as impulses)
-            tc.insert(2, 'duration', 0) 
-            # append timecourses to ROI_tc
-            ROI_tc.append(tc)
+            tc_dat = tc.join(tc_dat)
         
-        # combine ROI timecourses into dataframe
-        tc_df = pd.concat(ROI_tc)
+        # remove timecourses if not specified in regressors list in config file
+        tc_dat=tc_dat.filter(regressor_opts)
+
         # save as tc regressor file in tcDir
         tcreg_file = op.join(tcDir, 'sub-{}_ROI_timecourses.txt'.format(sub))
-        pd.DataFrame(tc_df).to_csv(tcreg_file, index=False, sep ='\t') 
+        pd.DataFrame(tc_dat).to_csv(tcreg_file, index=False, sep ='\t') 
         
         # assign timecourse files as events_files (duplicating for the number of kept runs because the same timecourses are used for each run)
         events_files = [] # initialize output
         events_files = np.repeat(tcreg_file, len(keepruns)).tolist()
-        
+    
+    # select events files
     else: # if events files are trials within run
         # extract events in each run of data
         events_files = [] # initialize output
@@ -600,7 +598,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
 
     # call firstlevel workflow with extracted subject-level data
     wf = create_firstlevel_workflow(projDir, derivDir, workDir, suboutDir, 
-                                    sub, task, ses, keepruns, events_files, events, contrast, contrast_opts,
+                                    sub, task, ses, keepruns, events_files, events, contrast, contrast_opts, timecourses,
                                     regressor_opts, smoothing_kernel_size, hpf, TR, dropvols, splithalves, sparse)                                    
     return wf
 
@@ -653,12 +651,13 @@ def main(argv=None):
     derivDir=config_file.loc['derivDir',1]
     task=config_file.loc['task',1]
     ses=config_file.loc['sessions',1]
+    dropvols=int(config_file.loc['dropvols',1])
     smoothing_kernel_size=int(config_file.loc['smoothing',1])
     hpf=int(config_file.loc['hpf',1])
     contrast=config_file.loc['contrast', 1]
     contrast_opts=config_file.loc['events',1].replace(' ','').split(',')
     events=config_file.loc['events',1].replace(' ','').replace(',','-').split('-')
-    dropvols=int(config_file.loc['dropvols',1])
+    timecourses=config_file.loc['timecourses', 1].replace(' ', '').split(',')
     regressor_opts=config_file.loc['regressors',1].replace(' ','').split(',')
     splithalf=config_file.loc['splithalf',1]
     overwrite=config_file.loc['overwrite',1]
@@ -719,7 +718,7 @@ def main(argv=None):
               
         # create a process_subject workflow with the inputs defined above
         wf = process_subject(layout, args.projDir, derivDir, outDir, workDir, 
-                             sub, task, ses, sub_runs, events, contrast, contrast_opts,
+                             sub, task, ses, sub_runs, events, contrast, contrast_opts, timecourses,
                              regressor_opts, smoothing_kernel_size, hpf, dropvols, splithalf, args.sparse)
    
         # configure workflow options

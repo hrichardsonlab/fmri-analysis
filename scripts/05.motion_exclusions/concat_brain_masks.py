@@ -20,11 +20,11 @@ def concat_masks(derivDir, sub, ses):
         
         # define path to inputs (subjects preprocessed functional data)
         subDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-' + ses, 'func')
-        concat_img_fname = '{}/{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
+        concat_img_fname = '{}/sub-{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
     else: # if session was 'no'
         # define path to inputs (subjects preprocessed functional data)
         subDir = op.join(derivDir, 'sub-{}'.format(sub), 'func')
-        concat_img_fname = '{}/{}_MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub)
+        concat_img_fname = '{}/sub-{}_MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub)
     
     # identify all mask files (there should be 1 per functional run)
     maskfiles = glob.glob(op.join(subDir, '*MNI152NLin2009cAsym_res-2_desc-brain_mask.nii.gz'))  

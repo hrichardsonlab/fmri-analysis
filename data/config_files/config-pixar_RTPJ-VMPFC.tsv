@@ -1,5 +1,5 @@
-bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot
-derivDir	/EBC/preprocessedData/TEBC-5y/derivatives/pilot
+bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data
+derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
 resultsDir	
 task	pixar
 sessions	01
@@ -8,14 +8,15 @@ DVARS_thresh	1.5
 art_norm_thresh	1
 art_z_thresh	3
 ntmpts_exclude	.33
+dropvols	0
 smoothing	5
 hpf	100
 detrend	no
 standardize	no
-events	ToM_ROIs
+events	RTPJ-VMPFC
 contrast	yes
-dropvols	0
-regressors	art, aCompCor
+timecourses	ToM_ROIs
+regressors	art, aCompCor, RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
 splithalf	yes
 search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
 top_nvox	80

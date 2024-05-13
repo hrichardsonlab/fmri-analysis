@@ -8,13 +8,14 @@ DVARS_thresh	1.5
 art_norm_thresh	1
 art_z_thresh	3
 ntmpts_exclude	.33
+dropvols	0
 smoothing	0
 hpf	100
 detrend	no
 standardize	no
 events	Mind-Body
-contrast	yes
-dropvols	0
+contrast	no
+timecourses	no
 regressors	art, aCompCor
 splithalf	no
 search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
