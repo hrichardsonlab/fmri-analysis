@@ -9,9 +9,10 @@ art_norm_thresh	1
 art_z_thresh	3
 ntmpts_exclude	.33
 dropvols	0
-smoothing	5
+smoothing	0
 hpf	100
-detrend	no
+filter	butterworth
+detrend	yes
 standardize	no
 events	RTPJ-VMPFC
 contrast	yes

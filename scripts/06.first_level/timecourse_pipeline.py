@@ -27,7 +27,7 @@ from datetime import datetime
 # define first level workflow function
 def create_resting_workflow(projDir, derivDir, workDir, outDir, 
                             sub, task, ses, runs, regressor_opts, 
-                            smoothing_kernel_size, smoothDir, hpf, TR, detrend, standardize, dropvols,
+                            smoothing_kernel_size, smoothDir, hpf, filter_opt, TR, detrend, standardize, dropvols,
                             name='sub-{}_task-{}_timecourses'):
     """Processing pipeline"""
     
@@ -232,7 +232,7 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
     regressorinfo.inputs.outDir = outDir
     
     # define function to denoise data
-    def denoise_data(imgs, mni_mask, motion_params, vol_indx, outliers, TR, hpf, detrend, standardize, outDir, sub, run_id):
+    def denoise_data(imgs, mni_mask, motion_params, vol_indx, outliers, TR, hpf, filter_opt, detrend, standardize, outDir, sub, run_id):
         import nibabel as nib
         from nibabel import load
         import nilearn
@@ -249,25 +249,37 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
         # the smoothing node returns a list object but clean_img needs a path to the file
         if isinstance(imgs, list):
             imgs=imgs[0]        
+       
         
-        # convert filter from seconds to Hz
-        hpf_hz = 1/hpf
-        
-        print('Using a high pass filter cutoff of {}Hz for run-{}'.format(hpf_hz, run_id))
-
+        # process options from config file
         if detrend == 'yes':
             detrend_opt = True
         else:
             detrend_opt = False
-            
         if standardize != 'no':
             standardize_opt = standardize
         else:
-            standardize_opt = False   
+            standardize_opt = False
+            
+        # convert filter from seconds to Hz
+        hpf_hz = 1/hpf
         
+        print('Will apply a {} filter using a high pass filter cutoff of {}Hz for run-{}.'.format(filter_opt, hpf_hz, run_id))
+
+        # define kwargs input to signal.clean function
+        if filter_opt == 'butterworth':
+            kwargs_opts={'clean__sample_mask':vol_indx, 
+                         'clean__butterworth__t_r':TR,
+                         'clean__butterworth__high_pass':hpf_hz}
+        elif filter_opt == 'cosine':
+            kwargs_opts={'clean__sample_mask':vol_indx, 
+                         'clean__cosine__t_r':TR,
+                         'clean__cosine__high_pass':hpf_hz}
+        else:
+            kwargs_opts={'clean__sample_mask':vol_indx}
+
         # process signal data with parameters specified in config file
-        # **kwargs are input to signal.clean function
-        denoised_data = image.clean_img(imgs, mask_img=mni_mask, confounds=motion_params, high_pass=hpf_hz, t_r=TR, detrend=detrend_opt, standardize=standardize_opt, **{'clean__sample_mask':vol_indx})
+        denoised_data = image.clean_img(imgs, mask_img=mni_mask, confounds=motion_params, detrend=detrend_opt, standardize=standardize_opt, **kwargs_opts)
 
         # save denoised data
         denoise_file = op.join(denoiseDir, 'sub-{}_run-{:02d}_denoised_bold.nii.gz'.format(sub, run_id))
@@ -324,6 +336,7 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
     cleansignal.inputs.detrend = detrend
     cleansignal.inputs.standardize = standardize
     cleansignal.inputs.outDir = outDir
+    cleansignal.inputs.filter_opt = filter_opt
     
     # pass data to cleansignal depending on whether dropvols and/or smoothing were requested
     if dropvols !=0: # if drop volumes requested (likely always no for us)
@@ -352,7 +365,7 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
 # define function to extract subject-level data for workflow
 def process_subject(layout, projDir, derivDir, outDir, workDir, 
                     sub, task, ses, sub_runs, regressor_opts, 
-                    smoothing_kernel_size, smoothDir, hpf, detrend, standardize, dropvols):
+                    smoothing_kernel_size, smoothDir, hpf, filter_opt, detrend, standardize, dropvols):
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
@@ -405,7 +418,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
     # call resting state workflow with extracted subject-level data
     wf = create_resting_workflow(projDir, derivDir, workDir, suboutDir, 
                                  sub, task, ses, keepruns, regressor_opts, 
-                                 smoothing_kernel_size, smoothDir, hpf, TR, detrend, standardize, dropvols)                                    
+                                 smoothing_kernel_size, smoothDir, hpf, filter_opt, TR, detrend, standardize, dropvols)                                    
     return wf
 
 # define command line parser function
@@ -460,6 +473,7 @@ def main(argv=None):
     ses=config_file.loc['sessions',1]
     smoothing_kernel_size=int(config_file.loc['smoothing',1])
     hpf=int(config_file.loc['hpf',1])
+    filter_opt=config_file.loc['filter',1]
     detrend=config_file.loc['detrend',1]
     standardize=config_file.loc['standardize',1]
     dropvols=int(config_file.loc['dropvols',1])
@@ -523,7 +537,7 @@ def main(argv=None):
         # create a process_subject workflow with the inputs defined above
         wf = process_subject(layout, args.projDir, derivDir, outDir, workDir, 
                              sub, task, ses, sub_runs, regressor_opts, 
-                             smoothing_kernel_size, smoothDir, hpf, detrend, standardize, dropvols)
+                             smoothing_kernel_size, smoothDir, hpf, filter_opt, detrend, standardize, dropvols)
    
         # configure workflow options
         wf.config['execution'] = {'crashfile_format': 'txt',

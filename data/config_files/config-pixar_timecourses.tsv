@@ -11,10 +11,11 @@ ntmpts_exclude	.33
 dropvols	0
 smoothing	0
 hpf	100
-detrend	no
+filter	butterworth
+detrend	yes
 standardize	no
-events	Mind-Body
-contrast	no
+events	ToM_ROIs
+contrast	yes
 timecourses	no
 regressors	art, aCompCor
 splithalf	no
