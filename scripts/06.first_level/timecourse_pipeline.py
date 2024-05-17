@@ -23,11 +23,12 @@ import glob
 import shutil
 from datetime import datetime
 
+
 # define first level workflow function
 def create_resting_workflow(projDir, derivDir, workDir, outDir, 
                             sub, task, ses, runs, regressor_opts, 
                             smoothing_kernel_size, smoothDir, hpf, TR, detrend, standardize, dropvols,
-                            name='sub-{}_task-{}_resting'):
+                            name='sub-{}_task-{}_timecourses'):
     """Processing pipeline"""
     
     # initialize workflow
@@ -191,33 +192,31 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
         # convert motion regressors to dataframe
         motion_params = pd.DataFrame(regressors).transpose()
         
-        if 'art' in regressor_opts: # if art regressor was included in regressor_opts list in config file
-            print('ART identified motion spikes will be used as nuisance regressors')
+        # generate vector of volume indices (where inclusion means to retain volume) to use for scrubbing
+        vol_indx = np.arange(motion_params.shape[0], dtype=np.int64)
+        
+        # if art regressor was included in regressor_opts list in config file        
+        if 'art' in regressor_opts:
+            print('ART identified motion spikes will be scrubbed from data')
             if np.shape(outliers)[0] != 0: # if there are outlier volumes
-                # generate vector of zeros with same length as motion parameters
-                outlier_vec = np.zeros((motion_params.shape[0], 1))
-                for i in range(len(outliers)): # for each outlier
-                    tmp_vec = np.zeros((motion_params.shape[0], 1))
-                    tmp_vec[outliers[i]] = 1
-                    outlier_vec = np.concatenate((outlier_vec, tmp_vec), axis=1)
-                outlier_vec = outlier_vec[:, 1:]
-                # concatenate and create final motion related regressors
-                nuisance_regs = np.concatenate((motion_params, outlier_vec), axis=1)
-            else: # if no outlier volumes
-                nuisance_regs = motion_params
-        else: # if art regressor not included in regressor_opts list in config file
-            nuisance_regs = motion_params
+                # remove excluded volumes from vec
+                vol_indx = np.delete(vol_indx, [outliers])
+                print('{} outlier volumes will be scrubbed in run-{:02d}'.format(len(outliers), run_id))
         
         # save nuisance regressor array as text file in subject output directory
         regDir = op.join(outDir, 'regressors')
         os.makedirs(regDir, exist_ok=True)
-        nuisance_file = op.join(regDir, 'sub-{}_run-{:02d}_confounds.txt'.format(sub, run_id))
-        pd.DataFrame(nuisance_regs).to_csv(nuisance_file, index=False, header=False, sep ='\t')        
+        motion_file = op.join(regDir, 'sub-{}_run-{:02d}_confounds.txt'.format(sub, run_id))
+        scrub_file = op.join(regDir, 'sub-{}_run-{:02d}_retained_volumes.txt'.format(sub, run_id))
+        pd.DataFrame(motion_params).to_csv(motion_file, index=False, header=False, sep ='\t')
+        pd.DataFrame(vol_indx).to_csv(scrub_file, index=False, header=False, sep ='\t')
         
-        return nuisance_regs
+        return motion_params, vol_indx, outliers
     
     # define motion regressor node   
-    regressorinfo = Node(Function(output_names=['nuisance_regs'], 
+    regressorinfo = Node(Function(output_names=['motion_params',
+                                                'vol_indx',
+                                                'outliers'], 
                                   function=create_motion_reg), 
                                   name='regressorinfo')
     
@@ -233,40 +232,81 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
     regressorinfo.inputs.outDir = outDir
     
     # define function to denoise data
-    def denoise_data(imgs, mni_mask, nuisance_regs, TR, hpf, detrend, standardize, outDir, sub, run_id):
+    def denoise_data(imgs, mni_mask, motion_params, vol_indx, outliers, TR, hpf, detrend, standardize, outDir, sub, run_id):
         import nibabel as nib
-        import pandas as pd
+        from nibabel import load
+        import nilearn
         from nilearn import image
+        import pandas as pd
+        import numpy as np
         import os
-        import os.path as op   
+        import os.path as op
+        
+        # make output directory
+        denoiseDir = op.join(outDir, 'denoised', 'run{}'.format(run_id))
+        os.makedirs(denoiseDir, exist_ok=True)
+        
+        # the smoothing node returns a list object but clean_img needs a path to the file
+        if isinstance(imgs, list):
+            imgs=imgs[0]        
         
         # convert filter from seconds to Hz
         hpf_hz = 1/hpf
         
         print('Using a high pass filter cutoff of {}Hz for run-{}'.format(hpf_hz, run_id))
-        
+
         if detrend == 'yes':
             detrend_opt = True
         else:
             detrend_opt = False
             
-        if standardize == 'yes':
-            standardize_opt = True
+        if standardize != 'no':
+            standardize_opt = standardize
         else:
-            standardize_opt = False            
+            standardize_opt = False   
         
-        # the smoothing node returns a list object but clean_img needs a path to the file
-        if isinstance(imgs, list):
-            imgs=imgs[0]
-        
-        denoised_data = image.clean_img(imgs, confounds=nuisance_regs, detrend=detrend_opt, standardize=standardize_opt, 
-                                        high_pass=hpf_hz, t_r=TR, mask_img=mni_mask)
-       
-        # save denoised_data
-        denoiseDir = op.join(outDir, 'denoised', 'run{}'.format(run_id))
-        os.makedirs(denoiseDir, exist_ok=True)
+        # process signal data with parameters specified in config file
+        # **kwargs are input to signal.clean function
+        denoised_data = image.clean_img(imgs, mask_img=mni_mask, confounds=motion_params, high_pass=hpf_hz, t_r=TR, detrend=detrend_opt, standardize=standardize_opt, **{'clean__sample_mask':vol_indx})
+
+        # save denoised data
         denoise_file = op.join(denoiseDir, 'sub-{}_run-{:02d}_denoised_bold.nii.gz'.format(sub, run_id))
         nib.save(denoised_data, denoise_file)
+        
+        # load denoised data and extract dimension info
+        denoise_img = image.load_img(denoised_data)
+        img_dim = denoise_img.shape
+        
+        # load input data and extract volume info
+        input_img = image.load_img(imgs)
+        nVols = input_img.shape[3]
+        
+        # create vector of volumes for indexing
+        all_vols_vec = np.arange(nVols, dtype=np.int64)
+        
+        # create nan volume
+        nan_vol = np.empty((img_dim[:-1])) # 97,115,97, 1
+        nan_vol[:] = np.nan
+        nan_img = image.new_img_like(denoise_img, nan_vol, affine=denoise_img.affine)
+
+        # pad denoised data with nan vols where vols were scrubbed
+        d=0 # index for denoised data which has a volume for index in vol_indx [nVols - outliers]
+        pad_imgs = list()
+        for vol in all_vols_vec: # for each volume
+            if vol in vol_indx:
+                tmp_vol = image.index_img(denoise_img, d)
+                pad_imgs.append(tmp_vol)
+                d += 1
+            else:
+                tmp_vol = nan_img
+                pad_imgs.append(tmp_vol)
+        
+        # concatente list of 3D imgs to one 4D img
+        pad_concat = image.concat_imgs(pad_imgs)
+        
+        # save padded data
+        pad_file = op.join(denoiseDir, 'sub-{}_run-{:02d}_denoised_padded_bold.nii.gz'.format(sub, run_id))
+        nib.save(pad_concat, pad_file)
         
         return denoised_data
     
@@ -274,7 +314,9 @@ def create_resting_workflow(projDir, derivDir, workDir, outDir,
     cleansignal = Node(Function(function=denoise_data), 
                                 name='cleansignal')
     wf.connect(datasource, 'mni_mask', cleansignal, 'mni_mask')
-    wf.connect(regressorinfo, 'nuisance_regs', cleansignal, 'nuisance_regs')
+    wf.connect(regressorinfo, 'motion_params', cleansignal, 'motion_params')
+    wf.connect(regressorinfo, 'vol_indx', cleansignal, 'vol_indx')
+    wf.connect(regressorinfo, 'outliers', cleansignal, 'outliers')
     wf.connect(infosource, 'run_id', cleansignal, 'run_id')
     cleansignal.inputs.sub = sub
     cleansignal.inputs.TR = TR

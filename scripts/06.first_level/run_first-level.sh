@@ -102,7 +102,7 @@ outDir="${projDir}/analysis/${proj_name}/${analysis_name}"
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 if [ ! -d ${singularityDir}/nipype_sandbox ]
 then
-	singularity build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype.simg
+	singularity build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype_nilearn.simg
 fi
 
 # create working and output directories if they don't exist

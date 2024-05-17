@@ -81,7 +81,7 @@ codeDir="${projDir}/scripts/05.motion_exclusions"
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 if [ ! -d ${singularityDir}/nipype_sandbox ]
 then
-	singularity build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype.simg
+	singularity build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype_nilearn.simg
 fi
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
