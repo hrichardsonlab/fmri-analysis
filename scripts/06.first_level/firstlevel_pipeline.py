@@ -90,10 +90,8 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         # check to see whether outputs exist in resultsDir (if resultsDir was specified in config file)
         if resultsDir:
             if splithalf_id != 0:
-                preprocDir = op.join(outDir, 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id))
                 smooth_file = op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
             else:
-                preprocDir = op.join(outDir, 'preproc', 'run{}'.format(run_id))
                 smooth_file = op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
@@ -102,6 +100,12 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                 print('WARNING: A resultsDir was specified in the config file but no smoothed data files were found.')
         else:
             print('No resultsDir specified in the config file. Using fMRIPrep outputs.')
+        
+        # make preproc directory
+        if splithalf_id != 0:
+            preprocDir = op.join(outDir, 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id))
+        else:
+            preprocDir = op.join(outDir, 'preproc', 'run{}'.format(run_id))
         
         # save mni_file
         os.makedirs(preprocDir, exist_ok=True)
@@ -124,7 +128,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     datasource.inputs.resultsDir = resultsDir
     datasource.inputs.outDir = outDir
     datasource.inputs.ses = ses
-    
+
     # define function to process data into halves for analysis (if requested in config file)
     def process_data_files(sub, mni_file, event_file, timecourses, art_file, confound_file, regressor_opts, run_id, splithalf_id, TR, nVols, outDir):
         import os
