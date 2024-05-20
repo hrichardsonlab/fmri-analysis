@@ -332,7 +332,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
             wf.connect(mni_split, 'roi_file', roi, 'in_file')
     
     # define function to denoise data
-    def denoise_data(imgs, mni_mask, motion_params, vol_indx, outliers, TR, hpf, filter_opt, detrend, standardize,  outDir, sub, run_id):
+    def denoise_data(imgs, mni_mask, motion_params, vol_indx, outliers, TR, hpf, filter_opt, detrend, standardize,  outDir, sub, run_id, splithalf_id):
         import nibabel as nib
         from nibabel import load
         import nilearn
@@ -381,7 +381,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
         denoised_data = image.clean_img(imgs, mask_img=mni_mask, confounds=motion_params, detrend=detrend_opt, standardize=standardize_opt, **kwargs_opts)
         
         # save denoised data
-        denoise_file = op.join(denoiseDir, 'sub-{}_run-{:02d}_denoised_bold.nii.gz'.format(sub, run_id))
+        denoise_file = op.join(denoiseDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_denoised_bold.nii.gz'.format(sub, run_id, splithalf_id))
         nib.save(denoised_data, denoise_file)
         
         # load denoised data and extract dimension info
@@ -416,7 +416,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
         pad_concat = image.concat_imgs(pad_imgs)
        
         # save padded data
-        pad_file = op.join(denoiseDir, 'sub-{}_run-{:02d}_denoised_padded_bold.nii.gz'.format(sub, run_id))
+        pad_file = op.join(denoiseDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_denoised_padded_bold.nii.gz'.format(sub, run_id, splithalf_id))
         nib.save(pad_concat, pad_file)
         
         return denoised_data, pad_concat
@@ -431,6 +431,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
     wf.connect(splitdata, 'vol_indx', cleansignal, 'vol_indx')
     wf.connect(splitdata, 'outliers', cleansignal, 'outliers')
     wf.connect(infosource, 'run_id', cleansignal, 'run_id')
+    wf.connect(infosource, 'splithalf_id', cleansignal, 'splithalf_id')
     cleansignal.inputs.sub = sub
     cleansignal.inputs.TR = TR
     cleansignal.inputs.hpf = hpf
