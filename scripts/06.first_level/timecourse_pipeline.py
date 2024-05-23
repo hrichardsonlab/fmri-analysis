@@ -26,9 +26,8 @@ from datetime import datetime
 
 
 # define first level workflow function
-def create_timecourse_workflow(projDir, derivDir, workDir, outDir, 
-                               sub, task, ses, runs, regressor_opts, mask_opts,
-                               smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, dropvols, splithalves,
+def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, ses, runs, regressor_opts, mask_opts,
+                               smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, extract_opt, dropvols, splithalves,
                                name='sub-{}_task-{}_timecourses'):
     """Processing pipeline"""
 
@@ -65,7 +64,6 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
         import shutil
         from nibabel import load
 
-        
         # define output filename and path, depending on whether session information is in directory/file names
         if ses != 'no': # if session was provided
             # define path to preprocessed functional and mask data (subject derivatives func folder)
@@ -122,7 +120,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
                 roi_file == op.join(projDir, 'data', 'ROIs', '{}.nii.gz'.format(m))
                 roi_masks.append(roi_file)
                 print('Grabbing {} ROI files from {}'.format(m, roi_file))
-        
+
         # save mni_file
         preprocDir = op.join(outDir, 'preproc', 'run{}'.format(run_id))
         os.makedirs(preprocDir, exist_ok=True)
@@ -161,6 +159,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
         # make art directory and specify splithalf outlier file name
         artDir = op.join(outDir, 'art_files')
         os.makedirs(artDir, exist_ok=True)
+        
         if splithalf_id == 0: # if processing full run (splithalf = 'no' in config file)
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}.txt'.format(sub, run_id))
             vol_indx_file = op.join(artDir, 'sub-{}_run-{:02d}_incl-vols.txt'.format(sub, run_id))
@@ -272,9 +271,6 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
         # save outliers (split or not) as text file in outDir for modeling
         outliers.to_csv(outlier_file, index=False, header=False)
         pd.DataFrame(vol_indx).to_csv(vol_indx_file, index=False, header=False)
-
-        print(vol_indx)
-        print(outliers)
         
         # return processed data - either split or full run depending on 'splithalf' parameter in config file
         return t_min, t_size, motion_params, vol_indx, outliers
@@ -375,7 +371,8 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
                          'clean__cosine__t_r':TR,
                          'clean__cosine__high_pass':hpf_hz}
         else:
-            kwargs_opts={'clean__sample_mask':vol_indx}
+            kwargs_opts={'clean__sample_mask':vol_indx,
+                         'clean__t_r':TR}
 
         # process signal data with parameters specified in config file
         denoised_data = image.clean_img(imgs, mask_img=mni_mask, confounds=motion_params, detrend=detrend_opt, standardize=standardize_opt, **kwargs_opts)
@@ -396,7 +393,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
         all_vols_vec = np.arange(curVols, dtype=np.int64)
         
         # create nan volume
-        nan_vol = np.empty((img_dim[:-1])) # 97,115,97, 1
+        nan_vol = np.empty((img_dim[:-1]))
         nan_vol[:] = np.nan
         nan_img = image.new_img_like(denoise_img, nan_vol, affine=denoise_img.affine)
 
@@ -452,20 +449,48 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
            # pass unsmoothed output files as functional runs to modelspec
             wf.connect(mni_split, 'roi_file', cleansignal, 'imgs')
     
-    def extract_timecourse(denoised_data, pad_concat, roi_masks, outDir, sub, run_id, splithalf_id, nVols, vol_indx):
-        import numpy as np
+    def extract_timecourse(denoised_data, pad_concat, roi_masks, mask_opts, extract_opt, outDir, sub, run_id, splithalf_id, nVols, vol_indx):
         from nilearn.maskers import NiftiMasker
+        import os
+        import os.path as op
+        import numpy as np
+        import pandas as pd 
+        
+        # make output directory
+        tcDir = op.join(outDir, 'timecourses')
+        os.makedirs(tcDir, exist_ok=True)
+        
         
         # extract timecourses for each ROI provided in config file
-        for m in roi_masks:
+        for m, mask in enumerate(roi_masks):
+            print('extracting signal from {} ROI'.format(mask_opts[m]))
+            
             # instantiate the masker
-            masker = NiftiMasker(mask_img = m)
+            masker = NiftiMasker(mask_img = mask)
             
             # apply mask to denoised and padded data
-            denoised_masked = masker.fit_transform(denoised_data)
-            padded_masked = masker.fit_transform(denoised_data)
+            padded_masked = masker.fit_transform(pad_concat)
+            padded_masked_df = pd.DataFrame(padded_masked)
             
-        return denoised_masked, padded_masked
+            # add splithalf info to output file name     
+            if splithalf_id != 0:
+                tc_prefix = op.join(tcDir, 'sub-{}_run{}_splithalf{}_{}'.format(sub, run_id, splithalf_id, mask_opts[m]))
+            else:
+                tc_prefix = op.join(tcDir, 'sub-{}_run{}_{}'.format(sub, run_id, mask_opts[m]))
+            
+            # average data in mask if requested and add info to output file name
+            if extract_opt == 'mean':
+                # average voxelwise timecourses
+                print('Averging voxelwise timecourses within mask or ROI')
+                padded_masked_df = padded_masked_df.mean(axis=1)
+                tc_file = op.join('{}_mean_timecourse.csv'.format(tc_prefix))
+            else:
+                tc_file = op.join('{}_voxelwise_timecourses.csv'.format(tc_prefix))
+            
+            # save file
+            padded_masked_df.to_csv(tc_file)
+            
+        return padded_masked
         
     extractsignal = Node(Function(output_names=['denoised_masked',
                                                 'padded_masked'],
@@ -481,6 +506,8 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
     wf.connect(cleansignal, 'pad_concat', extractsignal, 'pad_concat')
     extractsignal.inputs.sub = sub
     extractsignal.inputs.outDir = outDir
+    extractsignal.inputs.mask_opts = mask_opts
+    extractsignal.inputs.extract_opt = extract_opt
     
     # extract components from working directory cache and store it at a different location
     sinker = Node(DataSink(), name='datasink')
@@ -499,9 +526,8 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir,
     return wf
 
 # define function to extract subject-level data for workflow
-def process_subject(layout, projDir, derivDir, outDir, workDir, 
-                    sub, task, ses, sub_runs, regressor_opts, mask_opts,
-                    smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, dropvols, splithalf):    
+def process_subject(layout, projDir, derivDir, outDir, workDir, sub, task, ses, sub_runs, regressor_opts, mask_opts,
+                    smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, extract_opt, dropvols, splithalf):    
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
@@ -559,9 +585,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
     suboutDir = op.join(outDir, 'sub-{}'.format(sub))
 
     # call timecourse workflow with extracted subject-level data
-    wf = create_timecourse_workflow(projDir, derivDir, workDir, suboutDir, 
-                                    sub, task, ses, keepruns, regressor_opts, mask_opts,
-                                    smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, dropvols, splithalves)  
+    wf = create_timecourse_workflow(projDir, derivDir, workDir, suboutDir, sub, task, ses, keepruns, regressor_opts, mask_opts,                                smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, extract_opt, dropvols, splithalves)  
                                     
                                     
     return wf
@@ -625,6 +649,7 @@ def main(argv=None):
     regressor_opts=config_file.loc['regressors',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     splithalf=config_file.loc['splithalf',1]
+    extract_opt=config_file.loc['extract',1]
     overwrite=config_file.loc['overwrite',1]
     
     # if user requested overwrite, delete previous directories
@@ -682,9 +707,7 @@ def main(argv=None):
         sub_runs=list(map(int, sub_runs)) # convert to integers
               
         # create a process_subject workflow with the inputs defined above
-        wf = process_subject(layout, args.projDir, derivDir, outDir, workDir, 
-                             sub, task, ses, sub_runs, regressor_opts, mask_opts,
-                             smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, dropvols, splithalf)
+        wf = process_subject(layout, args.projDir, derivDir, outDir, workDir, sub, task, ses, sub_runs, regressor_opts, mask_opts,                     smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, extract_opt, dropvols, splithalf)
    
         # configure workflow options
         wf.config['execution'] = {'crashfile_format': 'txt',

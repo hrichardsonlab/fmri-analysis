@@ -18,7 +18,9 @@ events	RTPJ-VMPFC
 contrast	yes
 timecourses	ToM_ROIs
 regressors	art, aCompCor, RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
-splithalf	yes
+splithalf	no
 search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
+mask	whole_brain
+extract	mean
 top_nvox	80
 overwrite	no

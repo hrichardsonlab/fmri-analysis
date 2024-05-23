@@ -20,5 +20,7 @@ timecourses	no
 regressors	art, aCompCor
 splithalf	no
 search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
+mask	whole_brain
+extract	mean
 top_nvox	80
 overwrite	no

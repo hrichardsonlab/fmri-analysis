@@ -18,7 +18,9 @@ events	Mind-Body
 contrast	yes
 timecourses	no
 regressors	art, aCompCor
-splithalf	yes
+splithalf	no
 search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
+mask	whole_brain
+extract	mean
 top_nvox	80
 overwrite	no
