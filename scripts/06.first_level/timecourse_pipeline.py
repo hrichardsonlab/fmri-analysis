@@ -460,7 +460,6 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         tcDir = op.join(outDir, 'timecourses')
         os.makedirs(tcDir, exist_ok=True)
         
-        
         # extract timecourses for each ROI provided in config file
         for m, mask in enumerate(roi_masks):
             print('extracting signal from {} ROI'.format(mask_opts[m]))
@@ -482,13 +481,13 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             if extract_opt == 'mean':
                 # average voxelwise timecourses
                 print('Averging voxelwise timecourses within mask or ROI')
-                padded_masked_df = padded_masked_df.mean(axis=1)
+                padded_masked_df = padded_masked_df.mean(axis=1).replace([0], np.nan)
                 tc_file = op.join('{}_mean_timecourse.csv'.format(tc_prefix))
             else:
                 tc_file = op.join('{}_voxelwise_timecourses.csv'.format(tc_prefix))
             
             # save file
-            padded_masked_df.to_csv(tc_file)
+            padded_masked_df.to_csv(tc_file, header = False, index=False)
             
         return padded_masked
         
