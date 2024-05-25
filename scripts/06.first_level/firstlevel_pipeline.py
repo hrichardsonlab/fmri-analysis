@@ -166,12 +166,16 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             outliers = pd.DataFrame()
         
         # make art directory and specify splithalf outlier file name (used by process_data_files and modelspec functions)
-        artDir = op.join(outDir, 'art_files')
-        os.makedirs(artDir, exist_ok=True)
-        if splithalf_id == 0: # if processing full run (splithalf = 'no' in config file)
+        if splithalf_id == 0:  # if processing full run (splithalf = 'no' in config file)
+            artDir = op.join(outDir, 'art_files', 'run{}'.format(run_id))
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}.txt'.format(sub, run_id))
-        else: # if splitting run in half (splithalf = 'yes' in config file)
+            vol_indx_file = op.join(artDir, 'sub-{}_run-{:02d}_incl-vols.txt'.format(sub, run_id))
+        else:
+            artDir = op.join(outDir, 'art_files', 'run{}_splithalf{}'.format(run_id, splithalf_id))
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf-{:02d}.txt'.format(sub, run_id, splithalf_id))
+            vol_indx_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_incl-vols.txt'.format(sub, run_id, splithalf_id))
+        
+        os.makedirs(artDir, exist_ok=True)
         
         # read in events or timecourse file depending on config file options
         if not 'no' in timecourses:

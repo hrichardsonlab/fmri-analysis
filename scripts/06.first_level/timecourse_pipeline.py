@@ -106,6 +106,10 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         else:
             preprocDir = op.join(outDir, 'preproc', 'run{}'.format(run_id))
         
+        # save mni_file
+        os.makedirs(preprocDir, exist_ok=True)
+        shutil.copy(mni_file, preprocDir) 
+        
         # grab roi file for each mask requested
         roi_masks = list()
         for m in mask_opts:
@@ -120,12 +124,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             else:
                 roi_file = glob.glob(op.join(projDir, 'data', 'ROIs', '{}*.nii.gz'.format(m)))[0]
                 roi_masks.append(roi_file)
-                print('Using {} ROI file from {}'.format(m, roi_file))
-
-        # save mni_file
-        preprocDir = op.join(outDir, 'preproc', 'run{}'.format(run_id))
-        os.makedirs(preprocDir, exist_ok=True)
-        shutil.copy(mni_file, preprocDir)  
+                print('Using {} ROI file from {}'.format(m, roi_file)) 
         
         return confound_file, art_file, mni_file, mni_mask, roi_masks, nVols
         
@@ -158,15 +157,16 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         from nibabel import load
         
         # make art directory and specify splithalf outlier file name
-        artDir = op.join(outDir, 'art_files')
-        os.makedirs(artDir, exist_ok=True)
-        
-        if splithalf_id == 0: # if processing full run (splithalf = 'no' in config file)
+        if splithalf_id == 0:  # if processing full run (splithalf = 'no' in config file)
+            artDir = op.join(outDir, 'art_files', 'run{}'.format(run_id))
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}.txt'.format(sub, run_id))
             vol_indx_file = op.join(artDir, 'sub-{}_run-{:02d}_incl-vols.txt'.format(sub, run_id))
-        else: # if splitting run in half (splithalf = 'yes' in config file)
+        else:
+            artDir = op.join(outDir, 'art_files', 'run{}_splithalf{}'.format(run_id, splithalf_id))
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf-{:02d}.txt'.format(sub, run_id, splithalf_id))
             vol_indx_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_incl-vols.txt'.format(sub, run_id, splithalf_id))
+        
+        os.makedirs(artDir, exist_ok=True)
         
         # read in confound file
         confounds = pd.read_csv(confound_file, sep='\t', na_values='n/a')
@@ -340,7 +340,11 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         import os.path as op
         
         # make output directory
-        denoiseDir = op.join(outDir, 'denoised', 'run{}'.format(run_id))
+        if splithalf_id != 0:
+            denoiseDir = op.join(outDir, 'denoised', 'run{}_splithalf{}'.format(run_id, splithalf_id))
+        else:
+            denoiseDir = op.join(outDir, 'denoised', 'run{}'.format(run_id))
+        
         os.makedirs(denoiseDir, exist_ok=True)
         
         # the smoothing node returns a list object but clean_img needs a path to the file
@@ -460,7 +464,11 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         import pandas as pd 
         
         # make output directory
-        tcDir = op.join(outDir, 'timecourses')
+        if splithalf_id != 0:
+            tcDir = op.join(outDir, 'timecourses', 'run{}_splithalf{}'.format(run_id, splithalf_id))
+        else:
+            tcDir = op.join(outDir, 'timecourses', 'run{}'.format(run_id))
+        
         os.makedirs(tcDir, exist_ok=True)
         
         # extract timecourses for each ROI provided in config file
