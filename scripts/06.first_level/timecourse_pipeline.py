@@ -61,6 +61,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         """Quick filegrabber ala SelectFiles/DataGrabber"""
         import os
         import os.path as op
+        import glob
         import shutil
         from nibabel import load
 
@@ -113,13 +114,13 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                 print('Will extract whole brain timecourses')
             elif 'fROI' in m:
                 roi_name = m.split('-')[1]
-                roi_file == op.join(resultsDir, 'sub-{}'.format(sub), 'fROI', 'run{}'.format(run_id), 'sub-{}_task-{}_run-{:02d}_fROI-{}.nii.gz'.format(sub, task, run_id, roi_name))
+                roi_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'fROI', 'run{}'.format(run_id), 'sub-{}_task-{}_run-{:02d}_{}*.nii.gz'.format(sub, task, run_id, roi_name)))[0]
                 roi_masks.append(roi_file)
-                print('Grabbing {} fROI files from {}'.format(roi_name, roi_file))
+                print('Using {} fROI file from {}'.format(roi_name, roi_file))
             else:
-                roi_file == op.join(projDir, 'data', 'ROIs', '{}.nii.gz'.format(m))
+                roi_file = glob.glob(op.join(projDir, 'data', 'ROIs', '{}*.nii.gz'.format(m)))[0]
                 roi_masks.append(roi_file)
-                print('Grabbing {} ROI files from {}'.format(m, roi_file))
+                print('Using {} ROI file from {}'.format(m, roi_file))
 
         # save mni_file
         preprocDir = op.join(outDir, 'preproc', 'run{}'.format(run_id))
@@ -164,8 +165,8 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}.txt'.format(sub, run_id))
             vol_indx_file = op.join(artDir, 'sub-{}_run-{:02d}_incl-vols.txt'.format(sub, run_id))
         else: # if splitting run in half (splithalf = 'yes' in config file)
-            outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf{}.txt'.format(sub, run_id, splithalf_id))
-            vol_indx_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf{}_incl-vols.txt'.format(sub, run_id, splithalf_id))
+            outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf-{:02d}.txt'.format(sub, run_id, splithalf_id))
+            vol_indx_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_incl-vols.txt'.format(sub, run_id, splithalf_id))
         
         # read in confound file
         confounds = pd.read_csv(confound_file, sep='\t', na_values='n/a')
@@ -450,7 +451,9 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             wf.connect(mni_split, 'roi_file', cleansignal, 'imgs')
     
     def extract_timecourse(denoised_data, pad_concat, roi_masks, mask_opts, extract_opt, outDir, sub, run_id, splithalf_id, nVols, vol_indx):
+        import nibabel as nib
         from nilearn.maskers import NiftiMasker
+        from nilearn import image
         import os
         import os.path as op
         import numpy as np
@@ -462,32 +465,49 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         
         # extract timecourses for each ROI provided in config file
         for m, mask in enumerate(roi_masks):
-            print('extracting signal from {} ROI'.format(mask_opts[m]))
-            
-            # instantiate the masker
-            masker = NiftiMasker(mask_img = mask)
-            
-            # apply mask to denoised and padded data
-            padded_masked = masker.fit_transform(pad_concat)
-            padded_masked_df = pd.DataFrame(padded_masked)
-            
-            # add splithalf info to output file name     
-            if splithalf_id != 0:
-                tc_prefix = op.join(tcDir, 'sub-{}_run{}_splithalf{}_{}'.format(sub, run_id, splithalf_id, mask_opts[m]))
+            # don't extract timecourses from a splithalf for an fROI defined using that same splithalf
+            if splithalf_id == 1 and 'splithalf1' in mask_opts[m]:
+                print('Skipping signal extraction for {} in splithalf {}'.format(mask_opts[m], splithalf_id))
+            if splithalf_id == 2 and 'splithalf2' in mask_opts[m]:
+                print('Skipping signal extraction for {} in splithalf {}'.format(mask_opts[m], splithalf_id))
             else:
-                tc_prefix = op.join(tcDir, 'sub-{}_run{}_{}'.format(sub, run_id, mask_opts[m]))
+                print('Extracting signal from {} ROI'.format(mask_opts[m]))
             
-            # average data in mask if requested and add info to output file name
-            if extract_opt == 'mean':
-                # average voxelwise timecourses
-                print('Averging voxelwise timecourses within mask or ROI')
-                padded_masked_df = padded_masked_df.mean(axis=1).replace([0], np.nan)
-                tc_file = op.join('{}_mean_timecourse.csv'.format(tc_prefix))
-            else:
-                tc_file = op.join('{}_voxelwise_timecourses.csv'.format(tc_prefix))
-            
-            # save file
-            padded_masked_df.to_csv(tc_file, header = False, index=False)
+                # ensure that mask/ROI is binarized
+                mask_img = image.load_img(mask)
+                mask_bin = mask_img.get_fdata() # get image data (as floating point data)
+                mask_bin[mask_bin >= 1] = 1 # for values equal to or greater than 1, make 1 (values less than 1 are already 0)
+                mask_bin = image.new_img_like(mask_img, mask_bin) # create a new image of the same class as the initial image
+
+                # resample mask if not fROI or whole brain mask
+                if not 'fROI' in mask_opts[m] and not 'whole_brain' in mask_opts[m]:
+                    print('Resampling {} ROI to match functional data'.format(mask_opts[m]))
+                    mask_bin = image.resample_to_img(mask_bin, denoised_data, interpolation='nearest')
+     
+                # instantiate the masker
+                masker = NiftiMasker(mask_img = mask_bin)
+                
+                # apply mask to denoised padded data
+                padded_masked = masker.fit_transform(pad_concat)
+                padded_masked_df = pd.DataFrame(padded_masked)
+                
+                # add splithalf info to output file name     
+                if splithalf_id != 0:
+                    tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}'.format(sub, run_id, splithalf_id, mask_opts[m]))
+                else:
+                    tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_{}'.format(sub, run_id, mask_opts[m]))
+                
+                # average data in mask if requested and add info to output file name
+                if extract_opt == 'mean':
+                    # average voxelwise timecourses
+                    print('Averging voxelwise timecourses within {} mask'.format(mask_opts[m]))
+                    padded_masked_df = padded_masked_df.mean(axis=1).replace([0], np.nan)
+                    tc_file = op.join('{}_mean_timecourse.csv'.format(tc_prefix))
+                else:
+                    tc_file = op.join('{}_voxelwise_timecourses.csv'.format(tc_prefix))
+                
+                # save file
+                padded_masked_df.to_csv(tc_file, header = False, index=False)
             
         return padded_masked
         
@@ -514,11 +534,11 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
     sinker.inputs.regexp_substitutions = [('_run_id_', 'run'),
                                           ('_splithalf_id_0', ''),
                                           ('_splithalf_id_', '_splithalf'),
-                                          ('_smooth0/','')]          
+                                          ('_smooth0/',''),
+                                          ('_roi','')]          
     
     # define where output files are saved
-    #wf.connect(cleansignal, 'denoised_data', sinker, 'denoised')
-    #wf.connect(cleansignal, 'pad_concat', sinker, 'denoised.@')
+    wf.connect(mni_split, 'roi_file', sinker, 'preproc.@roi_file')
     if run_smoothing:
         wf.connect(smooth, 'outputnode.smoothed_files', sinker, 'preproc.@')  
         

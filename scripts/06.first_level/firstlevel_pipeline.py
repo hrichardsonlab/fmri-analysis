@@ -171,7 +171,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         if splithalf_id == 0: # if processing full run (splithalf = 'no' in config file)
             outlier_file = op.join(artDir, 'sub-{}_run-{:02d}.txt'.format(sub, run_id))
         else: # if splitting run in half (splithalf = 'yes' in config file)
-            outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf{}.txt'.format(sub, run_id, splithalf_id))
+            outlier_file = op.join(artDir, 'sub-{}_run-{:02d}_splithalf-{:02d}.txt'.format(sub, run_id, splithalf_id))
         
         # read in events or timecourse file depending on config file options
         if not 'no' in timecourses:
