@@ -94,13 +94,20 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                 # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf2 is extracted from fROI defined in splithalf1)
                 if splithalf_id == 1:
                     print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-02'.format(sub, task, run_id))
+                    #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-02'.format(sub, task, run_id))
+                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
+                    
                 if splithalf_id == 2:
                     print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-01'.format(sub, task, run_id))
+                    #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-01'.format(sub, task, run_id))
+                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
             else:
+            
+            
                 smooth_file = op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
                 froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
+            
+            
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
                 print('Previously smoothed data file has been found and will be used: {}'.format(mni_file))
@@ -130,7 +137,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                     print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
                 else:
                     roi_name = m.split('-')[1]
-                    roi_file = glob.glob(op.join('{}_{}*.nii.gz'.format(froi_prefix, roi_name)))[0]  
+                    roi_file = glob.glob(op.join('{}_{}*.nii.gz'.format(froi_prefix, roi_name)))[0] 
                     roi_masks.append(roi_file)
                     print('Using {} fROI file from {}'.format(roi_name, roi_file))
             else:
@@ -477,11 +484,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         import pandas as pd 
         
         # make output directory
-        if splithalf_id != 0:
-            tcDir = op.join(outDir, 'timecourses', 'run{}_splithalf{}'.format(run_id, splithalf_id))
-        else:
-            tcDir = op.join(outDir, 'timecourses', 'run{}'.format(run_id))
-        
+        tcDir = op.join(outDir, 'timecourses')
         os.makedirs(tcDir, exist_ok=True)
         
         # extract timecourses for each ROI provided in config file
@@ -496,9 +499,9 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             mask_bin = image.new_img_like(mask_img, mask_bin) # create a new image of the same class as the initial image
 
             # resample mask if not fROI or whole brain mask
-            if not 'fROI' in mask_opts[m] and not 'whole_brain' in mask_opts[m]:
-                print('Resampling {} ROI to match functional data'.format(mask_opts[m]))
-                mask_bin = image.resample_to_img(mask_bin, denoised_data, interpolation='nearest')
+            # if not 'fROI' in mask_opts[m] and not 'whole_brain' in mask_opts[m]:
+                # print('Resampling {} ROI to match functional data'.format(mask_opts[m]))
+                # mask_bin = image.resample_to_img(mask_bin, denoised_data, interpolation='nearest')
  
             # instantiate the masker
             masker = NiftiMasker(mask_img = mask_bin)
@@ -509,9 +512,12 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             
             # add splithalf info to output file name     
             if splithalf_id != 0:
-                # get fROI splithalf info from roi mask
-                roi_splithalf = re.search('splithalf-(.+?)_', roi_masks[m]).group().split('_')[0]
-                tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}'.format(sub, run_id, splithalf_id, mask_opts[m], roi_splithalf))
+                if 'fROI' in mask_opts[m]:
+                    # get fROI splithalf info from roi mask and add to output file name
+                    roi_splithalf = re.search('splithalf-(.+?)_', roi_masks[m]).group().split('_')[0]
+                    tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}'.format(sub, run_id, splithalf_id, mask_opts[m], roi_splithalf))
+                else:
+                    tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}'.format(sub, run_id, splithalf_id, mask_opts[m]))
             else:
                 tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_{}'.format(sub, run_id, mask_opts[m]))
             

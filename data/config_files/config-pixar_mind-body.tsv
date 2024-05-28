@@ -14,7 +14,7 @@ hpf	100
 filter	butterworth
 detrend	yes
 standardize	no
-events	Mind-Body
+events	mind-body
 contrast	yes
 timecourses	no
 regressors	art, aCompCor

@@ -1,5 +1,5 @@
 task	desc	conds	weights
-pixar	Mind-Body	Mind Body	1 -1
-pixar	Faces-Scenes	Faces Scenes	1 -1
+pixar	mind-body	mind body	1 -1
+pixar	faces-scenes	faces scenes	1 -1
 pixar	ToM_ROIs-FaceSceneObject_ROIs	RTPJ LTPJ PC DMPFC MMPFC VMPFC rFFA lFFA rpSTS lpSTS rOPA lOPA rPPA lPPA rRSC lRSC rLOC lLOC rEVC lEVC	1 1 1 1 1 1 -1 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0
 pixar	RTPJ-VMPFC	RTPJ VMPFC	1 -1
