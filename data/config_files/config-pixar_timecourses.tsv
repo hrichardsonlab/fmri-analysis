@@ -20,7 +20,9 @@ timecourses	no
 regressors	art, aCompCor
 splithalf	no
 search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
-mask	whole_brain
+resample	/EBC/home/mthye/TEBC-5y/data/search_spaces/ToM
+template	MNI152NLin2009cAsym_res-02_T1w
+mask	fROI-LTPJ, RTPJ, whole_brain
 extract	mean
 top_nvox	80
 overwrite	no
