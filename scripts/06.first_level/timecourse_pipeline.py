@@ -24,10 +24,9 @@ import glob
 import shutil
 from datetime import datetime
 
-
 # define first level workflow function
 def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, ses, runs, regressor_opts, mask_opts,
-                               smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, extract_opt, dropvols, splithalves,
+                               smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves,
                                name='sub-{}_task-{}_timecourses'):
     """Processing pipeline"""
 
@@ -57,7 +56,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         print('Spatial smoothing will not be run.')
         
     # define data grabber function
-    def data_grabber(sub, task, mask_opts, projDir, derivDir, resultsDir, outDir, ses, run_id, splithalf_id):
+    def data_grabber(sub, task, mask_opts, projDir, derivDir, resultsDir, outDir, template, ses, run_id, splithalf_id):
         """Quick filegrabber ala SelectFiles/DataGrabber"""
         import os
         import os.path as op
@@ -91,7 +90,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             if splithalf_id != 0:
                 smooth_file = op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
                 
-                # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf2 is extracted from fROI defined in splithalf1)
+                # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
                 if splithalf_id == 1:
                     print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
                     #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-02'.format(sub, task, run_id))
@@ -102,11 +101,8 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                     #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-01'.format(sub, task, run_id))
                     froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
             else:
-            
-            
                 smooth_file = op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
                 froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
-            
             
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
@@ -141,7 +137,13 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                     roi_masks.append(roi_file)
                     print('Using {} fROI file from {}'.format(roi_name, roi_file))
             else:
-                roi_file = glob.glob(op.join(projDir, 'data', 'ROIs', '{}*.nii.gz'.format(m)))[0]
+                if template is not None:
+                    #template_name = template[:6] # take first 6 characters
+                    template_name = template.split('_')[0] # take full template name
+                    roi_file = glob.glob(op.join(projDir, 'data', 'ROIs', '{}'.format(template_name), '{}*.nii.gz'.format(m)))[0]
+                else:
+                    roi_file = glob.glob(op.join(projDir, 'data', 'ROIs', '{}*.nii.gz'.format(m)))[0]
+                
                 roi_masks.append(roi_file)
                 print('Using {} ROI file from {}'.format(m, roi_file)) 
         
@@ -159,6 +161,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
     wf.connect(infosource, 'splithalf_id', datasource, 'splithalf_id')
     datasource.inputs.sub = sub
     datasource.inputs.mask_opts = mask_opts
+    datasource.inputs.template = template
     datasource.inputs.task = task
     datasource.inputs.derivDir = derivDir
     datasource.inputs.projDir = projDir
@@ -497,12 +500,30 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             mask_bin = mask_img.get_fdata() # get image data (as floating point data)
             mask_bin[mask_bin >= 1] = 1 # for values equal to or greater than 1, make 1 (values less than 1 are already 0)
             mask_bin = image.new_img_like(mask_img, mask_bin) # create a new image of the same class as the initial image
+            
+            # the masks should already be resampled, but check if this is true and resample if not
+            if denoised_data.shape[0:3] != mask_bin.shape:
+                print('WARNING: the mask provided has different dimensions than the functional data!')
+                
+                # make directory to save resampled rois
+                roiDir = op.join(outDir, 'resampled_rois')
+                os.makedirs(roiDir, exist_ok=True)
+                
+                # extract file name
+                roi_name = mask.replace('/','-').split('-')[-1]
+                roi_name = roi_name.split('.nii')[0]
+                resampled_file = op.join(roiDir, '{}_resampled.nii.gz'.format(roi_name))
+                
+                # check if file already exists
+                if os.path.isfile(resampled_file):
+                    print('Found previously resampled {} ROI in output directory'.format(mask_opts[m]))
+                    mask_bin = image.load_img(resampled_file)
+                else:
+                    # resample image
+                    print('Resampling {} ROI to match functional data'.format(mask_opts[m]))
+                    mask_bin = image.resample_to_img(mask_bin, denoised_data, interpolation='nearest')
+                    mask_bin.to_filename(resampled_file)
 
-            # resample mask if not fROI or whole brain mask
-            # if not 'fROI' in mask_opts[m] and not 'whole_brain' in mask_opts[m]:
-                # print('Resampling {} ROI to match functional data'.format(mask_opts[m]))
-                # mask_bin = image.resample_to_img(mask_bin, denoised_data, interpolation='nearest')
- 
             # instantiate the masker
             masker = NiftiMasker(mask_img = mask_bin)
             
@@ -570,7 +591,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
 
 # define function to extract subject-level data for workflow
 def process_subject(layout, projDir, derivDir, outDir, workDir, sub, task, ses, sub_runs, regressor_opts, mask_opts,
-                    smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, extract_opt, dropvols, splithalf):    
+                    smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf):    
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
@@ -628,7 +649,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir, sub, task, ses, 
     suboutDir = op.join(outDir, 'sub-{}'.format(sub))
 
     # call timecourse workflow with extracted subject-level data
-    wf = create_timecourse_workflow(projDir, derivDir, workDir, suboutDir, sub, task, ses, keepruns, regressor_opts, mask_opts,                                smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, extract_opt, dropvols, splithalves)  
+    wf = create_timecourse_workflow(projDir, derivDir, workDir, suboutDir, sub, task, ses, keepruns, regressor_opts, mask_opts,                                smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves)  
                                     
                                     
     return wf
@@ -692,6 +713,7 @@ def main(argv=None):
     regressor_opts=config_file.loc['regressors',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     splithalf=config_file.loc['splithalf',1]
+    template=config_file.loc['template',1]
     extract_opt=config_file.loc['extract',1]
     overwrite=config_file.loc['overwrite',1]
     
@@ -750,7 +772,7 @@ def main(argv=None):
         sub_runs=list(map(int, sub_runs)) # convert to integers
               
         # create a process_subject workflow with the inputs defined above
-        wf = process_subject(layout, args.projDir, derivDir, outDir, workDir, sub, task, ses, sub_runs, regressor_opts, mask_opts,                     smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, extract_opt, dropvols, splithalf)
+        wf = process_subject(layout, args.projDir, derivDir, outDir, workDir, sub, task, ses, sub_runs, regressor_opts, mask_opts,                     smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf)
    
         # configure workflow options
         wf.config['execution'] = {'crashfile_format': 'txt',

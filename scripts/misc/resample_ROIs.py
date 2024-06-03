@@ -24,8 +24,8 @@ def resample_roi(projDir, roiDir, template):
     
     # grab template
     template_file = glob.glob(op.join(projDir, 'data', 'templates', '*{}*').format(template))
-    template_name = template[:6] # take first 6 characters
-    # template_name = template.split('_')[0] # take full template name
+    #template_name = template[:6] # take first 6 characters
+    template_name = template.split('_')[0] # take full template name
     
     # load and binarize mni file
     template_img = image.load_img(template_file)
