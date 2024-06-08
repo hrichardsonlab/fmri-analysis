@@ -94,12 +94,14 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                 if splithalf_id == 1:
                     print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
                     #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-02'.format(sub, task, run_id))
-                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
+                    #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
+                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id))
                     
                 if splithalf_id == 2:
                     print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
                     #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-01'.format(sub, task, run_id))
-                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
+                    #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
+                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id))
             else:
                 smooth_file = op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
                 froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))

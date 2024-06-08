@@ -106,7 +106,7 @@ then
 fi
 
 # create working and output directories if they don't exist
-if [ ! -d ${outDir} ] || [ ! -d ${outDir}/processing ]
+if [ ! -d ${outDir} ] || [ ! -d ${outDir}/processing ] &&  [ ${pipeline} != 'define_fROIs.py' ]
 then 
 	echo
 	echo "Creating project analysis directory: ${outDir}"
