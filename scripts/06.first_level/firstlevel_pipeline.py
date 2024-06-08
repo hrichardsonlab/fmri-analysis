@@ -294,11 +294,11 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         from nipype.interfaces.base import Bunch
         
         print('Using the following nuisance regressors in the model: {}'.format(regressor_names))
-        
+       
         # if there are stimuli/events to process (ie not timecourse regressors)
         if len(stimuli) != 0:
             trial_types = stimuli[stimuli.trial_type.isin(['{}'.format(e) for e in events])].trial_type.unique()
-             
+
             # extract onset and duration for each trial type
             onset = []
             duration = []

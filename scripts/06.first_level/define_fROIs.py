@@ -1,13 +1,7 @@
 """
-Individual run analysis using outputs from fMRIPrep
-
-Adapted script from original notebook:
-https://github.com/poldrack/fmri-analysis-vm/blob/master/analysis/postFMRIPREPmodelling/First%20and%20Second%20Level%20Modeling%20(FSL).ipynb
+Script to define subject functional ROIs using contrast maps generated in firstlevel pipeline
 
 More information on what this script is doing - beyond the commented code - is provided on the lab's github wiki page
-Nesting of functions: main > argparser > process_subject > create_timecourse_workflow > data_grabber > process_data_files > denoise_data > extract_timecourse
-
-Requirement: BIDS dataset (including events.tsv), derivatives directory with fMRIPrep outputs, and modeling files
 
 """
 import pandas as pd
