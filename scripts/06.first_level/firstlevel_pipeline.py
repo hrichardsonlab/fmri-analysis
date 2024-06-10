@@ -409,6 +409,9 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             # read in contrasts file
             contrast_info = pd.read_csv(contrasts_file, sep='\t')
             
+            # set contrasts condition column to lowercase to avoid case errors and allow users flexibility when specifying events in config and contrasts files
+            contrast_info['desc'] = contrast_info['desc'].str.lower()
+            
             # select contrasts of interest specified in config file
             contrast_info = contrast_info[contrast_info['desc'].isin(contrast_opts)]
             
@@ -707,6 +710,11 @@ def main(argv=None):
     splithalf=config_file.loc['splithalf',1]
     overwrite=config_file.loc['overwrite',1]
     
+    # lowercase contrast_opts and events to avoid case errors - allows flexibility in how users specify events in config and contrasts files
+    contrast_opts = [c.lower() for c in contrast_opts]
+    events = [e.lower() for e in events]
+    timecourses = [t.lower() for t in timecourses]
+
     # if user requested overwrite, delete previous directories
     if (overwrite == 'yes') & (len(os.listdir(workDir)) != 0):
         print('Overwriting existing outputs.')
