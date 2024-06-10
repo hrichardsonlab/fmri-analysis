@@ -93,14 +93,10 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                 # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
                 if splithalf_id == 1:
                     print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                    #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-02'.format(sub, task, run_id))
-                    #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
                     froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id))
                     
                 if splithalf_id == 2:
                     print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                    #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}_splithalf-01'.format(sub, task, run_id))
-                    #froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id), 'sub-{}_task-{}_run-{:02d}'.format(sub, task, run_id))
                     froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id))
             else:
                 smooth_file = op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
@@ -122,7 +118,9 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         
         # make preproc directory and save mni_file
         os.makedirs(preprocDir, exist_ok=True)
-        shutil.copy(mni_file, preprocDir) 
+        
+        if not resultsDir:
+            shutil.copy(mni_file, preprocDir) 
         
         # grab roi file for each mask requested
         roi_masks = list()
@@ -131,11 +129,11 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                 roi_masks.append(mni_mask)
                 print('Will extract whole brain timecourses')
             elif 'fROI' in m:
-                if not resultsDir:
+                if not froi_prefix: # resultsDir:
                     print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
                 else:
                     roi_name = m.split('-')[1]
-                    roi_file = glob.glob(op.join('{}_{}*.nii.gz'.format(froi_prefix, roi_name)))[0] 
+                    roi_file = glob.glob(op.join('{}'.format(froi_prefix),'*{}*.nii.gz'.format(roi_name)))#[0]
                     roi_masks.append(roi_file)
                     print('Using {} fROI file from {}'.format(roi_name, roi_file))
             else:
@@ -496,7 +494,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
         for m, mask in enumerate(roi_masks):
 
             print('Extracting signal from {} ROI'.format(mask_opts[m]))
-        
+            
             # ensure that mask/ROI is binarized
             mask_img = image.load_img(mask)
             mask_bin = mask_img.get_fdata() # get image data (as floating point data)
@@ -504,7 +502,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             mask_bin = image.new_img_like(mask_img, mask_bin) # create a new image of the same class as the initial image
             
             # the masks should already be resampled, but check if this is true and resample if not
-            if denoised_data.shape[0:3] != mask_bin.shape:
+            if denoised_data.shape[0:3] != mask_bin.shape[0:3]:
                 print('WARNING: the mask provided has different dimensions than the functional data!')
                 
                 # make directory to save resampled rois
@@ -512,8 +510,8 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                 os.makedirs(roiDir, exist_ok=True)
                 
                 # extract file name
-                roi_name = mask.replace('/','-').split('-')[-1]
-                roi_name = roi_name.split('.nii')[0]
+                roi_name = mask[0].split('/')[-1].split('.nii.gz')[0]
+  
                 resampled_file = op.join(roiDir, '{}_resampled.nii.gz'.format(roi_name))
                 
                 # check if file already exists
@@ -536,9 +534,11 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
             # add splithalf info to output file name     
             if splithalf_id != 0:
                 if 'fROI' in mask_opts[m]:
+                    # extract contrast used to generate fROI from file name
+                    contrast = roi_masks[m][0].split('_')[-2]
                     # get fROI splithalf info from roi mask and add to output file name
-                    roi_splithalf = re.search('splithalf-(.+?)_', roi_masks[m]).group().split('_')[0]
-                    tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}'.format(sub, run_id, splithalf_id, mask_opts[m], roi_splithalf))
+                    roi_splithalf = re.search('splithalf-(.+?)_', roi_masks[m][0]).group().split('_')[0]
+                    tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_{}_splithalf-{:02d}_{}-{}'.format(sub, run_id, contrast, splithalf_id, mask_opts[m], roi_splithalf))
                 else:
                     tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}'.format(sub, run_id, splithalf_id, mask_opts[m]))
             else:
@@ -693,12 +693,6 @@ def main(argv=None):
     if not op.exists(args.config):
         raise IOError('Configuration file {} not found. Make sure it is saved in your project directory!'.format(args.config))
     
-    # define output and working directories
-    workDir, outDir = op.realpath(args.workDir), op.realpath(args.outDir)
-    
-    # identify analysis README file
-    readme_file=op.join(outDir, 'README.txt')
-    
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     bidsDir=config_file.loc['bidsDir',1]
@@ -719,31 +713,60 @@ def main(argv=None):
     extract_opt=config_file.loc['extract',1]
     overwrite=config_file.loc['overwrite',1]
     
-    # if user requested overwrite, delete previous directories
-    if (overwrite == 'yes') & (len(os.listdir(workDir)) != 0):
-        print('Overwriting existing outputs.')
-        shutil.copy(readme_file, args.projDir)  # temporarily copy README to project directory
-        # remove directories
-        shutil.rmtree(outDir)
-        # create new directories
-        os.mkdir(outDir)
-        os.mkdir(workDir)
-        tmp_file=op.join(args.projDir, 'README.txt')
-        shutil.copy(tmp_file, readme_file) # copy README to new working directory
-        os.remove(tmp_file) # delete temp file
     
-    # if user requested no overwrite, create new working directory with date and time stamp
-    if (overwrite == 'no') & (len(os.listdir(workDir)) != 0):
-        print('Creating new output directories to avoid overwriting existing outputs.')
-        today = datetime.now() # get date
-        datestring = today.strftime('%Y-%m-%d_%H-%M-%S')
-        outDir = (outDir + '_' + datestring) # new directory path
+    # define output and working directories
+    if resultsDir: # if resultsDir was specified
+        # save outputs to established resultsDir
+        outDir = resultsDir
         workDir = op.join(outDir, 'processing')
-        # create new directories
-        os.mkdir(outDir)
-        os.mkdir(workDir)      
-        shutil.copy(readme_file, outDir)  # copy README to new output directory
-        readme_file=op.join(outDir, 'README.txt') # re-identify current analysis README file
+        
+        # identify analysis README file
+        readme_file=op.join(outDir, 'README.txt')
+        
+        # add config details to project README file
+        with open(readme_file, 'a') as file_1:
+            file_1.write('\n')
+            file_1.write('Timecourses were extracted using the timecourse_pipeline.py \n')
+            file_1.write('The following masks were specified in the config file: {} \n'.format(mask_opts))
+    
+    else: # if no resultsDir was specified
+        workDir, outDir = op.realpath(args.workDir), op.realpath(args.outDir)
+    
+        # identify analysis README file
+        readme_file=op.join(outDir, 'README.txt')
+        
+        # if user requested overwrite, delete previous directories
+        if (overwrite == 'yes') & (len(os.listdir(workDir)) != 0):
+            print('Overwriting existing outputs.')
+            shutil.copy(readme_file, args.projDir)  # temporarily copy README to project directory
+            # remove directories
+            shutil.rmtree(outDir)
+            # create new directories
+            os.mkdir(outDir)
+            os.mkdir(workDir)
+            tmp_file=op.join(args.projDir, 'README.txt')
+            shutil.copy(tmp_file, readme_file) # copy README to new working directory
+            os.remove(tmp_file) # delete temp file
+        
+        # if user requested no overwrite, create new working directory with date and time stamp
+        if (overwrite == 'no') & (len(os.listdir(workDir)) != 0):
+            print('Creating new output directories to avoid overwriting existing outputs.')
+            today = datetime.now() # get date
+            datestring = today.strftime('%Y-%m-%d_%H-%M-%S')
+            outDir = (outDir + '_' + datestring) # new directory path
+            workDir = op.join(outDir, 'processing')
+            # create new directories
+            os.mkdir(outDir)
+            os.mkdir(workDir)      
+            shutil.copy(readme_file, outDir)  # copy README to new output directory
+            readme_file=op.join(outDir, 'README.txt') # re-identify current analysis README file
+            
+        # add config details to project README file
+        with open(args.config, 'r') as file_1, open(readme_file, 'a') as file_2:
+            file_2.write('Timecourses were extracted by running the timecourse_pipeline.py \n')
+            file_2.write('Pipeline parameters were defined by the {} file'.format(args.config))
+            for line in file_1:
+                file_2.write(line)
     
     # print if BIDS directory is not found
     if not op.exists(bidsDir):
@@ -753,11 +776,7 @@ def main(argv=None):
     if not op.exists(derivDir):
         raise IOError('Derivatives directory {} not found.'.format(derivDir))
     
-    # add config details to project README file
-    with open(args.config, 'r') as file_1, open(readme_file, 'a') as file_2:
-        for line in file_1:
-            file_2.write(line)
-    
+
     # get layout of BIDS directory
     # this is necessary because the pipeline reads the functional json files that have TR info
     # the derivDir (where fMRIPrep outputs are) doesn't have json files with this information, so getting the layout of that directory will result in an error
