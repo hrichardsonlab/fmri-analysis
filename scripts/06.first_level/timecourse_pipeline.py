@@ -538,7 +538,7 @@ def create_timecourse_workflow(projDir, derivDir, workDir, outDir, sub, task, se
                     contrast = roi_masks[m][0].split('_')[-2]
                     # get fROI splithalf info from roi mask and add to output file name
                     roi_splithalf = re.search('splithalf-(.+?)_', roi_masks[m][0]).group().split('_')[0]
-                    tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_{}_splithalf-{:02d}_{}-{}'.format(sub, run_id, contrast, splithalf_id, mask_opts[m], roi_splithalf))
+                    tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}-{}'.format(sub, run_id, splithalf_id, mask_opts[m], contrast, roi_splithalf))
                 else:
                     tc_prefix = op.join(tcDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}'.format(sub, run_id, splithalf_id, mask_opts[m]))
             else:
