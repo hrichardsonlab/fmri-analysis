@@ -649,9 +649,14 @@ def process_subject(layout, projDir, derivDir, outDir, workDir, sub, task, ses, 
     
     # define subject output directory
     suboutDir = op.join(outDir, 'sub-{}'.format(sub))
+    
+    # delete prior processing directories because cache files can interfere with workflow
+    subworkDir = op.join(workDir, 'sub-{}_task-{}_timecourses'.format(sub, task))
+    if os.path.exists(subworkDir):
+        shutil.rmtree(subworkDir)
 
     # call timecourse workflow with extracted subject-level data
-    wf = create_timecourse_workflow(projDir, derivDir, workDir, suboutDir, sub, task, ses, keepruns, regressor_opts, mask_opts,                                smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves)  
+    wf = create_timecourse_workflow(projDir, derivDir, workDir, suboutDir, sub, task, ses, keepruns, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves)  
                                     
                                     
     return wf
