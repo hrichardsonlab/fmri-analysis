@@ -70,7 +70,6 @@ def process_subject(projDir, resultsDir, sub, runs, task, events, splithalves, s
             # load and binarize mni file
             mni_img = image.load_img(mni_file)
             mni_bin = mni_img.get_fdata() # get image data (as floating point data)
-            # ensure that mni img is binarized
             mni_bin[mni_bin >= 1] = 1 # for values equal to or greater than 1, make 1 (values less than 1 are already 0)
             mni_bin = image.new_img_like(mni_img, mni_bin) # create a new image of the same class as the initial image
 
@@ -113,23 +112,21 @@ def process_subject(projDir, resultsDir, sub, runs, task, events, splithalves, s
                     print('Defining fROI using top {} voxels within {} contrast'.format(top_nvox, c))
                     z_file = glob.glob(op.join(statsDir, '*{}_zstat.nii.gz'.format(c)))
                     z_img = image.load_img(z_file)
-                    #t_file = glob.glob(op.join(statsDir, '*{}_tstat.nii.gz'.format(c)))
-                    #t_img = image.load_img(t_file)
                     
                     # mask contrast image with roi image
                     masked_img = image.math_img('img1 * img2', img1 = z_img, img2 = mask_bin)
                     masked_data = masked_img.get_fdata()
                     
-                    # set negative and 0 values to nan before grabbing top voxels to ensure only positive values are included
-                    masked_data[masked_data <= 0] = np.nan
+                    # set 0 values to nan before grabbing top voxels
+                    masked_data[masked_data == 0] = np.nan # nan 0 values
 
                     # save masked file (optional data checking step)
-                    #masked_img_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
-                    #masked_img.to_filename(masked_img_file)
+                    # masked_img_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
+                    # masked_img.to_filename(masked_img_file)
                     
                     # get top voxels
                     masked_data_inds = (-masked_data).argsort(axis = None) # the negative ensures that values are returned in decending order
-                    masked_data[np.unravel_index(masked_data_inds[top_nvox:], masked_data.shape)] = np.nan
+                    masked_data[np.unravel_index(masked_data_inds[top_nvox:], masked_data.shape)] = np.nan # set voxels not in top_nvox to nan
                     
                     # binarize top voxel mask
                     sub_froi = masked_data.copy()
@@ -138,7 +135,7 @@ def process_subject(projDir, resultsDir, sub, runs, task, events, splithalves, s
                     
                     # save froi file
                     sub_froi = image.new_img_like(mask_bin, sub_froi) # create a new image of the same class as the initial image
-                    sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}.nii.gz'.format(sub, r, s, search_spaces[m], c))
+                    sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox))
                     sub_froi.to_filename(sub_roi_file)
 
 # define command line parser function
@@ -203,6 +200,7 @@ def main(argv=None):
 
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
+        print('Defining fROIs for sub-{}'.format(sub))
         # pass runs for this sub
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
