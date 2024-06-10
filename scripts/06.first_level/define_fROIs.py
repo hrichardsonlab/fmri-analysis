@@ -170,11 +170,6 @@ def main(argv=None):
     # print if the project directory is not found
     if not op.exists(args.projDir):
         raise IOError('Project directory {} not found.'.format(args.projDir))    
-        
-    # print if the project directory is not found
-    if not op.exists(args.projDir):
-        raise IOError('Project directory {} not found.'.format(args.projDir))
-    
     # print if config file is not found
     if not op.exists(args.config):
         raise IOError('Configuration file {} not found. Make sure it is saved in your project directory!'.format(args.config))
@@ -197,6 +192,16 @@ def main(argv=None):
     # print if results directory is not found
     if not op.exists(resultsDir):
         raise IOError('Results directory {} not found.'.format(resultsDir))
+        
+    # identify analysis README file
+    readme_file=op.join(resultsDir, 'README.txt')
+    
+    # add config details to project README file
+    with open(readme_file, 'a') as file_1:
+        file_1.write('\n')
+        file_1.write('fROIs were defined using the define_ROIs.py script \n')
+        file_1.write('The following search spaces were specified in the config file: {} \n'.format(search_spaces))
+        file_1.write('The top {} voxels were selected for each search space within the {} contrast: {} \n'.format(top_nvox, events))
 
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
