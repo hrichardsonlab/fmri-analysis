@@ -201,7 +201,7 @@ def main(argv=None):
         file_1.write('\n')
         file_1.write('fROIs were defined using the define_ROIs.py script \n')
         file_1.write('The following search spaces were specified in the config file: {} \n'.format(search_spaces))
-        file_1.write('The top {} voxels were selected for each search space within the {} contrast: {} \n'.format(top_nvox, events))
+        file_1.write('The top {} voxels were selected for each search space within the contrast: {} \n'.format(top_nvox, config_file.loc['events',1]))
 
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
