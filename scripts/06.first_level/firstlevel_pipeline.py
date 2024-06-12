@@ -138,10 +138,12 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         import numpy as np
         from nibabel import load
         
+        print(event_file)
+        
         # create a dictionary for mapping between config file and labels used in confounds file (more options can be added later)
-        regressor_dict = {'FD': 'framewise_displacement',
-                          'DVARS':'std_dvars',
-                          'aCompCor': ['a_comp_cor_00', 'a_comp_cor_01', 'a_comp_cor_02', 'a_comp_cor_03', 'a_comp_cor_04']}
+        regressor_dict = {'fd': 'framewise_displacement',
+                          'dvars':'std_dvars',
+                          'acompcor': ['a_comp_cor_00', 'a_comp_cor_01', 'a_comp_cor_02', 'a_comp_cor_03', 'a_comp_cor_04']}
         
         # extract the entries from the dictionary that match the key value provided in the config file
         regressor_list=list({r: regressor_dict[r] for r in regressor_opts if r in regressor_dict}.values())
@@ -180,6 +182,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         # read in events or timecourse file depending on config file options
         if not 'no' in timecourses:
             tc_reg = pd.read_csv(event_file, sep='\t')
+            
             # add timecourse regressors to list of regressor names
             regressor_names.extend(list(tc_reg.columns))
             # add timecourses to confounds dataframe
@@ -293,7 +296,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         """Defines `SpecifyModel` information from BIDS events."""
         from nipype.interfaces.base import Bunch
         
-        print('Using the following nuisance regressors in the model: {}'.format(regressor_names))
+        print('Using the following regressors in the model: {}'.format(regressor_names))
        
         # if there are stimuli/events to process (ie not timecourse regressors)
         if len(stimuli) != 0:
@@ -411,6 +414,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             
             # set contrasts condition column to lowercase to avoid case errors and allow users flexibility when specifying events in config and contrasts files
             contrast_info['desc'] = contrast_info['desc'].str.lower()
+            contrast_info['conds'] = contrast_info['conds'].str.lower()
             
             # select contrasts of interest specified in config file
             contrast_info = contrast_info[contrast_info['desc'].isin(contrast_opts)]
@@ -618,11 +622,12 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
             # read in timecourse file from project/data directory and combined into 1 dataframe
             tc_files = glob.glob(op.join(projDir, 'data', 'ROI_timecourses', '{}'.format(task), 'adult_TC-{}.tsv'.format(t)))
             tc = pd.read_csv(tc_files[0], sep='\t')
+            tc.columns = tc.columns.str.lower()
             tc_dat = tc.join(tc_dat)
         
         # remove timecourses if not specified in regressors list in config file
         tc_dat=tc_dat.filter(regressor_opts)
-
+        
         # save as tc regressor file in tcDir
         tcreg_file = op.join(tcDir, 'sub-{}_ROI_timecourses.txt'.format(sub))
         pd.DataFrame(tc_dat).to_csv(tcreg_file, index=False, sep ='\t') 
@@ -642,7 +647,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
     # if no events identified (e.g., resting state data)
     if not events_files:
         raise FileNotFoundError('No event files found for sub-{}'.format(sub))
-
+    
     # call firstlevel workflow with extracted subject-level data
     wf = create_firstlevel_workflow(projDir, derivDir, workDir, suboutDir, 
                                     sub, task, ses, keepruns, events_files, events, contrast, contrast_opts, timecourses,
@@ -704,7 +709,7 @@ def main(argv=None):
     hpf=int(config_file.loc['hpf',1])
     contrast=config_file.loc['contrast',1]
     contrast_opts=config_file.loc['events',1].replace(' ','').split(',')
-    events=config_file.loc['events',1].replace(' ','').replace(',','-').split('-')
+    events=list(set(config_file.loc['events',1].replace(' ','').replace(',','-').split('-')))
     timecourses=config_file.loc['timecourses',1].replace(' ', '').split(',')
     regressor_opts=config_file.loc['regressors',1].replace(' ','').split(',')
     splithalf=config_file.loc['splithalf',1]
@@ -713,7 +718,7 @@ def main(argv=None):
     # lowercase contrast_opts and events to avoid case errors - allows flexibility in how users specify events in config and contrasts files
     contrast_opts = [c.lower() for c in contrast_opts]
     events = [e.lower() for e in events]
-    timecourses = [t.lower() for t in timecourses]
+    regressor_opts = [r.lower() for r in regressor_opts]
 
     # if user requested overwrite, delete previous directories
     if (overwrite == 'yes') & (len(os.listdir(workDir)) != 0):
