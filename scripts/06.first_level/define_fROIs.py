@@ -22,14 +22,14 @@ from nilearn import masking
 import nilearn
 import shutil
 
-def process_subject(projDir, resultsDir, sub, runs, task, events, splithalves, search_spaces, template, top_nvox):
+def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, splithalves, search_spaces, template, top_nvox):
 
     # define search spaces dictionary
     roi_dict = {'lEBA':'body', 'rEBA':'body',
                 'lFFA':'face', 'lOFA':'face', 'lSTS':'face', 'rFFA':'face', 'rOFA':'face', 'rSTS':'face',
                 'lLOC':'object', 'rLOC': 'object',
                 'lPPA':'scene', 'lRSC':'scene', 'lTOS':'scene', 'rPPA':'scene', 'rRSC':'scene', 'rTOS':'scene',
-                'DMPFC':'ToM', 'LTPJ':'ToM', 'MMPFC':'ToM', 'PC':'ToM', 'RSTS':'ToM', 'RTPJ':'ToM', 'VMPFC':'ToM',
+                'DMPFC':'tom', 'LTPJ':'tom', 'MMPFC':'tom', 'PC':'tom', 'RSTS':'tom', 'RTPJ':'tom', 'VMPFC':'tom',
                 'lvwfa':'vwfa'}
    
     # grab ROI search space files
@@ -43,9 +43,13 @@ def process_subject(projDir, resultsDir, sub, runs, task, events, splithalves, s
         if template != None: # if a template was specified (ie resampled search spaces are requested)
             # extract main part of  template name
             template_name = template.split('_')[0]
-            roi_file = glob.glob(op.join(projDir, 'data', 'search_spaces', '{}/{}/{}*.nii.gz'.format(network, template_name, m)))
+            roi_file = glob.glob(op.join(sharedDir, 'search_spaces', '{}/{}/{}*.nii.gz'.format(network, template_name, m)))
+            if not roi_file: # check projDir directory for search spaces if not in shared directory
+                roi_file = glob.glob(op.join(projDir, 'data', 'search_spaces', '{}/{}/{}*.nii.gz'.format(network, template_name, m)))
         else:
-            roi_file = glob.glob(op.join(projDir, 'data', 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
+            roi_file = glob.glob(op.join(sharedDir, 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
+            if not roi_file: # check projDir directory for search spaces if not in shared directory
+                roi_file = glob.glob(op.join(projDir, 'data', 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
         
         roi_masks.append(roi_file)
         
@@ -88,7 +92,7 @@ def process_subject(projDir, resultsDir, sub, runs, task, events, splithalves, s
                     print('WARNING: the search space provided has different dimensions than the functional data!')
                     
                     # make directory to save resampled rois
-                    roiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'resampled_rois')
+                    roiDir = op.join(resultsDir, 'resampled_rois')
                     os.makedirs(roiDir, exist_ok=True)
                     
                     # extract file name
@@ -118,7 +122,7 @@ def process_subject(projDir, resultsDir, sub, runs, task, events, splithalves, s
                     masked_data = masked_img.get_fdata()
                     
                     # set 0 values to nan before grabbing top voxels
-                    masked_data[masked_data == 0] = np.nan # nan 0 values
+                    # masked_data[masked_data == 0.00000000] = np.nan
 
                     # save masked file (optional data checking step)
                     # masked_img_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
@@ -133,9 +137,13 @@ def process_subject(projDir, resultsDir, sub, runs, task, events, splithalves, s
                     sub_froi[~np.isnan(sub_froi)] = 1
                     sub_froi[np.isnan(sub_froi)] = 0
                     
+                    # roi_name_lower = search_spaces[m].lower()
+                    
                     # save froi file
+                    # could use roi_name_lower instead of search_spaces[m] to get all lowercase names
                     sub_froi = image.new_img_like(mask_bin, sub_froi) # create a new image of the same class as the initial image
-                    sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox))
+                    # sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
+                    sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, r, s, search_spaces[m], c, top_nvox))
                     sub_froi.to_filename(sub_roi_file)
 
 # define command line parser function
@@ -176,6 +184,7 @@ def main(argv=None):
     
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
+    sharedDir=config_file.loc['sharedDir',1]
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
     events=config_file.loc['events',1].replace(' ','').split(',')
@@ -183,6 +192,9 @@ def main(argv=None):
     splithalf=config_file.loc['splithalf',1]
     template=config_file.loc['template',1]
     top_nvox=int(config_file.loc['top_nvox',1])
+    
+    # lowercase events to avoid case errors - allows flexibility in how users specify events in config and contrasts files
+    events = [e.lower() for e in events]
     
     if splithalf == 'yes':
         splithalves = [1,2]
@@ -212,7 +224,7 @@ def main(argv=None):
         sub_runs=list(map(int, sub_runs)) # convert to integers
               
         # create a process_subject workflow with the inputs defined above
-        process_subject(args.projDir, resultsDir, sub, sub_runs, task, events, splithalves, search_spaces, template, top_nvox)
+        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, search_spaces, template, top_nvox)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
