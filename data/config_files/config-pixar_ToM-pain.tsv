@@ -1,3 +1,4 @@
+sharedDir	/EBC/processing
 bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data
 derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
 resultsDir	
@@ -14,15 +15,15 @@ hpf	100
 filter	butterworth
 detrend	yes
 standardize	no
-events	RTPJ-VMPFC
+events	TPJ-S2
 contrast	yes
-timecourses	ToM_ROIs
-regressors	art, aCompCor, RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
-splithalf	no
-search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
-resample	/EBC/home/mthye/TEBC-5y/data/search_spaces/ToM
+timecourses	ToM_ROIs, Pain_ROIs
+regressors	art, aCompCor, LTPJ, RTPJ, RS2, LS2
+splithalf	yes
+search_spaces	LTPJ, RTPJ
+resample	
 template	MNI152NLin2009cAsym_res-02_T1w
-mask	fROI-LTPJ, RTPJ, whole_brain
+mask	fROI-LTPJ, fROI-RTPJ
 extract	mean
 top_nvox	80
 overwrite	no
