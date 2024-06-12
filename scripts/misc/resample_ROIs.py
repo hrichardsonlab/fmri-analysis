@@ -17,13 +17,15 @@ import glob
 import shutil
 
 # define first level workflow function
-def resample_roi(projDir, roiDir, template):
+def resample_roi(projDir, roiDir, sharedDir, template):
 
     # define roi files in directory provided
     roi_files = glob.glob(op.join(roiDir, '*.nii*'))
     
     # grab template
-    template_file = glob.glob(op.join(projDir, 'data', 'templates', '*{}*').format(template))
+    template_file = glob.glob(op.join(sharedDir, 'templates', '*{}*').format(template))
+    if not template_file: # check projDir directory for template file if not in shared directory
+        template_file = glob.glob(op.join(projDir, 'data', 'templates', '*{}*').format(template))
     #template_name = template[:6] # take first 6 characters
     template_name = template.split('_')[0] # take full template name
     
@@ -88,11 +90,12 @@ def main(argv=None):
     
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
+    sharedDir=config_file.loc['sharedDir',1]
     roiDir=config_file.loc['resample',1]
     template=config_file.loc['template',1]
     
     # pass inputs defined above to main resampling function
-    resample_roi(args.projDir, roiDir, template)
+    resample_roi(args.projDir, roiDir, sharedDir, template)
    
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
