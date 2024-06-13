@@ -91,7 +91,7 @@ def main(argv=None):
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     sharedDir=config_file.loc['sharedDir',1]
-    roiDir=config_file.loc['resample',1]
+    roiDir=config_file.loc['resampleDir',1]
     template=config_file.loc['template',1]
     
     # pass inputs defined above to main resampling function

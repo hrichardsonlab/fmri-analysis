@@ -22,7 +22,7 @@ from nilearn import masking
 import nilearn
 import shutil
 
-def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, splithalves, search_spaces, template, top_nvox):
+def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, splithalves, search_spaces, match_events, template, top_nvox):
 
     # define search spaces dictionary
     roi_dict = {'lEBA':'body', 'rEBA':'body',
@@ -113,38 +113,41 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
                 
                 # for each contrast
                 for c in events:
-                    print('Defining fROI using top {} voxels within {} contrast'.format(top_nvox, c))
-                    z_file = glob.glob(op.join(statsDir, '*{}_zstat.nii.gz'.format(c)))
-                    z_img = image.load_img(z_file)
-                    
-                    # mask contrast image with roi image
-                    masked_img = image.math_img('img1 * img2', img1 = z_img, img2 = mask_bin)
-                    masked_data = masked_img.get_fdata()
-                    
-                    # set 0 values to nan before grabbing top voxels
-                    # masked_data[masked_data == 0.00000000] = np.nan
+                    if match_events == 'yes' and search_spaces[m].lower() not in c: # if the search space (lowercase) is contained within the events specified
+                        print('Skipping {} search space for the {} contrast'.format(search_spaces[m], c))
+                    else: 
+                        print('Defining fROI using top {} voxels within {} contrast'.format(top_nvox, c))
+                        z_file = glob.glob(op.join(statsDir, '*{}_zstat.nii.gz'.format(c)))
+                        z_img = image.load_img(z_file)
+                        
+                        # mask contrast image with roi image
+                        masked_img = image.math_img('img1 * img2', img1 = z_img, img2 = mask_bin)
+                        masked_data = masked_img.get_fdata()
+                        
+                        # set 0 values to nan before grabbing top voxels
+                        # masked_data[masked_data == 0.00000000] = np.nan
 
-                    # save masked file (optional data checking step)
-                    # masked_img_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
-                    # masked_img.to_filename(masked_img_file)
-                    
-                    # get top voxels
-                    masked_data_inds = (-masked_data).argsort(axis = None) # the negative ensures that values are returned in decending order
-                    masked_data[np.unravel_index(masked_data_inds[top_nvox:], masked_data.shape)] = np.nan # set voxels not in top_nvox to nan
-                    
-                    # binarize top voxel mask
-                    sub_froi = masked_data.copy()
-                    sub_froi[~np.isnan(sub_froi)] = 1
-                    sub_froi[np.isnan(sub_froi)] = 0
-                    
-                    # roi_name_lower = search_spaces[m].lower()
-                    
-                    # save froi file
-                    # could use roi_name_lower instead of search_spaces[m] to get all lowercase names
-                    sub_froi = image.new_img_like(mask_bin, sub_froi) # create a new image of the same class as the initial image
-                    # sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
-                    sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, r, s, search_spaces[m], c, top_nvox))
-                    sub_froi.to_filename(sub_roi_file)
+                        # save masked file (optional data checking step)
+                        # masked_img_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
+                        # masked_img.to_filename(masked_img_file)
+                        
+                        # get top voxels
+                        masked_data_inds = (-masked_data).argsort(axis = None) # the negative ensures that values are returned in decending order
+                        masked_data[np.unravel_index(masked_data_inds[top_nvox:], masked_data.shape)] = np.nan # set voxels not in top_nvox to nan
+                        
+                        # binarize top voxel mask
+                        sub_froi = masked_data.copy()
+                        sub_froi[~np.isnan(sub_froi)] = 1
+                        sub_froi[np.isnan(sub_froi)] = 0
+                        
+                        # roi_name_lower = search_spaces[m].lower()
+                        
+                        # save froi file
+                        # could use roi_name_lower instead of search_spaces[m] to get all lowercase names
+                        sub_froi = image.new_img_like(mask_bin, sub_froi) # create a new image of the same class as the initial image
+                        # sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
+                        sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, r, s, search_spaces[m], c, top_nvox))
+                        sub_froi.to_filename(sub_roi_file)
 
 # define command line parser function
 def argparser():
@@ -187,9 +190,10 @@ def main(argv=None):
     sharedDir=config_file.loc['sharedDir',1]
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
+    splithalf=config_file.loc['splithalf',1]
     events=config_file.loc['events',1].replace(' ','').split(',')
     search_spaces=config_file.loc['search_spaces',1].replace(' ','').split(',')
-    splithalf=config_file.loc['splithalf',1]
+    match_events=config_file.loc['match_events',1]
     template=config_file.loc['template',1]
     top_nvox=int(config_file.loc['top_nvox',1])
     
@@ -201,7 +205,10 @@ def main(argv=None):
     else:
         splithalves = [0]
 
-    # print if results directory is not found
+    # print if results directory is not specified or found
+    if resultsDir == None:
+        raise IOError('No resultsDir was specified in config file, but is required to define fROIs!')
+    
     if not op.exists(resultsDir):
         raise IOError('Results directory {} not found.'.format(resultsDir))
         
@@ -224,7 +231,7 @@ def main(argv=None):
         sub_runs=list(map(int, sub_runs)) # convert to integers
               
         # create a process_subject workflow with the inputs defined above
-        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, search_spaces, template, top_nvox)
+        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, search_spaces, match_events, template, top_nvox)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
