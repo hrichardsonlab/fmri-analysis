@@ -58,12 +58,12 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
         # for each splithalf
         for s in splithalves:
             if s == 0:
-                statsDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(r))
+                modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(r))
                 froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}'.format(r))
                 # grab functional file for resampling
                 mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(r), '*preproc_bold.nii.gz'))
             else:
-                statsDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}_splithalf{}'.format(r,s))
+                modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}_splithalf{}'.format(r,s))
                 froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf{}'.format(r,s))
                 # grab functional file for resampling
                 mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*preproc_bold.nii.gz'))
@@ -117,7 +117,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
                         print('Skipping {} search space for the {} contrast'.format(search_spaces[m], c))
                     else: 
                         print('Defining fROI using top {} voxels within {} contrast'.format(top_nvox, c))
-                        z_file = glob.glob(op.join(statsDir, '*{}_zstat.nii.gz'.format(c)))
+                        z_file = glob.glob(op.join(modelDir, '*{}_zstat.nii.gz'.format(c)))
                         z_img = image.load_img(z_file)
                         
                         # mask contrast image with roi image

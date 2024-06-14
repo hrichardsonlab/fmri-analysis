@@ -2,6 +2,7 @@ sharedDir	/EBC/processing
 bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data
 derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
 resultsDir	
+resampleDir	
 task	pixar
 sessions	01
 FD_thresh	1
@@ -10,20 +11,20 @@ art_norm_thresh	1
 art_z_thresh	3
 ntmpts_exclude	.33
 dropvols	0
-smoothing	0
+smoothing	5
 hpf	100
 filter	butterworth
 detrend	yes
 standardize	no
-events	TPJ-S2
-contrast	yes
-timecourses	ToM_ROIs, Pain_ROIs
-regressors	art, aCompCor, LTPJ, RTPJ, RS2, LS2
 splithalf	yes
-search_spaces	LTPJ, RTPJ
-resample	
+events	RTPJ-S2, LTPJ-S2, PC-S2, DMPFC-S2, MMPFC-S2, VMPFC-S2
+contrast	yes
+timecourses	ToM_ROIs, Pain_ROIs, ToM_CounterROIs, Pain_CounterROIs
+regressors	art, aCompCor, LTPJ, RTPJ, PC, DMPFC, MMPFC, VMPFC, RS2, LS2, RMFG, LMFG, RInsula, LInsula, AMCC, C-RTPJ, C-LTPJ, C-PC, C-DMPFC, C-MMPFC, C-VMPFC, C-RS2, C-LS2, C-RMFG, C-LMFG, C-RInsula, C-LInsula, C-AMCC
 template	MNI152NLin2009cAsym_res-02_T1w
-mask	fROI-LTPJ, fROI-RTPJ
-extract	mean
+search_spaces	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
+match_events	yes
 top_nvox	80
+mask	fROI-LTPJ
+extract	voxelwise
 overwrite	no

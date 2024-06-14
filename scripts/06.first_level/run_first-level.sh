@@ -117,7 +117,7 @@ then
 fi
 
 # define output logfile
-if [ ${pipeline} == 'define_fROIs.py' ]
+if [ ${pipeline} == 'define_fROIs.py' ] | [ ${pipeline} == 'extract_stats.py' ]
 then
 	export log_file="${projDir}/analysis/${proj_name}/${analysis_name}_${pipeline::-3}_logfile.txt"
 else
