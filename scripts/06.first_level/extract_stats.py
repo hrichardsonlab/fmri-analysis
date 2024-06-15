@@ -1,5 +1,5 @@
 """
-Script to define subject functional ROIs using contrast maps generated in firstlevel pipeline
+Script to mask the contrast maps generated in firstlevel pipeline and extract mean or voxelwise stats
 
 More information on what this script is doing - beyond the commented code - is provided on the lab's github wiki page
 
