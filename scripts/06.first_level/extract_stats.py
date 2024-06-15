@@ -19,18 +19,19 @@ import math
 from nilearn import plotting
 from nilearn import image
 from nilearn import masking
+from nilearn.maskers import NiftiMasker
 import nilearn
 import shutil
 
-def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, splithalves, mask_opts, match_events, template):
+def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, splithalves, mask_opts, match_events, template, extract_opt):
     
     # make output stats directory
     statsDir = op.join(resultsDir, 'sub-{}'.format(sub), 'stats')
     os.makedirs(statsDir, exist_ok=True)
     
     # create output file name
-    stats_file = op.join(statsDir, 'sub-{}_mean_ROI_magnitudes.csv'.format(sub))
-        
+    stats_file = op.join(statsDir, 'sub-{}_{}_ROI_magnitudes.csv'.format(sub, extract_opt))
+
     # delete output file if it already exists (to ensure stats aren't appended to pre-existing files)
     if os.path.isfile(stats_file):
         os.remove(stats_file)
@@ -132,38 +133,65 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
                         cope_file = glob.glob(op.join(modelDir, '*{}_zstat.nii.gz'.format(c)))
                         cope_img = image.load_img(cope_file)
    
-                        # mask contrast image with roi image
-                        masked_img = image.math_img('img1 * img2', img1 = cope_img, img2 = mask_bin)
-                        masked_data = masked_img.get_fdata()
+                        # mask and extract values depending on extract_opt
+                        if extract_opt == 'mean': # if mean requested
+                            # mask contrast image with roi image
+                            masked_img = image.math_img('img1 * img2', img1 = cope_img, img2 = mask_bin)
+                            masked_data = masked_img.get_fdata()
+                            
+                            # take the mean of voxels within mask
+                            mean_val = np.nanmean(masked_data)
                         
-                        # take the mean of the top voxels
-                        mean_val = np.nanmean(masked_data)
-                    
-                        if splithalf_id != 0:
-                            df_row = pd.DataFrame({'sub': sub,
-                                                   'task' : task,
-                                                   'run' : run_id,
-                                                   'split' : splithalf_id,
-                                                   'mask': mask_opts[r],
-                                                   'roi_file' : roi,
-                                                   'contrast' : c, 
-                                                   'mean_val' : mean_val}, index=[0])
-                        else:
-                            df_row = pd.DataFrame({'sub': sub,
-                                                   'task' : task,
-                                                   'run' : run_id,
-                                                   'mask': mask_opts[r],
-                                                   'roi_file' : roi,
-                                                   'contrast' : c, 
-                                                   'mean_val' : mean_val}, index=[0])
-                        
-                        if not os.path.isfile(stats_file): # if the stats output file doesn't exist
-                            # save current row as file
-                            df_row.to_csv(stats_file, index=False, header='column_names')
-                        else: # if the stats output file exists
-                            # append current row without header labels
-                            df_row.to_csv(stats_file, mode='a', index=False, header=False)
+                            if splithalf_id != 0:
+                                df_row = pd.DataFrame({'sub': sub,
+                                                       'task' : task,
+                                                       'run' : run_id,
+                                                       'half' : splithalf_id,
+                                                       'mask': mask_opts[r],
+                                                       'roi_file' : roi,
+                                                       'contrast' : c, 
+                                                       'mean_val' : mean_val}, index=[0])
+                            else:
+                                df_row = pd.DataFrame({'sub': sub,
+                                                       'task' : task,
+                                                       'run' : run_id,
+                                                       'mask': mask_opts[r],
+                                                       'roi_file' : roi,
+                                                       'contrast' : c, 
+                                                       'mean_val' : mean_val}, index=[0])
+                            
+                            if not os.path.isfile(stats_file): # if the stats output file doesn't exist
+                                # save current row as file
+                                df_row.to_csv(stats_file, index=False, header='column_names')
+                            else: # if the stats output file exists
+                                # append current row without header labels
+                                df_row.to_csv(stats_file, mode='a', index=False, header=False)
 
+                        # return voxelwise values
+                        else:
+                            # mask contrast image with roi image and return 2D array
+                            masker = NiftiMasker(mask_img=mask_bin)
+                            masked_data = masker.fit_transform(cope_img)
+                            
+                            # convert to data frame
+                            masked_df = pd.DataFrame(masked_data).transpose()
+                            
+                            # add columns with run, split, and mask info
+                            masked_df.insert(loc=0, column='voxel_index', value=range(len(masked_df)))
+                            masked_df.insert(loc=0, column='mask', value=mask_opts[r])
+                            masked_df.insert(loc=0, column='contrast', value=c)
+                            if splithalf_id != 0:
+                                masked_df.insert(loc=0, column='half', value=splithalf_id)
+                            masked_df.insert(loc=0, column='run', value=run_id)
+                            masked_df.insert(loc=0, column='sub', value='sub-{}'.format(sub))
+                            
+                            if not os.path.isfile(stats_file): # if the stats output file doesn't exist
+                                # save dataframe
+                                masked_df.to_csv(stats_file, index=False, header='column_names')
+                            else:
+                                # append current row without header labels
+                                masked_df.to_csv(stats_file, mode='a', index=False, header=False)
+                                
 # define command line parser function
 def argparser():
     # create an instance of ArgumentParser
@@ -211,6 +239,7 @@ def main(argv=None):
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     match_events=config_file.loc['match_events',1]
     template=config_file.loc['template',1]
+    extract_opt=config_file.loc['extract',1]
     
     # lowercase events to avoid case errors - allows flexibility in how users specify events in config and contrasts files
     events = [e.lower() for e in events]
@@ -236,7 +265,7 @@ def main(argv=None):
         sub_runs=list(map(int, sub_runs)) # convert to integers
               
         # create a process_subject workflow with the inputs defined above
-        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, mask_opts, match_events, template)
+        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, mask_opts, match_events, template, extract_opt)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
