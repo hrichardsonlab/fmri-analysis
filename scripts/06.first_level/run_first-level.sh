@@ -117,11 +117,11 @@ then
 fi
 
 # define output logfile
-if [ ${pipeline} == 'define_fROIs.py' ] | [ ${pipeline} == 'extract_stats.py' ]
+if [[ ${pipeline} == *'pipeline.py'* ]]
 then
-	export log_file="${projDir}/analysis/${proj_name}/${analysis_name}_${pipeline::-3}_logfile.txt"
-else
 	export log_file="${projDir}/analysis/${proj_name}/${analysis_name}_${pipeline::-12}_logfile.txt"
+else
+	export log_file="${projDir}/analysis/${proj_name}/${analysis_name}_${pipeline::-3}_logfile.txt"
 fi
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)

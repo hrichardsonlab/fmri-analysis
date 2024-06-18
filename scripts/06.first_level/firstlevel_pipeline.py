@@ -405,7 +405,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             # read in data contrast file
             contrasts_file = op.join(projDir, 'data', 'contrast_files', 'contrasts.tsv')
             
-            # if contrasts file not found
+            # raise error if contrasts file not found
             if not op.exists(contrasts_file):
                 raise FileNotFoundError('Contrasts file {} not found.'.format(contrasts_file))
             
@@ -433,7 +433,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                     [float(w) for w in row[3].split(' ')]
                 ])
             
-            # raise if there are no contrasts in the file for the current task
+            # raise error if there are no contrasts in the file for the current task
             if not contrasts:
                 raise AttributeError('No contrasts found for task {}'.format(task))
         else:

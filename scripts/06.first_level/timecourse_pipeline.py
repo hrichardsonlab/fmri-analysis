@@ -800,17 +800,16 @@ def main(argv=None):
         sub_runs=list(map(int, sub_runs)) # convert to integers
               
         # create a process_subject workflow with the inputs defined above
-        wf = process_subject(layout, sharedDir, args.projDir, derivDir, outDir, workDir, sub, task, ses, sub_runs, regressor_opts, mask_opts,                     smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf)
+        wf = process_subject(layout, sharedDir, args.projDir, derivDir, outDir, workDir, sub, task, ses, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf)
    
         # configure workflow options
         wf.config['execution'] = {'crashfile_format': 'txt',
                                   'remove_unnecessary_outputs': False,
                                   'keep_inputs': True}
 
-        # run multiproc unless plugin specified in script call
-        plugin = args.plugin if args.plugin else 'MultiProc'
+        # run multiproc
         args_dict = {'n_procs' : 4}
-        wf.run(plugin=plugin, plugin_args = args_dict)
+        wf.run(plugin='MultiProc', plugin_args = args_dict)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
