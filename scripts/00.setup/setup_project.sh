@@ -75,4 +75,3 @@ cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/data/subj_lists
 cp -r ${dataDir}/event_files ${proj}/data
 cp -r ${dataDir}/contrast_files ${proj}/data
 cp -r ${dataDir}/ROI_timecourses ${proj}/data
-cp -r ${dataDir}/search_spaces ${proj}/data
