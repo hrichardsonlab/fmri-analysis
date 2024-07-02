@@ -11,11 +11,11 @@ Usage() {
     echo "./bids_conversion.sh <list of subject folders to convert>"
     echo
     echo "Example:"
-    echo "./bids_conversion.sh list.txt"
+    echo "./bids_conversion.sh TEBC-5y_subjs.txt"
     echo 
-    echo "list.txt is a file containing the name of the raw data folders to convert"
-    echo "TEBC-5Y-8035"
-    echo "TEBC-5Y-8036"
+    echo "TEBC-5y_subjs.txt is a file containing the participants to convert"
+    echo "001"
+    echo "002"
 	echo "..."
     echo
 	echo
@@ -85,35 +85,36 @@ fi
 if [ ! -f ${bidsDir}/dataset_description.json ]
 then
 	echo '{' >> ${bidsDir}/dataset_description.json
-	echo ' "BIDSVersion": "1.0.0",' >> ${bidsDir}/dataset_description.json
-	echo ' "License":"This dataset is made available under the Public Domain Dedication and License \nv1.0, whose full text can be found at \nhttp://www.opendatacommons.org/licenses/pddl/1.0/. \nWe hope that all users will follow the ODC Attribution/Share-Alike \nCommunity Norms (http://www.opendatacommons.org/norms/odc-by-sa/); \nin particular, while not legally required, we hope that all users \nof the data will acknowledge the OpenfMRI project and NSF Grant \nOCI-1131441 (R. Poldrack, PI) in any publications.",' >> ${bidsDir}/dataset_description.json
 	echo ' "Name": "TheirWorld Edinburgh Birth Cohort (TEBC)",' >> ${bidsDir}/dataset_description.json
-	echo ' "ReferencesAndLinks": ["Boardman JP, Hall J, Thrippleton MJ, Reynolds RM, Bogaert D, Davidson DJ, Schwarze J, Drake AJ, Chandran S, Bastin ME, et al. 2020. Impact of preterm birth on brain development and long-term outcome: protocol for a cohort study in Scotland. BMJ Open.  10. doi: 10.1136/bmjopen-2019-035854."]' >> ${bidsDir}/dataset_description.json
+	echo ' "BIDSVersion": "1.9.0",' >> ${bidsDir}/dataset_description.json
+	echo ' "License": ["This dataset is made available under the Public Domain Dedication and License v1.0, whose full text can be found at http://www.opendatacommons.org/licenses/pddl/1.0/. We hope that all users will follow the ODC Attribution/Share-Alike Community Norms (http://www.opendatacommons.org/norms/odc-by-sa/); in particular, while not legally required, we hope that all users of the data will acknowledge the OpenfMRI project and NSF Grant OCI-1131441 (R. Poldrack, PI) in any publications."],' >> ${bidsDir}/dataset_description.json
+	echo ' "ReferencesAndLinks": ["Boardman JP, Hall J, Thrippleton MJ, Reynolds RM, Bogaert D, Davidson DJ, Schwarze J, Drake AJ, Chandran S, Bastin ME, et al. 2020. Impact of preterm birth on brain development and long-term outcome: Protocol for a cohort study in Scotland. BMJ Open. 10. doi: 10.1136/bmjopen-2019-035854."]' >> ${bidsDir}/dataset_description.json
 	echo '}' >> ${bidsDir}/dataset_description.json
 fi
 
 # iterate for all subjects in the text file
 while read p
 do
-	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# raw data folder name
-	NEWNAME=` basename ${p} | awk -F- '{print $NF}' `	# subj number from folder name
 
-		if [ -d ${dataDir}/${ORIGINALNAME} ] # if the subject has a raw data folder
+	NAME=` basename ${p} | awk -F- '{print $NF}' `	# subj number
+	
+		# convert data if the subject has a raw data folder, trying different naming conventions to check whether the folder exists
+		if [ -d ${dataDir}/"${NAME}" ] || [ -d ${dataDir}/"${cohort^^}-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-TEBC-5YP-${NAME}" ]
 		then
 			
 			# copy rawData to temporary directory
 			echo
-			echo "Copying ${ORIGINALNAME} to temporary directory within BIDS_data folder for conversion"
+			echo "Copying sub-${NAME} to temporary directory within BIDS_data folder for conversion"
 			echo
 			
-			cp -r ${dataDir}/${ORIGINALNAME} ${tmpDir}
+			cp -r ${dataDir}/*${NAME} ${tmpDir}/${NAME}
 			
 			# remove some of the DTI directories
-			rm -r ${tmpDir}/${ORIGINALNAME}/*/*_DTI_AP_*/
+			rm -r ${tmpDir}/${NAME}/*/*_DTI_AP_*/
 			
 			# identify all functional runs
-			pixar_runs=$(ls -d ${tmpDir}/${ORIGINALNAME}/*/*_pixar*/)
-			sesame_runs=$(ls -d ${tmpDir}/${ORIGINALNAME}/*/*_sesame*/)
+			pixar_runs=$(ls -d ${tmpDir}/${NAME}/*/*_pixar*/)
+			sesame_runs=$(ls -d ${tmpDir}/${NAME}/*/*_sesame*/)
 			
 			# check pixar data
 			for pr in ${pixar_runs}
@@ -147,7 +148,7 @@ do
 
 			# BIDS conversion
 			echo
-			echo "Converting subject ${ORIGINALNAME} to BIDS and renaming to ${NEWNAME}"
+			echo "Converting sub-${NAME} to BIDS"
 			echo
 			
 			# activate conda environment via bash
@@ -162,13 +163,13 @@ do
 				# -o: output directory
 			if [[ ${sessions} == 'yes' ]]
 			then
-				dcm2bids -d ${tmpDir}/${ORIGINALNAME}/*/ -p ${NEWNAME} -s 01 -c ${config} -o ${tmpDir}
-				subDir="sub-${NEWNAME}/ses-01"
-				file_prefix="sub-${NEWNAME}_ses-01"
+				dcm2bids -d ${tmpDir}/${NAME}/*/ -p ${NAME} -s 01 -c ${config} -o ${tmpDir}
+				subDir="sub-${NAME}/ses-01"
+				file_prefix="sub-${NAME}_ses-01"
 			else
-				dcm2bids -d ${tmpDir}/${ORIGINALNAME}/*/ -p ${NEWNAME} -c ${config} -o ${tmpDir}
-				subDir="sub-${NEWNAME}"
-				file_prefix="sub-${NEWNAME}"
+				dcm2bids -d ${tmpDir}/${NAME}/*/ -p ${NAME} -c ${config} -o ${tmpDir}
+				subDir="sub-${NAME}"
+				file_prefix="sub-${NAME}"
 			fi
 			
 			# deactivate conda environment
@@ -184,20 +185,23 @@ do
 			
 			# remove tmp conversion directories
 			rm -R ${tmpDir}/tmp_dcm2bids
-			rm -R ${tmpDir}/${ORIGINALNAME}
+			rm -R ${tmpDir}/${NAME}
 			
 			# copy temporary folder to BIDS_data folder
-			cp -r ${tmpDir}/sub-${NEWNAME} ${bidsDir}
+			cp -r ${tmpDir}/sub-${NAME} ${bidsDir}
 			
 			# remove the default diffusion data files
 			rm ${bidsDir}/${subDir}/dwi/*.nii.gz
 			rm ${bidsDir}/${subDir}/dwi/*.bv*
 			
-			# generate new diffusion files
-			/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz -fslgrad ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bval -shells 0,500,1000,2000 ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz -export_grad_fsl ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bval
+			# generate new diffusion files (more info: https://mrtrix.readthedocs.io/en/dev/reference/commands/dwiextract.html)
+			/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
+														     -fslgrad ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bval \
+															 -shells 0,500,1000,2000 ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
+															 -export_grad_fsl ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bval
 			
 			# give other users permissions to the generated folder
-			chmod -R a+rwx ${bidsDir}/sub-${NEWNAME}
+			chmod -R a+rwx ${bidsDir}/sub-${NAME}
 		
 		fi
 	
