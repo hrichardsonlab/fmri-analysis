@@ -5,8 +5,11 @@
 #
 # This script should be run in the directory where the project folder will be generated
 # This should typically be in your EBC/home/UUN folder
-# The scripts and subject lists saved in the EBC/processing folder will be copied
-# to the project folder and a PATHS.txt file will be generated
+#
+# This script copies and organizes the scripts and data files saved in the 
+# shared location (e.g., EBC/processing) to your project folder and generates
+# a PATHS.txt file. Larger data files (e.g., ROI files) won't be transferred
+#
 ################################################################################
 
 # usage documentation - shown if no project name is provided
@@ -36,42 +39,47 @@ cohort=$1
 proj=$2
 
 # define directories
-dataDir="/EBC/processing"	# location of shared files
-
-# delete the project directory if it already exists
-if [ -d ${proj} ]
-then
-	rm -r ${proj}
-fi
+dataDir="/EBC/processing" # location of shared files
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/EBC/" ]]; 
 	then Usage
 fi
 
-# make project directories
-echo
-echo "making ${proj} project directory"
-echo
+# warn if the project directory already exists
+if [ -d ${proj} ]
+then
+	echo
+	echo "${proj} project directory already exists!"
+	echo
+	# rm -r ${proj} # could remove project directory
+else
+	# make project directories
+	echo
+	echo "making ${proj} project directory"
+	echo
 
-mkdir ${proj}
-mkdir ${proj}/data
-mkdir ${proj}/scripts
+	mkdir ${proj}
+	mkdir ${proj}/files
+	mkdir ${proj}/scripts
 
-# create PATHS.txt file
-echo
-echo "saving project path to PATHS.txt file"
-echo
+	# create PATHS.txt file
+	echo
+	echo "saving project path to PATHS.txt file"
+	echo
 
-echo $PWD/${proj} >> ${proj}/PATHS.txt
+	echo $PWD/${proj} >> ${proj}/PATHS.txt
 
-# copy shared files to project directory
-echo
-echo "copying scripts and data files to project directory"
-echo
+	# copy shared files to project directory
+	echo
+	echo "copying scripts and data files to project directory"
+	echo
 
-cp -r ${dataDir}/scripts/fMRI/. ${proj}/scripts
-cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/data/subj_lists
-cp -r ${dataDir}/event_files ${proj}/data
-cp -r ${dataDir}/contrast_files ${proj}/data
-cp -r ${dataDir}/ROI_timecourses ${proj}/data
+	cp -r ${dataDir}/scripts/fMRI/. ${proj}/scripts
+	cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/files/subj_lists
+	cp -r ${dataDir}/event_files ${proj}/files
+	cp -r ${dataDir}/contrast_files ${proj}/files
+	cp -r ${dataDir}/ROI_timecourses ${proj}/files
+
+fi
+
