@@ -99,7 +99,7 @@ do
 	NAME=` basename ${p} | awk -F- '{print $NF}' `	# subj number
 	
 		# convert data if the subject has a raw data folder, trying different naming conventions to check whether the folder exists
-		if [ -d ${dataDir}/"${NAME}" ] || [ -d ${dataDir}/"${cohort^^}-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-TEBC-5YP-${NAME}" ]
+		if [ -d ${dataDir}/"${NAME}" ] || [ -d ${dataDir}/"${cohort^^}-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-TEBC-5YP-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}-AP-${NAME}" ]
 		then
 			
 			# copy rawData to temporary directory
