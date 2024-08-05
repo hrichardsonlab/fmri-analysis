@@ -16,26 +16,26 @@
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
 Usage() {
-    echo
 	echo
-    echo "Usage:"
-    echo "./get_outlier_info.sh <list of subjects>"
-    echo
-    echo "Example:"
-    echo "./get_outlier_info.sh list.txt"
-    echo
-    echo "list.txt is a file containing the participants to check:"
-    echo "001"
-    echo "002"
+	echo
+	echo "Usage:"
+	echo "./get_outlier_info.sh <list of subjects>"
+	echo
+	echo "Example:"
+	echo "./get_outlier_info.sh TEBC-5y_subjs.txt"
+	echo
+	echo "TEBC-5y_subjs.txt is a file containing the participants to check:"
+	echo "001"
+	echo "002"
 	echo "..."
-    echo
+	echo
 	echo
 	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /EBC/ directory."
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] && Usage
 
@@ -44,13 +44,12 @@ if [[ ! "$PWD" =~ "/EBC/" ]]
 then Usage
 fi
 
-# define session (should always be 01 for EBC data, could alternatively put 'no' for non-EBC data)
-ses=01
+# indicate whether session folders are used (always 'yes' for EBC data)
+sessions='yes'
 
 # define directories
 projDir=`cat ../../PATHS.txt`
-singularityDir="${projDir}/singularity_images"
-qcDir="${projDir}/analysis/data_checking"
+qcDir="${projDir}/analysis"
 
 # extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
 sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
