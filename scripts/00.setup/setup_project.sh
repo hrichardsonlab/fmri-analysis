@@ -85,7 +85,9 @@ else
 	cp -r ${dataDir}/event_files ${proj}/files
 	cp -r ${dataDir}/contrast_files ${proj}/files
 	cp -r ${dataDir}/ROI_timecourses ${proj}/files
-
+	
+	# copy example config file as template with motion thresholds that were already applied to data
+	cp -r ${dataDir}/config_files/config-study_template.tsv ${proj}
 fi
 
 # optional, but nice to clean up environment
