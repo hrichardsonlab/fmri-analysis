@@ -4,7 +4,8 @@
 # RUN MRIQC ON BIDS FORMATTED DATA
 #
 # The MRIQC singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/mriqc-24.0.0.simg docker://nipreps/mriqc:24.0.0
+# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/mriqc-24.0.0.simg docker://nipreps/mriqc:24.0.0
+#
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
@@ -15,9 +16,9 @@ Usage() {
     echo "./run_mriqc.sh <list of subjects>"
     echo
     echo "Example:"
-    echo "./run_mriqc.sh list.txt"
+    echo "./run_mriqc.sh TEBC-5y_subjs.txt"
     echo
-    echo "list.txt is a file containing the participants to run MRIQC on:"
+    echo "TEBC-5y_subjs.txt is a file containing the participants to run MRIQC on:"
     echo "001"
     echo "002"
 	echo "..."
@@ -34,12 +35,12 @@ Usage() {
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/EBC/" ]]
-then Usage
+	then Usage
 fi
 
 # define directories
 projDir=`cat ../../PATHS.txt`
-singularityDir="$projDir/singularity_images"
+singularityDir="${projDir}/singularity_images"
 
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 if [ ! -d ${singularityDir}/mriqc_sandbox ]
@@ -69,17 +70,10 @@ else
 	qcDir="/EBC/preprocessedData/${cohort}/derivatives/mriqc"
 fi
 
-# create QC and dvars directory if they don't exist
+# create QCdirectory if they don't exist
 if [ ! -d ${qcDir} ]
 then 
 	mkdir -p ${qcDir}
-	mkdir ${qcDir}/dvars
-fi
-
-# delete dvars tsv file if it already exists
-if [ -f ${qcDir}/dvars.tsv ]
-then 
-	rm ${qcDir}/dvars.tsv
 fi
 
 # display subjects
@@ -101,47 +95,17 @@ participant																								\
 --participant_label ${subjs}																			\
 --no-sub 																								\
 --fd_thres 1																							\
--m T1w bold																								\
+-m T1w bold 																							\
 -w ${singularityDir}
 
-# extract dvars timeseries
-echo
-echo "extracting DVARS values..."
-echo 
-
-# copy dvars files from mriqc functional workflow directory
-cp ${singularityDir}/mriqc_wf/funcMRIQC/ComputeIQMs/*/ComputeDVARS/*_dvars.tsv ${qcDir}/dvars
-
-# extract standardized dvars values from files in QC directory
-files=(`ls -1 ${qcDir}/dvars/*_dvars.tsv`)
-
-# for each file in the QC directory, generate a subject file with name and dvar timeseries
-for f in ${files[@]}
-do
-	# extract sub and task info from file name
-	sub=` basename ${f} | cut -d '_' -f 1,3,4 `
-	echo ${sub}
-	# print sub and task info to temporary file
-	printf ${sub} ${f} >> ${qcDir}/${sub}.tsv
-	# add a line in the text file
-	printf "\n" >> ${qcDir}/${sub}.tsv
-	# extract first column from dvars file (standardized dvars), skipping the header row
-	awk '{print $1}' ${f} | tail -n +2 >> ${qcDir}/${sub}.tsv
-done
-
-# combine temporary sub files into dvars file
-paste ${qcDir}/sub*.tsv >> ${qcDir}/dvars.tsv
-# remove temporary sub fles
-rm ${qcDir}/sub*.tsv
-
-## generate group reports
+# generate group reports
 singularity run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
 ${singularityDir}/mriqc_sandbox																			\
 ${bidsDir} ${qcDir} group 																				\
 -m T1w bold
 
 # remove hidden files in singularity directory to avoid space issues
-rm ${singularityDir}/.mriqc*
+rm ${singularityDir}/config*
 rm -r ${singularityDir}/.bids*
 rm -r ${singularityDir}/mriqc_wf*
 rm -r ${singularityDir}/reportlets
