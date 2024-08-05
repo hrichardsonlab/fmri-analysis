@@ -75,10 +75,10 @@ then
 	mkdir -p ${qcDir}
 fi
 
-# delete data checking scans-group.tsv file if it already exists
-if [ -f ${qcDir}/scans-group.tsv ]
+# delete data checking outlier_info.tsv file if it already exists
+if [ -f ${qcDir}/outlier_info.tsv ]
 then 
-	rm ${qcDir}/scans-group.tsv
+	rm ${qcDir}/outlier_info.tsv
 fi
 
 # iterate over subjects
@@ -99,11 +99,11 @@ do
 	scan_file=`ls ${subDir}/*_scans.tsv`
 
 	# add scan information to data checking scans file
-	if [ ! -f ${qcDir}/scans-group.tsv ] # on first loop, take header information from first subject
+	if [ ! -f ${qcDir}/outlier_info.tsv ] # on first loop, take header information from first subject
 	then
-		awk 'NR>0' ${scan_file} >> ${qcDir}/scans-group.tsv
+		awk 'NR>0' ${scan_file} >> ${qcDir}/outlier_info.tsv
 	else
-		awk 'NR>1' ${scan_file} >> ${qcDir}/scans-group.tsv
+		awk 'NR>1' ${scan_file} >> ${qcDir}/outlier_info.tsv
 	fi
 
 done <$1
