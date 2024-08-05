@@ -21,6 +21,11 @@ Usage() {
 	echo
 	echo "You must provide (1) the cohort for analysis and (2) a PROJECT_NAME (with no spaces) so the associated project folder can be generated"
 	echo
+	echo "Example:"
+    echo "./setup_project TEBC-5y pixar"
+	echo
+	echo "For non-EBC data, the 'cohort' argument passed in the script call will be the name of the study or dataset"
+	echo
 	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /EBC/ directory."
 	echo
@@ -83,3 +88,5 @@ else
 
 fi
 
+# optional, but nice to clean up environment
+rm setup_project.sh

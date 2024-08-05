@@ -5,7 +5,7 @@
 #
 # We want singularity images accessible but we don't want a bunch of copies
 # so this creates a symbolic link for all the content of the lab standard 
-# containers and puts those links in your project folder
+# containers and puts those links in your project folder.
 ################################################################################
 
 # usage documentation
@@ -33,7 +33,7 @@ if [[ ! "$PWD" =~ "/EBC/" ]];
 fi
 
 # if the PATHS.txt document does not exist where expected, terminate the script and show usage documentation
-if [[ ! -f  "../../PATHS.txt" ]]; 
+if [[ ! -f  "../../PATHS.txt" ]];
 	then Usage
 fi
 
