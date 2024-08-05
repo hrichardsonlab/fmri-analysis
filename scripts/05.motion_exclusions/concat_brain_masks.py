@@ -9,7 +9,6 @@ import os.path as op
 import glob
 
 # define mask concatenation function
-# inputs: derivatives directory, subject, session
 def concat_masks(derivDir, sub, ses): 
     # print current subject
     print('concatenating BOLD masks for sub-{}'.format(sub))
@@ -19,7 +18,7 @@ def concat_masks(derivDir, sub, ses):
         print('Session information provided. Assuming data are organized into session folders.')
         
         # define path to inputs (subjects preprocessed functional data)
-        subDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-' + ses, 'func')
+        subDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func')
         concat_img_fname = '{}/sub-{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
     else: # if session was 'no'
         # define path to inputs (subjects preprocessed functional data)

@@ -9,22 +9,22 @@
 
 # usage documentation - shown if no text file is provided
 Usage() {
-    echo
-    echo "Usage:"
-    echo "./generate_scanfiles.sh <list of subjects>"
-    echo
-    echo "Example:"
-    echo "./generate_scanfiles.sh list.txt"
-    echo 
-    echo "list.txt is a file containing the participants to generate the scans.tsv file for:"
-    echo "001"
-    echo "002"
-	echo "..."
-    echo
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Usage:"
+	echo "./generate_scanfiles.sh <list of subjects>"
+	echo
+	echo "Example:"
+	echo "./generate_scanfiles.sh TEBC-5y_subjs.txt"
+	echo 
+	echo "TEBC-5y_subjs.txt is a file containing the participants to generate the scans.tsv file for:"
+	echo "001"
+	echo "002"
+	echo "..."
+	echo
+	echo
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] && Usage
 

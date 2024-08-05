@@ -1,6 +1,6 @@
 #!/bin/bash
 
-################################################################################
+###############################################################################
 # MARK RUNS THAT EXCEED MOTION THRESHOLDS
 #
 # This script moves select fMRIPrep output files to a data checking directory for ease of QC
@@ -10,31 +10,32 @@
 # If more than the specified proportion of the volumes in a run are tagged, the run is marked for exclusion in a generated tsv file (in subject derivatives folder and data checking directory)
 #
 # The nipype singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+#
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
 Usage() {
-    echo
 	echo
-    echo "Usage:"
-    echo "./check_data.sh <configuration file name> <list of subjects>"
-    echo
-    echo "Example:"
-    echo "./check_data.sh config-pixar_mind-body.tsv list.txt"
-    echo
-    echo "list.txt is a file containing the participants to check:"
-    echo "001"
-    echo "002"
+	echo
+	echo "Usage:"
+	echo "./check_data.sh <configuration file name> <list of subjects>"
+	echo
+	echo "Example:"
+	echo "./check_data.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
+	echo
+	echo "TEBC-5y_subjs.txt is a file containing the participants to check:"
+	echo "001"
+	echo "002"
 	echo "..."
-    echo
+	echo
 	echo
 	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /EBC/ directory."
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] | [ "$2" = "" ] && Usage
 
@@ -49,7 +50,7 @@ then
 	echo "The configuration file was not found."
 	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
 	echo
-	echo "./check_data.sh config-pixar_mind-body.tsv list.txt"
+	echo "./check_data.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
 	echo
 	
 	# end script and show full usage documentation	
@@ -62,7 +63,7 @@ then
 	echo "The list of participants was not found."
 	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
 	echo
-	echo "./check_data.sh config-pixar_mind-body.tsv list.txt"
+	echo "./check_data.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
 	echo
 	
 	# end script and show full usage documentation	
@@ -110,7 +111,6 @@ do
 	singularity exec -C -B /EBC:/EBC									\
 	${singularityDir}/nipype_sandbox 									\
 	/neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py \
-	-p ${projDir}														\
 	-s ${sub} 															\
 	-c ${projDir}/${config} 											\
 	-w ${singularityDir}

@@ -71,7 +71,7 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, fd_thresh, dvars_thresh, a
             run = row['run']
             subject = row['subject']
             
-            # if there is only 1 run for this task (no run info specified: sesame data)
+            # if there is no run info specified for this task
             if run == None:
                 # name of confound file (has FD/DVARS info)
                 confounds_filestr = '*task-' + task + '_desc-confounds*.tsv'
@@ -88,7 +88,7 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, fd_thresh, dvars_thresh, a
                 
                 outname = task # create a different output directory name for each run
                 
-            # if there's multiple runs (pixar data)
+            # if there's multiple runs specified
             else: 
                 # name of confound file (has FD/DVARS info)
                 confounds_filestr = '*task-' + task + '_run-*' + str(run) + '_desc-confounds*.tsv'
@@ -126,9 +126,9 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, fd_thresh, dvars_thresh, a
         # extract and write realignment parameters in a format for art
         mp_name = op.join(funcDir, mp_filestr)
         pd.read_table(confound_file).to_csv(mp_name, sep='\t',
-                                           header = False,
-                                           index = False, 
-                                           columns=['trans_x', 'trans_y', 'trans_z', 'rot_x', 'rot_y', 'rot_z'])
+                                            header = False,
+                                            index = False, 
+                                            columns=['trans_x', 'trans_y', 'trans_z', 'rot_x', 'rot_y', 'rot_z'])
             
         # read in motion parameters file
         mp = glob.glob(op.join(funcDir, mp_filestr))
@@ -200,8 +200,6 @@ def argparser():
     # create an instance of ArgumentParser
     parser = argparse.ArgumentParser()
     # attach argument specifications to the parser
-    parser.add_argument('-p', dest='projDir',
-                        help='Project directory')
     parser.add_argument('-s', dest='sub',
                         help='subject ID')
     parser.add_argument('-c', dest='config',
@@ -216,10 +214,6 @@ def main(argv=None):
     parser = argparser()
     args = parser.parse_args(argv)
     
-    # print if the project directory is not found
-    if not op.exists(args.projDir):
-        raise IOError('Project directory {} not found.'.format(args.projDir))
-        
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0)
     derivDir=config_file.loc['derivDir',1]
@@ -230,8 +224,12 @@ def main(argv=None):
     art_z_thresh=int(config_file.loc['art_z_thresh',1])
     ntmpts_exclude=float(config_file.loc['ntmpts_exclude',1])
     
+    # print if the derivatives directory is not found
+    if not op.exists(derivDir):
+        raise IOError('Derivatives directory {} not found.'.format(derivDir))
+    
     # make QC directory
-    qcDir = op.join(args.projDir, 'analysis', 'data_checking', 'sub-{}'.format(args.sub))
+    qcDir = op.join(derivDir, 'data_checking', 'sub-{}'.format(args.sub))
     os.makedirs(qcDir, exist_ok=True)
 
     # run mark_motion_exclusions function with different inputs depending on config options
