@@ -4,7 +4,8 @@
 # RUN FMRIPREP ON BIDS DATA ALREADY RUN THROUGH FREESURFER
 #
 # The fMRIPrep singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/fmriprep-23.2.1.simg docker://nipreps/fmriprep:23.2.1
+# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/fmriprep-24.0.0.simg docker://nipreps/fmriprep:24.0.0
+#
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
@@ -15,9 +16,9 @@ Usage() {
     echo "./run_fmriprep.sh <list of subjects>"
     echo
     echo "Example:"
-    echo "./run_fmriprep.sh list.txt"
+    echo "./run_fmriprep.sh TEBC-5y_subjs.txt"
     echo
-    echo "list.txt is a file containing the participants to run fMRIPrep on:"
+    echo "TEBC-5y_subjs.txt is a file containing the participants to run fMRIPrep on:"
     echo "001"
     echo "002"
 	echo "..."
@@ -44,7 +45,7 @@ singularityDir="${projDir}/singularity_images"
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 if [ ! -d ${singularityDir}/fmriprep_sandbox ]
 then
-	singularity build --sandbox ${singularityDir}/fmriprep_sandbox ${singularityDir}/fmriprep-23.2.1.simg
+	singularity build --sandbox ${singularityDir}/fmriprep_sandbox ${singularityDir}/fmriprep-24.0.0.simg
 fi
 
 # define subjects from text document
@@ -87,9 +88,8 @@ echo "${subjs}"
 # iterate for all subjects in the text file
 while read p
 do
-	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# data folder name
-	NAME=` basename ${p} |  cut -d "-" -f 3 `			# subj number from folder name
-	
+	NAME=` basename ${p} | awk -F- '{print $NF}' `	# subj number from folder name
+
 	echo
 	echo "Running fMRIprep for sub-${NAME}"
 	echo
@@ -118,6 +118,6 @@ do
 	mv ${derivDir}/sub-${NAME}.html ${derivDir}/sub-${NAME}
 	
 	# give other users permissions to created files
-	chmod -R a+wrx ${derivDir}/sub-${NAME}
+	#chmod -R a+wrx ${derivDir}/sub-${NAME}
 
 done <$1

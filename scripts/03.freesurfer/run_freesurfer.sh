@@ -6,7 +6,8 @@
 # This step must be run before the data can be fully processed through fMRIPrep
 #
 # The fMRIPrep singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/fmriprep-23.2.1.simg docker://nipreps/fmriprep:23.2.1
+# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/fmriprep-24.0.0.simg docker://nipreps/fmriprep:24.0.0
+#
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
@@ -17,9 +18,9 @@ Usage() {
     echo "./run_freesurfer.sh <list of subjects>"
     echo
     echo "Example:"
-    echo "./run_freesurfer.sh list.txt"
+    echo "./run_freesurfer.sh TEBC-5y_subjs.txt"
     echo
-    echo "list.txt is a file containing the participants to run Freesurfer on:"
+    echo "TEBC-5y_subjs.txt is a file containing the participants to run Freesurfer on:"
     echo "001"
     echo "002"
 	echo "..."
@@ -46,7 +47,7 @@ singularityDir="${projDir}/singularity_images"
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 if [ ! -d ${singularityDir}/fmriprep_sandbox ]
 then
-	singularity build --sandbox ${singularityDir}/fmriprep_sandbox ${singularityDir}/fmriprep-23.2.1.simg
+	singularity build --sandbox ${singularityDir}/fmriprep_sandbox ${singularityDir}/fmriprep-24.0.0.simg
 fi
 
 # define subjects from text document
@@ -94,10 +95,8 @@ echo "${subjs}"
 
 # iterate for all subjects in the text file
 while read p
-do
-	
-	ORIGINALNAME=` basename ${p} | cut -d '_' -f 1 `	# data folder name
-	NAME=` basename ${p} |  cut -d "-" -f 3 `			# subj number from folder name
+do	
+	NAME=` basename ${p} | awk -F- '{print $NF}' `	# subj number
 	
 	# check whether the file already exists
 	if [ ! -f ${derivDir}/sourcedata/freesurfer/sub-${NAME}/mri/aparc+aseg.mgz ]
