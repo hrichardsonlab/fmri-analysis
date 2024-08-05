@@ -7,18 +7,18 @@
 
 # usage documentation - shown if no PATH.txt file is found
 Usage() {
-    echo
 	echo
-    echo "Usage:"
-    echo "./clean_environment.sh"
-    echo
+	echo
+	echo "Usage:"
+	echo "./clean_environment.sh"
+	echo
 	echo
 	echo "This script will look for a PATHS.txt file saved 2 directories above where this script is saved"
 	echo
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 
 if [ ! -f ../../PATHS.txt ]
@@ -37,12 +37,3 @@ echo
 # remove temporary files and directories leaving only singularity images
 find ${singularityDir}/. -type f ! -iname "*.simg" -delete
 rm -rf -- ${singularityDir}/./*/
-
-# rm -f ${singularityDir}/config*
-# rm -rf --interactive=never ${singularityDir}/fmriprep-*_wf
-# rm -rf --interactive=never ${singularityDir}/20*
-# #rm -rf ${singularityDir}/fmriprep-*
-# rm -rf --interactive=never ${singularityDir}/rootfs*
-# rm -rf --interactive=never ${singularityDir}/*_sandbox
-# rm -rf --interactive=never ${singularityDir}/build*
-
