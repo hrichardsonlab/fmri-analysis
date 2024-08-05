@@ -14,15 +14,15 @@
 
 # usage documentation - shown if no project name is provided
 Usage() {
-    echo
 	echo
-    echo "Usage:"
-    echo "./setup_project cohort PROJECT_NAME"
+	echo
+	echo "Usage:"
+	echo "./setup_project cohort PROJECT_NAME"
 	echo
 	echo "You must provide (1) the cohort for analysis and (2) a PROJECT_NAME (with no spaces) so the associated project folder can be generated"
 	echo
 	echo "Example:"
-    echo "./setup_project TEBC-5y pixar"
+	echo "./setup_project TEBC-5y pixar"
 	echo
 	echo "For non-EBC data, the 'cohort' argument passed in the script call will be the name of the study or dataset"
 	echo
@@ -31,9 +31,9 @@ Usage() {
 	echo
 	echo "This script only needs to be run once when setting up your project folder."
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] | [ "$2" = "" ] && Usage
 
@@ -48,7 +48,7 @@ dataDir="/EBC/processing" # location of shared files
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/EBC/" ]]; 
-	then Usage
+then Usage
 fi
 
 # warn if the project directory already exists

@@ -10,26 +10,26 @@
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
 Usage() {
-    echo
 	echo
-    echo "Usage:"
-    echo "./run_fmriprep.sh <list of subjects>"
-    echo
-    echo "Example:"
-    echo "./run_fmriprep.sh TEBC-5y_subjs.txt"
-    echo
-    echo "TEBC-5y_subjs.txt is a file containing the participants to run fMRIPrep on:"
-    echo "001"
-    echo "002"
+	echo
+	echo "Usage:"
+	echo "./run_fmriprep.sh <list of subjects>"
+	echo
+	echo "Example:"
+	echo "./run_fmriprep.sh TEBC-5y_subjs.txt"
+	echo
+	echo "TEBC-5y_subjs.txt is a file containing the participants to run fMRIPrep on:"
+	echo "001"
+	echo "002"
 	echo "..."
-    echo
+	echo
 	echo
 	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /EBC/ directory."
 	echo
-    echo "Script created by Manuel Blesa & Melissa Thye"
-    echo
-    exit
+	echo "Script created by Manuel Blesa & Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] && Usage
 

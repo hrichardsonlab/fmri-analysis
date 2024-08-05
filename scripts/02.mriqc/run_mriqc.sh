@@ -35,7 +35,7 @@ Usage() {
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/EBC/" ]]
-	then Usage
+then Usage
 fi
 
 # define directories

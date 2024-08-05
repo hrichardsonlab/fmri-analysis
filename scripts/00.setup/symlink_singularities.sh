@@ -10,7 +10,7 @@
 
 # usage documentation
 Usage() {
-    echo
+	echo
 	echo
 	echo "Usage:"
 	echo "./symlink_singularities"
@@ -29,12 +29,12 @@ Usage() {
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/EBC/" ]]; 
-	then Usage
+then Usage
 fi
 
 # if the PATHS.txt document does not exist where expected, terminate the script and show usage documentation
 if [[ ! -f  "../../PATHS.txt" ]];
-	then Usage
+then Usage
 fi
 
 # location of shared singularity images

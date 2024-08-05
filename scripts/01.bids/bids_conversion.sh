@@ -6,22 +6,22 @@
 
 # usage documentation - shown if no text file is provided
 Usage() {
-    echo
-    echo "Usage:"
-    echo "./bids_conversion.sh <list of subject folders to convert>"
-    echo
-    echo "Example:"
-    echo "./bids_conversion.sh TEBC-5y_subjs.txt"
-    echo 
-    echo "TEBC-5y_subjs.txt is a file containing the participants to convert"
-    echo "001"
-    echo "002"
-	echo "..."
-    echo
 	echo
-    echo "Script created by Manuel Blesa & Melissa Thye"
-    echo
-    exit
+	echo "Usage:"
+	echo "./bids_conversion.sh <list of subject folders to convert>"
+	echo
+	echo "Example:"
+	echo "./bids_conversion.sh TEBC-5y_subjs.txt"
+	echo 
+	echo "TEBC-5y_subjs.txt is a file containing the participants to convert"
+	echo "001"
+	echo "002"
+	echo "..."
+	echo
+	echo
+	echo "Script created by Manuel Blesa & Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] && Usage
 
@@ -95,115 +95,114 @@ fi
 # iterate for all subjects in the text file
 while read p
 do
-
 	NAME=` basename ${p} | awk -F- '{print $NF}' `	# subj number
 	
-		# convert data if the subject has a raw data folder, trying different naming conventions to check whether the folder exists
-		if [ -d ${dataDir}/"${NAME}" ] || [ -d ${dataDir}/"${cohort^^}-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-TEBC-5YP-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}-AP-${NAME}" ]
-		then
-			
-			# copy rawData to temporary directory
-			echo
-			echo "Copying sub-${NAME} to temporary directory within BIDS_data folder for conversion"
-			echo
-			
-			cp -r ${dataDir}/*${NAME} ${tmpDir}/${NAME}
-			
-			# remove some of the DTI directories
-			rm -r ${tmpDir}/${NAME}/*/*_DTI_AP_*/
-			
-			# identify all functional runs
-			pixar_runs=$(ls -d ${tmpDir}/${NAME}/*/*_pixar*/)
-			sesame_runs=$(ls -d ${tmpDir}/${NAME}/*/*_sesame*/)
-			
-			# check pixar data
-			for pr in ${pixar_runs}
-			do
-				echo "Checking pixar run" ${pr}
-			
-				# check whether run has too few dicoms and if so remove prior to conversion
-				if [[ ! "$(ls ${pr} | wc -l)" -ge ${pixar_dicoms} ]]
-				then
-					echo
-					echo ${pr} "is an incomplete run and will be excluded from BIDS conversion"
-					echo
-					rm -r ${pr}
-				fi
-			done
-			
-			# check sesame data
-			for sr in ${sesame_runs}
-			do
-				echo "Checking sesame run" ${sr}
-			
-				# check whether run has too few dicoms and if so remove prior to conversion
-				if [[ ! "$(ls ${sr} | wc -l)" -ge ${sesame_dicoms} ]]
-				then
-					echo
-					echo ${sr} "is an incomplete run and will be excluded from BIDS conversion"
-					echo
-					rm -r ${sr}
-				fi
-			done
-
-			# BIDS conversion
-			echo
-			echo "Converting sub-${NAME} to BIDS"
-			echo
-			
-			# activate conda environment via bash
-			eval "$(conda shell.bash hook)"
-			conda activate ${toolDir}/dcm2bids
-			
-			# convert to BIDS [more options: dcm2bids --help]
-				# -d: directory with dicom data
-				# -p: participant ID
-				# -s: session ID
-				# -c: configuration file
-				# -o: output directory
-			if [[ ${sessions} == 'yes' ]]
-			then
-				dcm2bids -d ${tmpDir}/${NAME}/*/ -p ${NAME} -s 01 -c ${config} -o ${tmpDir}
-				subDir="sub-${NAME}/ses-01"
-				file_prefix="sub-${NAME}_ses-01"
-			else
-				dcm2bids -d ${tmpDir}/${NAME}/*/ -p ${NAME} -c ${config} -o ${tmpDir}
-				subDir="sub-${NAME}"
-				file_prefix="sub-${NAME}"
-			fi
-			
-			# deactivate conda environment
-			conda deactivate
-			
-			# if participant only has 1 run of pixar data, rename to run-01 (default is no run info)
-			if [ -f ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.nii.gz ]
-			then
-				# remame files
-				mv ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.nii.gz ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_run-01_bold.nii.gz
-				mv ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.json ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_run-01_bold.json
-			fi
-			
-			# remove tmp conversion directories
-			rm -R ${tmpDir}/tmp_dcm2bids
-			rm -R ${tmpDir}/${NAME}
-			
-			# copy temporary folder to BIDS_data folder
-			cp -r ${tmpDir}/sub-${NAME} ${bidsDir}
-			
-			# remove the default diffusion data files
-			rm ${bidsDir}/${subDir}/dwi/*.nii.gz
-			rm ${bidsDir}/${subDir}/dwi/*.bv*
-			
-			# generate new diffusion files (more info: https://mrtrix.readthedocs.io/en/dev/reference/commands/dwiextract.html)
-			/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
-														     -fslgrad ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bval \
-															 -shells 0,500,1000,2000 ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
-															 -export_grad_fsl ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bval
-			
-			# give other users permissions to the generated folder
-			chmod -R a+rwx ${bidsDir}/sub-${NAME}
+	# convert data if the subject has a raw data folder, trying different naming conventions to check whether the folder exists
+	if [ -d ${dataDir}/"${NAME}" ] || [ -d ${dataDir}/"${cohort^^}-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}P-TEBC-5YP-${NAME}" ] || [ -d ${dataDir}/"${cohort^^}-AP-${NAME}" ]
+	then
 		
+		# copy rawData to temporary directory
+		echo
+		echo "Copying sub-${NAME} to temporary directory within BIDS_data folder for conversion"
+		echo
+		
+		cp -r ${dataDir}/*${NAME} ${tmpDir}/${NAME}
+		
+		# remove some of the DTI directories
+		rm -r ${tmpDir}/${NAME}/*/*_DTI_AP_*/
+		
+		# identify all functional runs
+		pixar_runs=$(ls -d ${tmpDir}/${NAME}/*/*_pixar*/)
+		sesame_runs=$(ls -d ${tmpDir}/${NAME}/*/*_sesame*/)
+		
+		# check pixar data
+		for pr in ${pixar_runs}
+		do
+			echo "Checking pixar run" ${pr}
+		
+			# check whether run has too few dicoms and if so remove prior to conversion
+			if [[ ! "$(ls ${pr} | wc -l)" -ge ${pixar_dicoms} ]]
+			then
+				echo
+				echo ${pr} "is an incomplete run and will be excluded from BIDS conversion"
+				echo
+				rm -r ${pr}
+			fi
+		done
+		
+		# check sesame data
+		for sr in ${sesame_runs}
+		do
+			echo "Checking sesame run" ${sr}
+		
+			# check whether run has too few dicoms and if so remove prior to conversion
+			if [[ ! "$(ls ${sr} | wc -l)" -ge ${sesame_dicoms} ]]
+			then
+				echo
+				echo ${sr} "is an incomplete run and will be excluded from BIDS conversion"
+				echo
+				rm -r ${sr}
+			fi
+		done
+
+		# BIDS conversion
+		echo
+		echo "Converting sub-${NAME} to BIDS"
+		echo
+		
+		# activate conda environment via bash
+		eval "$(conda shell.bash hook)"
+		conda activate ${toolDir}/dcm2bids
+		
+		# convert to BIDS [more options: dcm2bids --help]
+			# -d: directory with dicom data
+			# -p: participant ID
+			# -s: session ID
+			# -c: configuration file
+			# -o: output directory
+		if [[ ${sessions} == 'yes' ]]
+		then
+			dcm2bids -d ${tmpDir}/${NAME}/*/ -p ${NAME} -s 01 -c ${config} -o ${tmpDir}
+			subDir="sub-${NAME}/ses-01"
+			file_prefix="sub-${NAME}_ses-01"
+		else
+			dcm2bids -d ${tmpDir}/${NAME}/*/ -p ${NAME} -c ${config} -o ${tmpDir}
+			subDir="sub-${NAME}"
+			file_prefix="sub-${NAME}"
 		fi
+		
+		# deactivate conda environment
+		conda deactivate
+		
+		# if participant only has 1 run of pixar data, rename to run-01 (default is no run info)
+		if [ -f ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.nii.gz ]
+		then
+			# remame files
+			mv ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.nii.gz ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_run-01_bold.nii.gz
+			mv ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_bold.json ${tmpDir}/${subDir}/func/${file_prefix}_task-pixar_run-01_bold.json
+		fi
+		
+		# remove tmp conversion directories
+		rm -R ${tmpDir}/tmp_dcm2bids
+		rm -R ${tmpDir}/${NAME}
+		
+		# copy temporary folder to BIDS_data folder
+		cp -r ${tmpDir}/sub-${NAME} ${bidsDir}
+		
+		# remove the default diffusion data files
+		rm ${bidsDir}/${subDir}/dwi/*.nii.gz
+		rm ${bidsDir}/${subDir}/dwi/*.bv*
+		
+		# generate new diffusion files (more info: https://mrtrix.readthedocs.io/en/dev/reference/commands/dwiextract.html)
+		/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
+														 -fslgrad ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bval \
+														 -shells 0,500,1000,2000 ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
+														 -export_grad_fsl ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bval
+		
+		# give other users permissions to the generated folder
+		chmod -R a+rwx ${bidsDir}/sub-${NAME}
+	
+	fi
 	
 done <$1
 
