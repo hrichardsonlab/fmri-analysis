@@ -22,7 +22,7 @@ Usage() {
 }
 
 if [ ! -f ../../PATHS.txt ]
-then Usage
+	then Usage
 fi
 
 # define directories
@@ -34,9 +34,15 @@ echo
 echo "Cleaning up temporary workflow directories in..." ${singularityDir}
 echo
 
-# remove temporary directories
-rm -r --interactive=never ${singularityDir}/fmriprep-23_2_wf
-rm -r --interactive=never ${singularityDir}/rootfs*
-rm -r --interactive=never ${singularityDir}/20*
-rm -r ${singularityDir}/fmriprep
-rm -r --interactive=never ${singularityDir}/*_sandbox
+# remove temporary files and directories leaving only singularity images
+find ${singularityDir}/. -type f ! -iname "*.simg" -delete
+rm -rf -- ${singularityDir}/./*/
+
+# rm -f ${singularityDir}/config*
+# rm -rf --interactive=never ${singularityDir}/fmriprep-*_wf
+# rm -rf --interactive=never ${singularityDir}/20*
+# #rm -rf ${singularityDir}/fmriprep-*
+# rm -rf --interactive=never ${singularityDir}/rootfs*
+# rm -rf --interactive=never ${singularityDir}/*_sandbox
+# rm -rf --interactive=never ${singularityDir}/build*
+
