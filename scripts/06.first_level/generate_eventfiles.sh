@@ -9,26 +9,27 @@
 #
 # More information on these files: 
 #	https://bids-specification.readthedocs.io/en/stable/modality-specific-files/task-events.html
+#
 ################################################################################
 
 # usage documentation - shown if no text file is provided
 Usage() {
-    echo
-    echo "Usage:"
-    echo "./generate_eventfiles.sh <list of subjects> <task>"
-    echo
-    echo "Example:"
-    echo "./generate_eventfiles.sh list.txt pixar"
-    echo 
-    echo "list.txt is a file containing the participants to generate the events.tsv files for:"
-    echo "001"
-    echo "002"
-	echo "..."
-    echo
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Usage:"
+	echo "./generate_eventfiles.sh <list of subjects> <task>"
+	echo
+	echo "Example:"
+	echo "./generate_eventfiles.sh TEBC-5y_subjs.txt pixar"
+	echo 
+	echo "TEBC-5y_subjs.txt is a file containing the participants to generate the events.tsv files for:"
+	echo "001"
+	echo "002"
+	echo "..."
+	echo
+	echo
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] | [ "$2" = "" ] && Usage
 
@@ -98,8 +99,8 @@ do
 					rm ${subDir}/${run_file}
 				fi	
 				
-				# copy the event files saved in the data directory
-				for e in ${projDir}/data/event_files/${task}/*.tsv
+				# copy the event files saved in the project files directory
+				for e in ${projDir}/files/event_files/${task}/*.tsv
 				do
 					awk 'NR>0' ${e} >> ${subDir}/tmp.tsv
 				done
@@ -108,7 +109,7 @@ do
 				awk '!NF || !seen[$0]++' ${subDir}/tmp.tsv >> ${subDir}/${run_file}
 				rm ${subDir}/tmp.tsv
 			done
-		# if no run information is specified (i.e., only 1 run, not indicated in filenames)
+		# if no run information is specified (i.e., only 1 run or not indicated in filenames)
 		else
 			# define event file for run
 			run_file="${tsv_prefix}_events.tsv"
@@ -120,7 +121,7 @@ do
 			fi	
 			
 			# copy the event files saved in the data directory
-			for e in ${projDir}/data/event_files/${task}/*.tsv
+			for e in ${projDir}/files/event_files/${task}/*.tsv
 			do
 				awk 'NR>0' ${e} >> ${subDir}/tmp.tsv
 			done
