@@ -1,10 +1,11 @@
 sharedDir	/EBC/processing
 bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data
-derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
+derivDir	/EBC/preprocessedData/TEBC-5y/derivatives/pilot
 resultsDir	
 resampleDir	
 task	pixar
 sessions	01
+multiecho	no
 FD_thresh	1
 DVARS_thresh	1.5
 art_norm_thresh	1
@@ -18,6 +19,7 @@ detrend	yes
 standardize	no
 splithalf	yes
 events	RTPJ-S2, LTPJ-S2, PC-S2, DMPFC-S2, MMPFC-S2, VMPFC-S2
+modulators	
 contrast	yes
 timecourses	ToM_ROIs, Pain_ROIs, ToM_CounterROIs, Pain_CounterROIs
 regressors	art, aCompCor, LTPJ, RTPJ, PC, DMPFC, MMPFC, VMPFC, RS2, LS2, RMFG, LMFG, RInsula, LInsula, AMCC, C-RTPJ, C-LTPJ, C-PC, C-DMPFC, C-MMPFC, C-VMPFC, C-RS2, C-LS2, C-RMFG, C-LMFG, C-RInsula, C-LInsula, C-AMCC

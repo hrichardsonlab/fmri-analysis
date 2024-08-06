@@ -3,7 +3,7 @@ bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data
 derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
 resultsDir	
 resampleDir	
-task	pixar
+task	
 sessions	01
 multiecho	no
 FD_thresh	1
@@ -12,21 +12,21 @@ art_norm_thresh	1
 art_z_thresh	3
 ntmpts_exclude	.33
 dropvols	0
-smoothing	0
-hpf	100
-filter	butterworth
-detrend	yes
-standardize	no
-splithalf	yes
-events	mind-body
+smoothing	
+hpf	
+filter	
+detrend	
+standardize	
+splithalf	
+events	
 modulators	
-contrast	yes
-timecourses	no
-regressors	art, aCompCor
+contrast	
+timecourses	
+regressors		
 template	MNI152NLin2009cAsym_res-02_T1w
-search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
+search_spaces		
 match_events	
-top_nvox	80
-mask	
+top_nvox		
+mask		
 extract	
 overwrite	no
