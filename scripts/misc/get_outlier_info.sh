@@ -96,14 +96,20 @@ do
 		subDir="${derivDir}/sub-${sub}/func"
 	fi
 	
-	scan_file=`ls ${subDir}/*_scans.tsv`
-
-	# add scan information to data checking scans file
-	if [ ! -f ${qcDir}/outlier_info.tsv ] # on first loop, take header information from first subject
+	# check whether subject has functional data
+	if [ -d ${subDir} ]
 	then
-		awk 'NR>0' ${scan_file} >> ${qcDir}/outlier_info.tsv
+		scan_file=`ls ${subDir}/*_scans.tsv`
+
+		# add scan information to data checking scans file
+		if [ ! -f ${qcDir}/outlier_info.tsv ] # on first loop, take header information from first subject
+		then
+			awk 'NR>0' ${scan_file} >> ${qcDir}/outlier_info.tsv
+		else
+			awk 'NR>1' ${scan_file} >> ${qcDir}/outlier_info.tsv
+		fi
 	else
-		awk 'NR>1' ${scan_file} >> ${qcDir}/outlier_info.tsv
+		echo "No scans.tsv file found for sub-${sub}..."
 	fi
 
 done <$1

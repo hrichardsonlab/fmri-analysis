@@ -86,11 +86,17 @@ do
 		subDir="${bidsDir}/sub-${sub}/func"
 	fi
 	
-	files=`ls ${subDir}/*_bold.nii.gz`
-
-	# print the subID in the very first column
-	3dinfo -prefix_noext -nv ${files} >> ${qcDir}/tmp.tsv
-	awk '{$1=$1};1' ${qcDir}/tmp.tsv >> ${qcDir}/run_info.tsv
-	rm ${qcDir}/tmp.tsv
+	# check whether subject has functional data
+	if [ -d ${subDir} ]
+	then
+		files=`ls ${subDir}/*_bold.nii.gz`
+		
+		# print the subID in the very first column
+		3dinfo -prefix_noext -nv ${files} >> ${qcDir}/tmp.tsv
+		awk '{$1=$1};1' ${qcDir}/tmp.tsv >> ${qcDir}/run_info.tsv
+		rm ${qcDir}/tmp.tsv
+	else
+		echo "No functional data found for sub-${sub}..."
+	fi
 	
 done <$1
