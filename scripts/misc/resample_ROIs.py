@@ -2,8 +2,8 @@
 Resample ROIs to match resolution of preprocessed functional data
 
 This will often be the same template given that the lab uses the same template within fMRIPrep, 
-but template option can be passed in the config file and will be used as long as it is saved in the 
-<PROJECT>/data/templates folder.
+but template option can be passed in the config file and will be used as long as it is saved in the
+shared directory (/EBC/processing/templates) or in your project directory (<project directory>/files/templates)
 
 """
 import nilearn
@@ -24,10 +24,18 @@ def resample_roi(projDir, roiDir, sharedDir, template):
     
     # grab template
     template_file = glob.glob(op.join(sharedDir, 'templates', '*{}*').format(template))
-    if not template_file: # check projDir directory for template file if not in shared directory
-        template_file = glob.glob(op.join(projDir, 'data', 'templates', '*{}*').format(template))
+    
+    # check projDir directory for template file if not in shared directory
+    if not template_file:
+        template_file = glob.glob(op.join(projDir, 'files', 'templates', '*{}*').format(template))
+    
+    # print if template file is not found
+    if not template_file:
+        raise IOError('{} template file not found. Make sure it is saved in the shared directory or your project directory!'.format(template))
+    
+    # extract template name
     #template_name = template[:6] # take first 6 characters
-    template_name = template.split('_')[0] # take full template name
+    template_name = template.split('_')[0] # take full name
     
     # load and binarize mni file
     template_img = image.load_img(template_file)
@@ -35,7 +43,8 @@ def resample_roi(projDir, roiDir, sharedDir, template):
     # make template directory for resampled ROI files
     templateDir = op.join(roiDir, '{}'.format(template_name))
     os.makedirs(templateDir, exist_ok=True)
-
+    
+    # for each ROI in the resampleDir
     for m, roi in enumerate(roi_files):
         print('Resampling {} to {}'.format(roi, template))
         

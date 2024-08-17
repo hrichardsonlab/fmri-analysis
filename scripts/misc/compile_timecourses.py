@@ -20,7 +20,10 @@ def compile_timecourses(projDir, resultsDir):
     # define subDirs from folders in directory provided
     subDirs = glob.glob(op.join(resultsDir, 'sub-*'))
     
+    # initialize dataframe
     compiled_tc = pd.DataFrame(columns=['time'])
+    
+    # loop over subjects
     for s, result in enumerate(subDirs):
         # extract subject number
         sub = result.split('sub-')[-1]
@@ -67,7 +70,7 @@ def compile_timecourses(projDir, resultsDir):
                 compiled_tc = compiled_tc.merge(tc_dat, 'outer')
 
             else:
-                print('WARNING: the extracted timecourses are voxelwise instead of averaged, skipping files!')
+                print('WARNING: the extracted timecourses are voxelwise instead of mean timecourses, skipping files!')
 
     # pivot data so ROIs are separated into columns, convert to dataframe, and sort data
     if split != 'no':

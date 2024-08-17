@@ -8,28 +8,28 @@
 # the pipeline. These parameters are likely to vary for each study, so must be specified for each project.
 #
 # The nipype singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
 Usage() {
-    echo
 	echo
-    echo "Usage:"
-    echo "./run_py-script.sh <python script> <configuration file name>"
-    echo
-    echo "Example:"
-    echo "./run_py-script.sh resample_ROIs.py config-pixar_mind-body.tsv"
-    echo
+	echo
+	echo "Usage:"
+	echo "./run_py-script.sh <python script> <configuration file name>"
+	echo
+	echo "Example:"
+	echo "./run_py-script.sh resample_ROIs.py config-pixar_mind-body.tsv"
+	echo
 	echo "the config file name (not path!) should be provided"
-    echo
+	echo
 	echo
 	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /EBC/ directory."
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] | [ "$2" = "" ] && Usage
 
