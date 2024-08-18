@@ -31,7 +31,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
                 'lPPA':'scene', 'lRSC':'scene', 'lTOS':'scene', 'rPPA':'scene', 'rRSC':'scene', 'rTOS':'scene',
                 'DMPFC':'tom', 'LTPJ':'tom', 'MMPFC':'tom', 'PC':'tom', 'RSTS':'tom', 'RTPJ':'tom', 'VMPFC':'tom',
                 'lvwfa':'vwfa'}
-   
+    
     # grab ROI search space files
     roi_masks = list()
     for m in search_spaces:
@@ -44,30 +44,49 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
             # extract main part of  template name
             template_name = template.split('_')[0]
             roi_file = glob.glob(op.join(sharedDir, 'search_spaces', '{}/{}/{}*.nii.gz'.format(network, template_name, m)))
+            
             if not roi_file: # check projDir directory for search spaces if not in shared directory
-                roi_file = glob.glob(op.join(projDir, 'data', 'search_spaces', '{}/{}/{}*.nii.gz'.format(network, template_name, m)))
+                roi_file = glob.glob(op.join(projDir, 'files', 'search_spaces', '{}/{}/{}*.nii.gz'.format(network, template_name, m)))
         else:
             roi_file = glob.glob(op.join(sharedDir, 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
+            
             if not roi_file: # check projDir directory for search spaces if not in shared directory
-                roi_file = glob.glob(op.join(projDir, 'data', 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
+                roi_file = glob.glob(op.join(projDir, 'files', 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
         
         roi_masks.append(roi_file)
-        
+    
+    # define combined run directory for this subject
+    combinedDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
+    
+    # check if combinedDir exists
+    if op.exists(combinedDir): # if yes, generate fROIs for the combined runs
+        print('Found combined runs directory. fROIs will be defined based on the combined data.')
+        runs=[0]
+    
     # for each run
     for r in runs:
         # for each splithalf
         for s in splithalves:
-            if s == 0:
+            if s == 0 and r != 0:
                 modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(r))
                 froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}'.format(r))
                 # grab functional file for resampling
                 mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(r), '*preproc_bold.nii.gz'))
-            else:
+            elif s == 0 and r == 0:
+                modelDir = combinedDir
+                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined')
+                # grab functional file for resampling (doesn't matter which one)
+                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1', '*preproc_bold.nii.gz'))
+            elif s != 0 and r != 0:
                 modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}_splithalf{}'.format(r,s))
                 froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf{}'.format(r,s))
                 # grab functional file for resampling
                 mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*preproc_bold.nii.gz'))
-            
+            elif s != 0 and r == 0:
+                modelDir = op.join(combinedDir, 'splithalf{}'.format(s))
+                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined', 'splithalf{}'.format(s))
+                # grab functional file for resampling (doesn't matter which one)
+                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(s), '*preproc_bold.nii.gz'))           
             # make frois directory
             os.makedirs(froiDir, exist_ok=True)
               
@@ -145,8 +164,11 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
                         # save froi file
                         # could use roi_name_lower instead of search_spaces[m] to get all lowercase names
                         sub_froi = image.new_img_like(mask_bin, sub_froi) # create a new image of the same class as the initial image
-                        # sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
-                        sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, r, s, search_spaces[m], c, top_nvox))
+                        if r == 0:
+                            sub_roi_file = op.join(froiDir, 'sub-{}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, s, search_spaces[m], c, top_nvox))
+                        else:
+                            # sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
+                            sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, r, s, search_spaces[m], c, top_nvox))
                         sub_froi.to_filename(sub_roi_file)
 
 # define command line parser function
@@ -181,6 +203,7 @@ def main(argv=None):
     # print if the project directory is not found
     if not op.exists(args.projDir):
         raise IOError('Project directory {} not found.'.format(args.projDir))    
+    
     # print if config file is not found
     if not op.exists(args.config):
         raise IOError('Configuration file {} not found. Make sure it is saved in your project directory!'.format(args.config))
@@ -207,7 +230,7 @@ def main(argv=None):
 
     # print if results directory is not specified or found
     if resultsDir == None:
-        raise IOError('No resultsDir was specified in config file, but is required to define fROIs!')
+        raise IOError('No resultsDir was specified in config file but is required to define fROIs!')
     
     if not op.exists(resultsDir):
         raise IOError('Results directory {} not found.'.format(resultsDir))
@@ -228,8 +251,11 @@ def main(argv=None):
         # pass runs for this sub
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
-        sub_runs=list(map(int, sub_runs)) # convert to integers
-              
+        if sub_runs == ['NA']: # if run info isn't used in file names
+            sub_runs = 1
+        else:
+            sub_runs=list(map(int, sub_runs)) # convert to integers     
+        
         # create a process_subject workflow with the inputs defined above
         process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, search_spaces, match_events, template, top_nvox)
 
