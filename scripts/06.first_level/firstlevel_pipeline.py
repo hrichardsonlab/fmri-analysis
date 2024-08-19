@@ -199,18 +199,20 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         if run_id != 0:
             run_abrv = 'run{}'.format(run_id)
             run_full = 'run-{:02d}'.format(run_id)
+            outlier_file_prefix = 'sub-{}_task-{}_{}'.format(sub, task, run_full)
         else:
             run_abrv = 'run1'
             run_full = 'run-01'
+            outlier_file_prefix = 'sub-{}_task-{}'.format(sub, task)         
         
         if splithalf_id == 0:  # if processing full run (splithalf = 'no' in config file)
-            artDir = op.join(outDir, 'art_files', '{}'.format(run_abrv))
-            outlier_file = op.join(artDir, 'sub-{}_{}.txt'.format(sub, run_full))
-            vol_indx_file = op.join(artDir, 'sub-{}_{}_incl-vols.txt'.format(sub, run_full))
+            artDir = op.join(subDir, 'art_files', '{}'.format(run_abrv))
+            outlier_file = op.join(artDir, '{}.txt'.format(outlier_file_prefix))
+            vol_indx_file = op.join(artDir, '{}_incl-vols.txt'.format(outlier_file_prefix))
         else:
-            artDir = op.join(outDir, 'art_files', '{}_splithalf{}'.format(run_abrv, splithalf_id))
-            outlier_file = op.join(artDir, 'sub-{}_{}_splithalf-{:02d}.txt'.format(sub, run_full, splithalf_id))
-            vol_indx_file = op.join(artDir, 'sub-{}_{}_splithalf-{:02d}_incl-vols.txt'.format(sub, run_full, splithalf_id))
+            artDir = op.join(subDir, 'art_files', '{}_splithalf{}'.format(run_abrv, splithalf_id))
+            outlier_file = op.join(artDir,'{}_splithalf-{:02d}.txt'.format(outlier_file_prefix, splithalf_id))
+            vol_indx_file = op.join(artDir, '{}_splithalf-{:02d}_incl-vols.txt'.format(outlier_file_prefix, splithalf_id))
         
         os.makedirs(artDir, exist_ok=True)
         
@@ -592,7 +594,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
     import pandas as pd
 
     # define subject output directory
-    suboutDir = op.join(outDir, 'sub-{}'.format(sub))
+    subDir = op.join(outDir, 'sub-{}'.format(sub))
     
     # identify scan and events files
     if ses != 'no': # if session was provided
@@ -658,7 +660,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
         print('ROI timecourses with a TR={} will be used as regressors'.format(TR))
         
         # make directory to save tc files
-        tcDir = op.join(suboutDir , 'timecourses')
+        tcDir = op.join(subDir , 'timecourses')
         os.makedirs(tcDir, exist_ok=True)
         
         # process each timecourse file and combine into dataframe
@@ -694,8 +696,13 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
     if not events_files:
         raise FileNotFoundError('No event files found for sub-{}'.format(sub))
     
+    # delete prior processing directories because cache files can interfere with workflow
+    subworkDir = op.join(workDir, 'sub-{}_task-{}_levelone'.format(sub, task))
+    if os.path.exists(subworkDir):
+        shutil.rmtree(subworkDir)
+ 
     # call firstlevel workflow with extracted subject-level data
-    wf = create_firstlevel_workflow(projDir, derivDir, workDir, suboutDir, 
+    wf = create_firstlevel_workflow(projDir, derivDir, workDir, subDir, 
                                     sub, task, ses, multiecho, keepruns, events_files, events, modulators, contrast, contrast_opts, timecourses, regressor_opts, smoothing_kernel_size, smoothDir, hpf, TR, dropvols, splithalves, sparse)                                    
     return wf
 
