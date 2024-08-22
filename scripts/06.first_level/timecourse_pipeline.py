@@ -139,8 +139,9 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         # make preproc directory and save mni_file
         os.makedirs(preprocDir, exist_ok=True)
         
-        if not resultsDir:
-            shutil.copy(mni_file, preprocDir) 
+        # useful for checking data but no need to duplicate
+        #if not resultsDir:
+            #shutil.copy(mni_file, preprocDir)
         
         # grab roi file for each mask requested
         roi_masks = list()
@@ -250,11 +251,11 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         
         if splithalf_id == 0:  # if processing full run (splithalf = 'no' in config file)
             artDir = op.join(subDir, 'art_files', '{}'.format(run_abrv))
-            outlier_file = op.join(artDir, '{}.txt'.format(outlier_file_prefix))
+            outlier_file = op.join(artDir, '{}_out-vols.txt'.format(outlier_file_prefix))
             vol_indx_file = op.join(artDir, '{}_incl-vols.txt'.format(outlier_file_prefix))
         else:
             artDir = op.join(subDir, 'art_files', '{}_splithalf{}'.format(run_abrv, splithalf_id))
-            outlier_file = op.join(artDir,'{}_splithalf-{:02d}.txt'.format(outlier_file_prefix, splithalf_id))
+            outlier_file = op.join(artDir,'{}_splithalf-{:02d}_out-vols.txt'.format(outlier_file_prefix, splithalf_id))
             vol_indx_file = op.join(artDir, '{}_splithalf-{:02d}_incl-vols.txt'.format(outlier_file_prefix, splithalf_id))
         
         os.makedirs(artDir, exist_ok=True)
@@ -816,22 +817,15 @@ def main(argv=None):
     
     else: # if no resultsDir was specified        
         workDir, outDir = op.realpath(args.workDir), op.realpath(args.outDir)
-    
-        # identify analysis README file
-        readme_file=op.join(outDir, 'README.txt')
         
         # if user requested overwrite, delete previous directories
         if (overwrite == 'yes') & (len(os.listdir(workDir)) != 0):
             print('Overwriting existing outputs.')
-            shutil.copy(readme_file, args.projDir)  # temporarily copy README to project directory
             # remove directories
             shutil.rmtree(outDir)
             # create new directories
             os.mkdir(outDir)
             os.mkdir(workDir)
-            tmp_file=op.join(args.projDir, 'README.txt')
-            shutil.copy(tmp_file, readme_file) # copy README to new working directory
-            os.remove(tmp_file) # delete temp file
         
         # if user requested no overwrite, create new working directory with date and time stamp
         if (overwrite == 'no') & (len(os.listdir(workDir)) != 0):
@@ -843,9 +837,10 @@ def main(argv=None):
             # create new directories
             os.mkdir(outDir)
             os.mkdir(workDir)      
-            shutil.copy(readme_file, outDir)  # copy README to new output directory
-            readme_file=op.join(outDir, 'README.txt') # re-identify current analysis README file
-            
+
+        # identify analysis README file
+        readme_file=op.join(outDir, 'README.txt')
+        
         # add config details to project README file
         with open(args.config, 'r') as file_1, open(readme_file, 'a') as file_2:
             file_2.write('Timecourses were extracted by running the timecourse_pipeline.py \n')
