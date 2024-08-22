@@ -30,7 +30,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
     os.makedirs(statsDir, exist_ok=True)
     
     # create output file name
-    stats_file = op.join(statsDir, 'sub-{}_{}_ROI_magnitudes.csv'.format(sub, extract_opt))
+    stats_file = op.join(statsDir, 'sub-{}_task-{}_{}_ROI_magnitudes.csv'.format(sub, task, extract_opt))
 
     # delete output file if it already exists (to ensure stats aren't appended to pre-existing files)
     if os.path.isfile(stats_file):
@@ -262,8 +262,11 @@ def main(argv=None):
         # pass runs for this sub
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
-        sub_runs=list(map(int, sub_runs)) # convert to integers
-              
+        if sub_runs == ['NA']: # if run info isn't used in file names
+            sub_runs = 1 # make this '1' instead of '0' because results were output with 'run1' label
+        else:
+            sub_runs=list(map(int, sub_runs)) # convert to integers
+            
         # create a process_subject workflow with the inputs defined above
         process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, mask_opts, match_events, template, extract_opt)
 

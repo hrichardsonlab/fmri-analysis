@@ -90,7 +90,7 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
         contrasts = []
         
         # read in data contrasts file
-        contrasts_file = op.join(projDir, 'data', 'contrast_files', 'contrasts.tsv')
+        contrasts_file = op.join(projDir, 'files', 'contrast_files', 'contrasts.tsv')
             
         # raise error if contrasts file not found
         if not op.exists(contrasts_file):
@@ -263,12 +263,20 @@ def argparser():
     # attach argument specifications to the parser
     parser.add_argument('-p', dest='projDir',
                         help='Project directory')
+    parser.add_argument('-w', dest='workDir', default=os.getcwd(),
+                        help='Working directory')
+    parser.add_argument('-o', dest='outDir', default=os.getcwd(),
+                        help='Output directory')
     parser.add_argument('-s', dest='subjects', nargs='*',
                         help='List of subjects to process (default: all)')
     parser.add_argument('-r', dest='runs', nargs='*',
                         help='List of runs for each subject')    
     parser.add_argument('-c', dest='config',
                         help='Configuration file')                                            
+    parser.add_argument('-sparse', action='store_true',
+                        help='Specify a sparse model')
+    parser.add_argument('-m', dest='plugin',
+                        help='Nipype plugin to use (default: MultiProc)')
     return parser
 
 # define main function that parses the config file and runs the functions defined above
