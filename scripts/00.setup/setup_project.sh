@@ -79,12 +79,32 @@ else
 	echo
 	echo "copying scripts and data files to project directory"
 	echo
-
+	
+	# some studies won't have all these files so (where relevant) check that directory exists first befoe trying to copy to project folder
 	cp -r ${dataDir}/scripts/fMRI/. ${proj}/scripts
-	cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/files/subj_lists
-	cp -r ${dataDir}/event_files ${proj}/files
-	cp -r ${dataDir}/contrast_files ${proj}/files
-	cp -r ${dataDir}/ROI_timecourses ${proj}/files
+	
+	# subj lists
+	if [ -d "${dataDir}/subj_lists/${cohort}" ]
+	then
+		cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/files/subj_lists
+	fi
+	# event files
+	if [ -d "${dataDir}/event_files" ]
+	then
+		cp -r ${dataDir}/event_files ${proj}/files
+	fi
+	
+	# contrast files
+	if [ -d "${dataDir}/contrast_files" ]
+	then
+		cp -r ${dataDir}/contrast_files ${proj}/files
+	fi
+	
+	# ROI timecourses
+	if [ -d "${dataDir}/ROI_timecourses" ]
+	then
+		cp -r ${dataDir}/ROI_timecourses ${proj}/files
+	fi
 	
 	# copy example config file as template with motion thresholds that were already applied to data
 	cp -r ${dataDir}/config_files/config-study_template.tsv ${proj}
