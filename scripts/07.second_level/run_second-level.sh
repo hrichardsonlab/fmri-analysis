@@ -8,33 +8,34 @@
 # the pipeline. These parameters are likely to vary for each study, so must be specified for each project.
 #
 # The nipype singularity was installed using the following code:
-# 	singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+#
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
 Usage() {
-    echo
 	echo
-    echo "Usage:"
-    echo "./run_second-level.sh <pipeline script> <configuration file name> <list of subjects>"
-    echo
-    echo "Example:"
-    echo "./run_second-level.sh secondlevel_pipeline.py config-pixar_mind-body.tsv list.txt"
-    echo
+	echo
+	echo "Usage:"
+	echo "./run_second-level.sh <pipeline script> <configuration file name> <list of subjects>"
+	echo
+	echo "Example:"
+	echo "./run_second-level.sh secondlevel_pipeline.py config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
+	echo
 	echo "the config file name (not path!) should be provided"
 	echo
-    echo "list.txt is a file containing the participants to process:"
-    echo "001"
-    echo "002"
+	echo "TEBC-5y_subjs.txt is a file containing the participants to process:"
+	echo "001"
+	echo "002"
 	echo "..."
-    echo
+	echo
 	echo
 	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /EBC/ directory."
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] | [ "$2" = "" ] | [ "$3" = "" ] && Usage
 
@@ -50,7 +51,7 @@ then
 	echo "The pipeline script was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
 	echo
-	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv list.txt"
+	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv TEBC-5y_subjs.txt"
 	echo
 	
 	# end script and show full usage documentation
@@ -63,7 +64,7 @@ then
 	echo "The configuration file was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
 	echo
-	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv list.txt"
+	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv TEBC-5y_subjs.txt"
 	echo
 	
 	# end script and show full usage documentation	
@@ -76,18 +77,19 @@ then
 	echo "The list of participants was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
 	echo
-	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv list.txt"
+	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv TEBC-5y_subjs.txt"
 	echo
 	
 	# end script and show full usage documentation	
 	Usage
 fi
 
-# define pipeline, configuration options, subjects, and runs from files passed in script call
+# define pipeline, configuration options and subjects from files passed in script call
 pipeline=$1
 config=$2
-subjs=$(cat $3 | awk '{print $1}') 
-runs=$(cat $3 | awk '{print $2}') 
+subjs=$(cat $3 | awk 'NR>1 {print $1}') 
+sub_file=$(readlink -f $3)
+runs=$(cat $3 | awk ' NR>1{print $2}') 
 
 # extract project and analysis name from config file
 proj_name=` basename ${config} | cut -d '-' -f 2 | cut -d '_' -f 1 ` # name provided after hyphen and before underscore
@@ -129,5 +131,6 @@ ${singularityDir}/nipype_sandbox						\
 /neurodocker/startup.sh python ${codeDir}/${pipeline}	\
 -p ${projDir}											\
 -s ${subjs}												\
+-f ${sub_file}											\
 -r ${runs}												\
 -c ${projDir}/${config} | tee ${log_file}
