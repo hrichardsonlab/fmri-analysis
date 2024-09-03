@@ -547,6 +547,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             subs.append(('/zstat%d.' % i, '/con_%d_%s_zstat.' % (i, name)))
             subs.append(('/tstat%d.' % i, '/con_%d_%s_tstat.' % (i, name)))
             subs.append(('/_filmgls0/', '/'))
+        
         return subs
 
     gensubs = Node(Function(function=substitutes), name='substitute_gen')
@@ -583,6 +584,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     wf.connect(glm, 'tstats', sinker, 'model.@tstats')
     wf.connect(glm, 'varcopes', sinker, 'model.@varcopes')
     wf.connect(glm, 'zstats', sinker, 'model.@zstats')
+    
     return wf
 
 # define function to extract subject-level data for workflow
