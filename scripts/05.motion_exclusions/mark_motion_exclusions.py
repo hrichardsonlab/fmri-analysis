@@ -107,94 +107,101 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, fd_thresh, dvars_thresh, a
 
             # read in confound file (has FD/DVARS info)
             cf = glob.glob(op.join(funcDir, confounds_filestr))
-            confound_file = cf[0]
-            
+
             # read in preprocessed bold data
             pf = glob.glob(op.join(funcDir, preproc_filestr))
-            preproc_file = pf[0]
             
             # identify and read in mask data (same across all runs)
             mask_filestr = '*_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'
             mf = glob.glob(op.join(funcDir, mask_filestr))
+            
+        # check whether data have been preprocessed
+        if pf: # if file exists
+            confound_file = cf[0]
+            preproc_file = pf[0]
             mask_file = mf[0]
-            
 
-        # read in confounds file
-        dfConfounds = pd.read_csv(confound_file, sep='\t')
-        nVols = len(dfConfounds) # record number of volumes to calculate threshold for excluding data
-        
-        # extract and write realignment parameters in a format for art
-        mp_name = op.join(funcDir, mp_filestr)
-        pd.read_table(confound_file).to_csv(mp_name, sep='\t',
-                                            header = False,
-                                            index = False, 
-                                            columns=['trans_x', 'trans_y', 'trans_z', 'rot_x', 'rot_y', 'rot_z'])
+
+            # read in confounds file
+            dfConfounds = pd.read_csv(confound_file, sep='\t')
+            nVols = len(dfConfounds) # record number of volumes to calculate threshold for excluding data
             
-        # read in motion parameters file
-        mp = glob.glob(op.join(funcDir, mp_filestr))
-        motion_params = mp[0]
-        
-        # use rapidart to detect outliers in realigned files
-        art = Node(rapidart.ArtifactDetect(mask_type = 'file',
-                                           mask_file =  mask_file, # specifies a brain mask file (should be an image consisting of 0s and 1s)
-                                           realigned_files = preproc_file,
-                                           realignment_parameters = motion_params,
-                                           use_norm = True, # use a composite of the motion parameters in order to determine outliers
-                                           norm_threshold = art_norm_thresh, # threshold to use to detect motion-related outliers when composite motion is being used
-                                           zintensity_threshold = art_z_thresh, # intensity Z-threshold used to detect images that deviate from the mean
-                                           parameter_source = 'SPM',
-                                           use_differences = [True, False]), # use differences between successive motion (first element) and intensity parameter (second element) estimates in order to determine outliers
-                    name=op.join(outname)) # create a different output directory name for each run
-        
-        # create a rapidart workflow
-        wf = Workflow(name = 'art',
-                      base_dir = funcDir)
-        
-        # add node to workflow and run
-        wf.add_nodes([art])          
-        wf.run()
-        
-        # read in art output to count number of artefact timepoints
-        art_file = glob.glob(af)[0]
-        
-        if op.getsize(art_file) == 0: # if no timepoints tagged as artifact
-            nArt=0
-        else:
-            nArt=len(pd.read_csv(art_file, header=None))
-        
-        # print number of artifact timepoints
-        print('identified ' + str(nArt) + ' artifacts saved in ' + art_file)
+            # extract and write realignment parameters in a format for art
+            mp_name = op.join(funcDir, mp_filestr)
+            pd.read_table(confound_file).to_csv(mp_name, sep='\t',
+                                                header = False,
+                                                index = False, 
+                                                columns=['trans_x', 'trans_y', 'trans_z', 'rot_x', 'rot_y', 'rot_z'])
                 
-        # extract standarized dvars and calculate TRs over FD and DVARS limits
-        FD = dfConfounds.framewise_displacement[1:]
-        meanFD = np.mean(FD)
-        FDoverlim = FD > fd_thresh
-        FDartifacts = FDoverlim.sum()
-        
-        DVARS = dfConfounds.std_dvars[1:]
-        meanDVARS = np.mean(DVARS)
-        DVARSoverlim = DVARS > dvars_thresh
-        DVARSartifacts = DVARSoverlim.sum()
-        
-        # add values to dataframe
-        df_merge.loc[index, 'MeanFD'] = meanFD
-        df_merge.loc[index, '#Artifacts_FD'] = FDartifacts
-        df_merge.loc[index, 'MeanDVARS'] = meanDVARS
-        df_merge.loc[index, '#Artifacts_DVARS'] = DVARSartifacts
-        df_merge.loc[index, '#Artifacts_ART'] = nArt
+            # read in motion parameters file
+            mp = glob.glob(op.join(funcDir, mp_filestr))
+            motion_params = mp[0]
+            
+            # use rapidart to detect outliers in realigned files
+            art = Node(rapidart.ArtifactDetect(mask_type = 'file',
+                                               mask_file =  mask_file, # specifies a brain mask file (should be an image consisting of 0s and 1s)
+                                               realigned_files = preproc_file,
+                                               realignment_parameters = motion_params,
+                                               use_norm = True, # use a composite of the motion parameters in order to determine outliers
+                                               norm_threshold = art_norm_thresh, # threshold to use to detect motion-related outliers when composite motion is being used
+                                               zintensity_threshold = art_z_thresh, # intensity Z-threshold used to detect images that deviate from the mean
+                                               parameter_source = 'SPM',
+                                               use_differences = [True, False]), # use differences between successive motion (first element) and intensity parameter (second element) estimates in order to determine outliers
+                        name=op.join(outname)) # create a different output directory name for each run
+            
+            # create a rapidart workflow
+            wf = Workflow(name = 'art',
+                          base_dir = funcDir)
+            
+            # add node to workflow and run
+            wf.add_nodes([art])          
+            wf.run()
+            
+            # read in art output to count number of artefact timepoints
+            art_file = glob.glob(af)[0]
+            
+            if op.getsize(art_file) == 0: # if no timepoints tagged as artifact
+                nArt=0
+            else:
+                nArt=len(pd.read_csv(art_file, header=None))
+            
+            # print number of artifact timepoints
+            print('identified ' + str(nArt) + ' artifacts saved in ' + art_file)
+                    
+            # extract standarized dvars and calculate TRs over FD and DVARS limits
+            FD = dfConfounds.framewise_displacement[1:]
+            meanFD = np.mean(FD)
+            FDoverlim = FD > fd_thresh
+            FDartifacts = FDoverlim.sum()
+            
+            DVARS = dfConfounds.std_dvars[1:]
+            meanDVARS = np.mean(DVARS)
+            DVARSoverlim = DVARS > dvars_thresh
+            DVARSartifacts = DVARSoverlim.sum()
+            
+            # add values to dataframe
+            df_merge.loc[index, 'MeanFD'] = meanFD
+            df_merge.loc[index, '#Artifacts_FD'] = FDartifacts
+            df_merge.loc[index, 'MeanDVARS'] = meanDVARS
+            df_merge.loc[index, '#Artifacts_DVARS'] = DVARSartifacts
+            df_merge.loc[index, '#Artifacts_ART'] = nArt
 
-        # sum of bools is number of true values. count of bool array is length
-        # mark run for exclusion if more than specified number of vols are identified as motion using FD, DVARS, or ART timepoints
-        if (FDoverlim.sum() / FDoverlim.count() >= ntmpts_exclude) or (DVARSoverlim.sum() / DVARSoverlim.count() >= ntmpts_exclude) or (nArt / nVols >= ntmpts_exclude):
-            df_merge.loc[index, 'MotionExclusion'] = True
-            print('Motion Exclusion: ' + row['filename'])
-    
-    print('saving updated scans.tsv file with motion information for sub-{}'.format(sub))
-    df_merge.to_csv(scansfile, sep = '\t', 
-                    index = False, 
-                    columns=['filename', 'task', 'run', 'subject', 'MotionExclusion', 'MeanFD',
-                             '#Artifacts_FD', 'MeanDVARS', '#Artifacts_DVARS', '#Artifacts_ART'])
-
+            # sum of bools is number of true values. count of bool array is length
+            # mark run for exclusion if more than specified number of vols are identified as motion using FD, DVARS, or ART timepoints
+            if (FDoverlim.sum() / FDoverlim.count() >= ntmpts_exclude) or (DVARSoverlim.sum() / DVARSoverlim.count() >= ntmpts_exclude) or (nArt / nVols >= ntmpts_exclude):
+                df_merge.loc[index, 'MotionExclusion'] = True
+                print('Motion Exclusion: ' + row['filename'])
+        
+            print('saving updated scans.tsv file with motion information for sub-{}'.format(sub))
+            df_merge.to_csv(scansfile, sep = '\t', 
+                            index = False, 
+                            columns=['filename', 'task', 'run', 'subject', 'MotionExclusion', 'MeanFD',
+                                     '#Artifacts_FD', 'MeanDVARS', '#Artifacts_DVARS', '#Artifacts_ART'])
+                                     
+        else: # skip if preprocessed file doesn't exist
+            print('No preprocessed data was found for {}'.format(preproc_filestr))
+            print('Motion exclusion checking will be skipped for this run')
+            
 # define command line parser function
 def argparser():
     # create an instance of ArgumentParser
