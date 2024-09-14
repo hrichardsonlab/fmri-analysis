@@ -2,6 +2,7 @@ sharedDir	/EBC/processing
 bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data
 derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
 resultsDir	
+smoothDir	
 resampleDir	
 task	
 sessions	01
@@ -22,11 +23,17 @@ events
 modulators	
 contrast	
 timecourses	
-regressors		
+regressors	
 template	MNI152NLin2009cAsym_res-02_T1w
-search_spaces		
+search_spaces	
 match_events	
-top_nvox		
-mask		
+top_nvox	
+mask	
 extract	
+nonparametric	
+npermutations	
+group_comparison	
+group_variables	
+est_group_variances	
+tfce	
 overwrite	no
