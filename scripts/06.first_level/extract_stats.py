@@ -23,7 +23,7 @@ from nilearn.maskers import NiftiMasker
 import nilearn
 import shutil
 
-def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, splithalves, mask_opts, match_events, template, extract_opt):
+def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt):
     
     # make output stats directory
     statsDir = op.join(resultsDir, 'sub-{}'.format(sub), 'stats')
@@ -71,7 +71,17 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
                         roi_file = glob.glob(op.join('{}'.format(froi_prefix),'*{}*.nii.gz'.format(roi_name)))
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
-                else:
+                
+                else: # if fROI not specified
+                    if splithalf_id != 0:
+                        # grab mni file (used only if resampling is required)
+                        mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*preproc_bold.nii.gz'))
+                        modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}_splithalf{}'.format(run_id, splithalf_id))
+                    else:
+                        # grab mni file (used only if resampling is required)              
+                        mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*preproc_bold.nii.gz'))
+                        modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(run_id))
+
                     if template is not None:
                         template_name = template.split('_')[0] # take full template name
                         roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}'.format(template_name), '{}*.nii.gz'.format(m)))[0]
@@ -113,26 +123,35 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
                     
                     # check if file already exists
                     if os.path.isfile(resampled_file):
-                        print('Found previously resampled {} ROI in output directory'.format(search_spaces[r]))
+                        print('Found previously resampled {} ROI in output directory'.format(roi_name[r]))
                         mask_bin = image.load_img(resampled_file)
                     else:
                         # resample image
-                        print('Resampling {} search space to match functional data'.format(search_spaces[r]))
+                        print('Resampling {} search space to match functional data'.format(roi_name[r]))
                         mask_bin = image.resample_to_img(mask_bin, mni_img, interpolation='nearest')
                         mask_bin.to_filename(resampled_file)
 
                 # for each contrast
-                for c in events:
+                for c in contrast_opts:
                     # extract mask name in a format that will match contrast naming
-                    mask_name = mask_opts[r].split('-')[1].lower()
-                    
-                    if match_events == 'yes' and mask_name not in c: # if the search space (lowercase) is contained within the events specified
+                    if 'fROI' in mask_opts[r]:
+                        mask_name = mask_opts[r].split('-')[1].lower()
+                    else:
+                        mask_name = mask_opts[r]
+
+                    if match_events == 'yes' and mask_name not in c: # if the search space (lowercase) is contained within the contrast_opts specified
                         print('Skipping {} search space for the {} contrast'.format(mask_opts[r], c))
                     else: 
                         print('Extracting stats from {} mask within {} contrast'.format(mask_opts[r], c))
                         cope_file = glob.glob(op.join(modelDir, '*{}_zstat.nii.gz'.format(c)))
                         cope_img = image.load_img(cope_file)
-   
+
+                        # squeeze the statistical map to remove the 4th singleton dimension is using anatomical/atlas ROI
+                        # this dimension is not adding any information, so this is fine to do; the 3D map of stats values is preserved.
+                        # this step isn't necessary for fROIs because they were defined using the functional data and also have a 4th singleton dimension
+                        if not 'fROI' in mask_opts[r]:
+                            cope_img = image.math_img('np.squeeze(img)', img=cope_img)
+                                                
                         # mask and extract values depending on extract_opt
                         if extract_opt == 'mean': # if mean requested
                             # mask contrast image with roi image
@@ -235,14 +254,14 @@ def main(argv=None):
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
     splithalf=config_file.loc['splithalf',1]
-    events=config_file.loc['events',1].replace(' ','').split(',')
+    contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     match_events=config_file.loc['match_events',1]
     template=config_file.loc['template',1]
     extract_opt=config_file.loc['extract',1]
     
-    # lowercase events to avoid case errors - allows flexibility in how users specify events in config and contrasts files
-    events = [e.lower() for e in events]
+    # lowercase contrast_opts to avoid case errors - allows flexibility in how users specify contrasts in config and contrasts files
+    contrast_opts = [c.lower() for c in contrast_opts]
     
     if splithalf == 'yes':
         splithalves = [1,2]
@@ -258,7 +277,7 @@ def main(argv=None):
         
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
-        print('Defining fROIs for sub-{}'.format(sub))
+        print('Extracting stats for sub-{}'.format(sub))
         # pass runs for this sub
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
@@ -268,7 +287,7 @@ def main(argv=None):
             sub_runs=list(map(int, sub_runs)) # convert to integers
             
         # create a process_subject workflow with the inputs defined above
-        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, mask_opts, match_events, template, extract_opt)
+        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
