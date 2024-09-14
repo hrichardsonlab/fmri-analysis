@@ -22,7 +22,7 @@ from nilearn import masking
 import nilearn
 import shutil
 
-def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, splithalves, search_spaces, match_events, template, top_nvox):
+def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_opts, splithalves, search_spaces, match_events, template, top_nvox):
 
     # define search spaces dictionary
     roi_dict = {'lEBA':'body', 'rEBA':'body',
@@ -131,8 +131,8 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, events, spl
                         mask_bin.to_filename(resampled_file)
                 
                 # for each contrast
-                for c in events:
-                    if match_events == 'yes' and search_spaces[m].lower() not in c: # if the search space (lowercase) is contained within the events specified
+                for c in contrast_opts:
+                    if match_events == 'yes' and search_spaces[m].lower() not in c: # if the search space (lowercase) is contained within the contrast_opts specified
                         print('Skipping {} search space for the {} contrast'.format(search_spaces[m], c))
                     else: 
                         print('Defining fROI using top {} voxels within {} contrast'.format(top_nvox, c))
@@ -214,14 +214,16 @@ def main(argv=None):
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
     splithalf=config_file.loc['splithalf',1]
-    events=config_file.loc['events',1].replace(' ','').split(',')
+    #events=config_file.loc['events',1].replace(' ','').split(',')
+    contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
     search_spaces=config_file.loc['search_spaces',1].replace(' ','').split(',')
     match_events=config_file.loc['match_events',1]
     template=config_file.loc['template',1]
     top_nvox=int(config_file.loc['top_nvox',1])
     
     # lowercase events to avoid case errors - allows flexibility in how users specify events in config and contrasts files
-    events = [e.lower() for e in events]
+    #events = [e.lower() for e in events]
+    contrast_opts = [c.lower() for c in contrast_opts]
     
     if splithalf == 'yes':
         splithalves = [1,2]

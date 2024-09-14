@@ -299,7 +299,7 @@ def main(argv=None):
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
     ses=config_file.loc['sessions',1]
-    contrast_opts=config_file.loc['events',1].replace(' ','').split(',')
+    contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
     events=list(set(config_file.loc['events',1].replace(' ','').replace(',','-').split('-')))
     splithalf=config_file.loc['splithalf',1]
     
