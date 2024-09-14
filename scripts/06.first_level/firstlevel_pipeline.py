@@ -27,7 +27,7 @@ from datetime import datetime
 
 # define first level workflow function
 def create_firstlevel_workflow(projDir, derivDir, workDir, outDir, 
-                               sub, task, ses, multiecho, runs, events_files, events, modulators, contrast_opts, timecourses,
+                               sub, task, ses, multiecho, runs, events_files, events, modulators, contrast, contrast_opts, timecourses,
                                regressor_opts, smoothing_kernel_size, smoothDir, hpf, TR, dropvols, splithalves, sparse,
                                name='sub-{}_task-{}_levelone'):
     """Processing pipeline"""
@@ -345,9 +345,6 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         from nipype.interfaces.base import Bunch
         
         print('Using the following regressors in the model: {}'.format(regressor_names))
-        
-        # lowercase trial type column in stimuli to avoid case errors
-        stimuli['trial_type'] = stimuli['trial_type'].str.lower()
        
         # if there are stimuli/events to process (ie not timecourse regressors)
         if len(stimuli) != 0:
@@ -445,13 +442,13 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         wf.connect(splitdata, 'outlier_file', modelspec, 'outlier_files') # generated using rapidart in motion exclusions script
     
     # define function to read in and parse task contrasts
-    def read_contrasts(projDir, task, contrast_opts):
+    def read_contrasts(projDir, task, contrast, contrast_opts):
         import os.path as op
         import pandas as pd 
 
         contrasts = []
         
-        if contrast_opts != 'no':
+        if contrast == 'yes':
             print('Setting up contrasts')
             # read in data contrast file
             contrasts_file = op.join(projDir, 'files', 'contrast_files', 'contrasts.tsv')
@@ -466,7 +463,6 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             # set contrasts condition column to lowercase to avoid case errors and allow users flexibility when specifying events in config and contrasts files
             contrast_info['desc'] = contrast_info['desc'].str.lower()
             contrast_info['conds'] = contrast_info['conds'].str.lower()
-            contrast_info['weights'] = contrast_info['weights'].str.lower()
             
             # select contrasts of interest specified in config file
             contrast_info = contrast_info[contrast_info['desc'].isin(contrast_opts)]
@@ -498,6 +494,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                        name='contrastgen')
     contrastgen.inputs.projDir = projDir
     contrastgen.inputs.task = task
+    contrastgen.inputs.contrast = contrast
     contrastgen.inputs.contrast_opts = contrast_opts
 
     # provide first-level design parameters
@@ -506,7 +503,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     level1design.inputs.bases = {'dgamma': {'derivs': False}}
     level1design.inputs.model_serial_correlations = True
     wf.connect(modelspec, 'session_info', level1design, 'session_info')
-    if contrast_opts != 'no': # pass contrasts if requested in config file
+    if contrast == 'yes': # pass contrasts if requested in config file
         wf.connect(contrastgen, 'contrasts', level1design, 'contrasts')
 
     # use FSL FEAT for GLM
@@ -592,7 +589,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
 
 # define function to extract subject-level data for workflow
 def process_subject(layout, projDir, derivDir, outDir, workDir, 
-                    sub, task, ses, multiecho, sub_runs, events, modulators, contrast_opts, timecourses,
+                    sub, task, ses, multiecho, sub_runs, events, modulators, contrast, contrast_opts, timecourses,
                     regressor_opts, smoothing_kernel_size, smoothDir, hpf, dropvols, splithalf, sparse):
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
@@ -709,7 +706,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
  
     # call firstlevel workflow with extracted subject-level data
     wf = create_firstlevel_workflow(projDir, derivDir, workDir, subDir, 
-                                    sub, task, ses, multiecho, keepruns, events_files, events, modulators, contrast_opts, timecourses, regressor_opts, smoothing_kernel_size, smoothDir, hpf, TR, dropvols, splithalves, sparse)                                    
+                                    sub, task, ses, multiecho, keepruns, events_files, events, modulators, contrast, contrast_opts, timecourses, regressor_opts, smoothing_kernel_size, smoothDir, hpf, TR, dropvols, splithalves, sparse)                                    
     return wf
 
 # define command line parser function
@@ -761,7 +758,8 @@ def main(argv=None):
     dropvols=int(config_file.loc['dropvols',1])
     smoothing_kernel_size=int(config_file.loc['smoothing',1])
     hpf=int(config_file.loc['hpf',1])
-    contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
+    contrast=config_file.loc['contrast',1]
+    contrast_opts=config_file.loc['events',1].replace(' ','').split(',')
     events=list(set(config_file.loc['events',1].replace(' ','').replace(',','-').split('-')))
     modulators=config_file.loc['modulators',1]
     timecourses=config_file.loc['timecourses',1].replace(' ', '').split(',')
@@ -843,7 +841,7 @@ def main(argv=None):
               
         # create a process_subject workflow with the inputs defined above
         wf = process_subject(layout, args.projDir, derivDir, outDir, workDir, 
-                             sub, task, ses, multiecho, sub_runs, events, modulators, contrast_opts, timecourses,
+                             sub, task, ses, multiecho, sub_runs, events, modulators, contrast, contrast_opts, timecourses,
                              regressor_opts, smoothing_kernel_size, smoothDir, hpf, dropvols, splithalf, args.sparse)
    
         # configure workflow options
