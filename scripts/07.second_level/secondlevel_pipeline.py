@@ -29,7 +29,7 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
 
         # grab mask file
         mask_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', '*BOLDmask.nii.gz'))
-        
+
         if runs[s] != ['NA'] or len(runs[s]) > 1: # if more than 1 run
             # pull outputs from combinedDir
             modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
@@ -45,7 +45,7 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
             else:
                 cope_file = glob.glob(op.join(modelDir, 'con_*_{}_cope.nii.gz'.format(contrast_id)))
                 varcope_file = glob.glob(op.join(modelDir, 'con_*_{}_varcope.nii.gz'.format(contrast_id)))
-                
+                            
         else: # if only 1 run
             # pull outputs from run directory
             modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model')
@@ -64,6 +64,8 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
                 cope_file = glob.glob(op.join(modelDir, 'run{}'.format(sub_run),'con_*_{}_cope.nii.gz'.format(contrast_id)))
                 varcope_file = glob.glob(op.join(modelDir, 'run{}'.format(sub_run),'con_*_{}_varcope.nii.gz'.format(contrast_id)))
         
+        print(cope_file)
+        print(varcope_file)
         if not op.isfile(cope_file[0]):
             print(cope_file, 'is missing!')
         else:
@@ -146,7 +148,7 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
         print('Creating design matrix file for within group analysis')
         
         # assign all subs to same group
-        sub_df.insert(0, 'within', np.ones(len(sub_df), dtype=int))
+        #sub_df.insert(0, 'within', np.ones(len(sub_df), dtype=int))
         sub_df['group']=1
     
     # extract and save group column
@@ -189,6 +191,7 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
     
     # remove contrasts based on contrast column (either all or a specific contrast is specified)
     contrasts[(contrasts.contrast == 'all') | (contrasts.contrast == contrast_id)]
+    print(contrasts)
     
     # filter contrasts
     contrasts=contrasts[sub_df.columns]
@@ -296,7 +299,7 @@ def main(argv=None):
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
     ses=config_file.loc['sessions',1]
-    contrast_opts=config_file.loc['events',1].replace(' ','').split(',')
+    contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
     splithalf=config_file.loc['splithalf',1]
     nonparametric=config_file.loc['nonparametric',1]
     group_opts=config_file.loc['group_comparison',1]
