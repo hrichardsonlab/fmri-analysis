@@ -411,18 +411,21 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         # make output directory
         if splithalf_id != 0:
             denoiseDir = op.join(subDir, 'denoised', '{}_splithalf{}'.format(run_abrv, splithalf_id))
+            split_name = '_splithalf-{:02d}_'.format(splithalf_id)
         else:
             denoiseDir = op.join(subDir, 'denoised', '{}'.format(run_abrv))
+            split_name = '_'
         
         os.makedirs(denoiseDir, exist_ok=True)
      
         # define output file names depending on whether run info is in file name
         if run_id != 0:
-            denoise_file = op.join(denoiseDir, 'sub-{}_task-{}_{}_splithalf-{:02d}_denoised_bold.nii.gz'.format(sub, task, run_full, splithalf_id))
-            pad_file = op.join(denoiseDir, 'sub-{}_task-{}_{}_splithalf-{:02d}_denoised_padded_bold.nii.gz'.format(sub, task, run_full, splithalf_id))
+            denoise_file = op.join(denoiseDir, '{}_task-{}_{}{}denoised_bold.nii.gz'.format(sub, task, run_full, split_name))
+            pad_file = op.join(denoiseDir, '{}_task-{}_{}{}denoised_padded_bold.nii.gz'.format(sub, task, run_full, split_name))
+        
         else: # if no run info is in filename, then results are saved under 'run1'
-            denoise_file = op.join(denoiseDir, 'sub-{}_task-{}_splithalf-{:02d}_denoised_bold.nii.gz'.format(sub, task, splithalf_id))
-            pad_file = op.join(denoiseDir, 'sub-{}_task-{}_splithalf-{:02d}_denoised_padded_bold.nii.gz'.format(sub, task, splithalf_id))
+            denoise_file = op.join(denoiseDir, '{}_task-{}{}denoised_bold.nii.gz'.format(sub, task, split_name))
+            pad_file = op.join(denoiseDir, '{}_task-{}{}denoised_padded_bold.nii.gz'.format(sub, task, split_name))
         
         # the smoothing node returns a list object but clean_img needs a path to the file
         if isinstance(imgs, list):
