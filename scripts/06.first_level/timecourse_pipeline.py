@@ -109,18 +109,8 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         if smoothDir:
             if splithalf_id != 0:
                 smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
-                
-                # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
-                if splithalf_id == 1:
-                    print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', '{}_splithalf2'.format(run_name))
-                    
-                if splithalf_id == 2:
-                    print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                    froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', '{}_splithalf1'.format(run_name))
             else:
                 smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
-                froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', '{}'.format(run_name))
             
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
@@ -129,6 +119,20 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
                 print('WARNING: A smoothDir was specified in the config file but no smoothed data files were found.')
         else:
             print('No smoothDir specified in the config file. Using fMRIPrep outputs.')
+        
+        # define froi prefix if resultsDir was provided
+        if resultsDir:
+            if splithalf_id != 0:                    
+                    # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
+                    if splithalf_id == 1:
+                        print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
+                        froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', '{}_splithalf2'.format(run_name))
+                        
+                    if splithalf_id == 2:
+                        print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
+                        froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', '{}_splithalf1'.format(run_name))
+            else:
+                froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', '{}'.format(run_name))
         
         # define preproc directory depending on whether splithalf was requested
         if splithalf_id != 0:
