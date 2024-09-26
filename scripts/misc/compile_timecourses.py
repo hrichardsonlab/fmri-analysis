@@ -42,13 +42,13 @@ def compile_timecourses(projDir, resultsDir):
                 tc_name = tc_name.split('_')
 
                 # extract ROI, run, and splithalf info from file name
-                if len(tc_name) == 4: # if splithalf
+                if len(tc_name) == 5: # if splithalf
+                    roi_name = tc_name[4]
+                    split = tc_name[3]
+                    run = tc_name[2]
+                elif len(tc_name) == 4:# if runs but no splithalf
                     roi_name = tc_name[3]
-                    split = tc_name[2]
-                    run = tc_name[1]
-                elif len(tc_name) == 3:# if runs but no splithalf
-                    roi_name = tc_name[2]
-                    run = tc_name[1]
+                    run = tc_name[2]
                     split = 'no'
                 else: # if no runs or splithalf
                     roi_name = tc_name[-1]
