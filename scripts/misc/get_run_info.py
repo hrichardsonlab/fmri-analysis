@@ -24,14 +24,13 @@ def run_volumes(bidsDir, qcDir, ses):
     
     # sort subDirs
     subDirs = sorted(subDirs, key=lambda x: int(re.search(r'(\d+)$', x).group()))
-
+    
     # delete run_info.tsv file if it already exists
     run_info_file = op.join(qcDir, 'run_info.tsv')
     if os.path.exists(run_info_file):
         os.remove(run_info_file)
         
     # initialize dataframe and list of rows
-    run_info = pd.DataFrame(columns=['sub', 'filename', 'nVols'])
     row_list = []
     
     # loop over subjects
@@ -66,8 +65,8 @@ def run_volumes(bidsDir, qcDir, ses):
         else:
             print('No functional data found for {}'.format(sub))
         
-        # concatenate all rows into the dataframe
-        run_info = pd.concat([run_info, pd.DataFrame(row_list)], ignore_index=True)
+        # convert to dataframe
+        run_info = pd.DataFrame(row_list)
 
         # save as file in qcDir
         run_info.to_csv(run_info_file, index=False, sep ='\t')
