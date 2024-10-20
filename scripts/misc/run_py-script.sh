@@ -39,7 +39,7 @@ then Usage
 fi
 
 # check that inputs are expected file types
-if [ ! ${pipeline##*.} == "py" ]
+if [ ! ${1##*.} == "py" ]
 then
 	echo
 	echo "The pipeline script was not found."

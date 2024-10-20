@@ -12,7 +12,7 @@ import argparse
 import pandas as pd
 import glob
 
-# define first level workflow function
+# define compilation function
 def compile_timecourses(projDir, resultsDir):
     
     print('Searching for timecourse files in {}'.format(resultsDir))

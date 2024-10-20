@@ -16,7 +16,7 @@ import pandas as pd
 import glob
 import shutil
 
-# define first level workflow function
+# define resampling function
 def resample_roi(projDir, roiDir, sharedDir, template):
 
     # define roi files in directory provided
