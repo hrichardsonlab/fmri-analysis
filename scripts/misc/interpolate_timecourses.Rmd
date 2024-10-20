@@ -1,0 +1,121 @@
+---
+title: "Interpolate Timecourses"
+output: html_document
+---
+
+### Overview
+
+This script assumes that timecourses were extracted from data with a TR=2 and need to be resampled to a TR=1. This is done by interpolating the data in-between consecutive timepoints by taking the average of the surrounding values. The input to the script are csv files where each column is a separate region of interest (ROI) and each row is a timepoint. Data that are not already in this format will need to be wrangled prior to running this script.
+
+
+```{r setup, echo=TRUE, message=FALSE, warning=FALSE}
+# load libraries
+library(readxl)
+library(tidyverse)
+library(stringr)
+
+# define directory
+roiDir <- "../../files/ROI_timecourses/"
+
+```
+
+### Read & interpolate timecourses
+
+The script assumes that timecourse files are saved in a **ROI_timecourses** folder in the *files* folder of your project directory (i.e., *PROJECT/files/ROI_timecourses*). For each csv file in the folder, the script will interpolate the data to match TR=1 and write out the interpolated tsv timecourse files that can be used by the pipeline.
+
+The script presumes that the timecourse files in the ROI_timecourses folder are named according to the following notation: adult_TC-FaceSceneObject_ROIs_TR2.csv where each file starts with **adult_TC-** and ends with **_TR2.csv**. This naming convention is consistently used in order to mark where to split the text string and extract the informative part of the file name (*FaceSceneObject_ROIs*). If files are named differently, the labeling of the output files will be impacted. 
+
+There is a commented out line `slice(1:324)` that can be used to trim the data if needed. This comes up in movie data if the run time of the movie differed across studies - maybe more credits were shown in one version compared to another or the instruction screen was displayed longer, etc. For pixar data, the only time the duration differs is if additional time was added to the *end* of the run, so we can have confidence that we can trim any extra volumes/timepoints at the end of the timeseries. If this option is used, please double-check that you understand the presentation differences across studies/lab groups to ensure the timecourses will be correctly syned with the presentation of your paradigm.
+
+
+```{r data, echo=TRUE, message=FALSE, warning=FALSE}
+# list all csv files in ROI_timecourses folder
+files = list.files(path=roiDir, pattern="*.csv", full.names = TRUE)
+
+# initialize list of plots
+dat_plot <- list()
+interp_plot <- list()
+
+for (f in 1:length(files)) { # for each file found in directory
+  # extract informative part of the filename
+  rois <- str_extract(files[[f]], "(?<=TC-).+(?=_TR)")
+  
+  # read and wrangle data
+  dat <- read.csv(files[[f]]) %>% 
+    select(-starts_with("timepoint")) %>% # remove pre-existing timepoint column if present
+    mutate(timepoint=row_number()) %>% # generate new timepoint column based on number of rows
+    rename_with(~ gsub("\\.", "-", .)) # replace periods with hyphens in column names
+  
+  # interpolate data
+  interp_dat <- dat %>%
+    # group 1: average of every 2 rows starting from the first row
+    mutate(grp1 = 1 + (row_number() - 1) %/% 2) %>%
+    group_by(grp1) %>%
+    summarise(across(everything(), ~ mean(.x, na.rm = TRUE)), .groups = 'drop') %>%
+    
+    # bind with group 2: average of every 2 rows starting from the second row
+    bind_rows(dat %>%
+                mutate(grp2 = 1 + (row_number() - 2) %/% 2) %>%
+                group_by(grp2) %>%
+                summarise(across(everything(), ~ mean(.x, na.rm = TRUE)), .groups = 'drop') %>%
+                filter(grp2 != 0)) %>%
+    
+    # add original values
+    bind_rows(dat) %>% 
+    arrange(timepoint) %>% # sort by timepoint
+    
+    # trim the final dataset
+    #slice(1:324) %>% # this step might be necessary if the timecourses were extracted from paradigms that differed in length!
+    select(-grp1, -grp2) # drop unneeded columns
+  
+  # pivot longer for plotting
+  dat_plot[[f]] <- dat %>% 
+    pivot_longer(!timepoint, names_to="ROI", values_to="timecourse")
+  
+  interp_plot[[f]] <- interp_dat %>% 
+    pivot_longer(!timepoint, names_to="ROI", values_to="timecourse")
+  
+  # remove timepoint column from interp_dat now that it's no longer needed
+  interp_dat <- select(interp_dat, -timepoint)
+  
+  # save interpolated timecourses as tsv file
+  interp_file <- paste0(roiDir, "adult_TC-", rois, ".tsv")
+  write.table(interp_dat, interp_file, quote=FALSE, sep='\t', row.names = FALSE)
+}
+
+```
+
+
+### Plot timecourses
+
+This is an optional, data-checking step to ensure that interpolation looks as expected. The unedited and interpolated timecourse from the first ROI each file is plotted alongside each other.
+
+The unedited timepoints are shown as black dots and the interpolated timepoints are shown as red dots.
+
+
+```{r plot, echo=TRUE, message=FALSE, warning=FALSE}
+
+for (p in 1:length(dat_plot)) { # for each df in plot list
+  
+  roi <- unique(dat_plot[[p]]$ROI)[1] # the name of the first ROI used for plotting
+  
+  # plot data
+  plot <- ggplot(filter(interp_plot[[p]], ROI==roi), aes(timepoint, timecourse, color="red")) +
+    geom_line(data=filter(dat_plot[[p]], ROI==roi), color="black") +
+    geom_point() +
+    geom_point(data=filter(dat_plot[[p]], ROI==roi), color="black") +
+    geom_line(alpha=.5, size=2) +
+    theme_bw() +
+    theme(axis.text.x = element_blank(),
+          axis.ticks.x = element_blank(),
+          legend.position = "none",
+          plot.title = element_text(hjust=.5)) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 20)) +
+    ggtitle(roi)
+  
+  print(plot)
+}
+
+```
+
+
