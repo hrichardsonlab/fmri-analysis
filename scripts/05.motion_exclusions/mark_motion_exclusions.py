@@ -43,17 +43,11 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, fd_thresh, dvars_thresh, a
     df_tsv = pd.read_csv(scansfile, sep='\t')
     
     # extract subject, task, and run information from filenames in scans.tsv file
-    df_tsv['task'] = df_tsv['filename'].str.split('task-', expand=True).loc[:,1]
-    df_tsv['task'] = df_tsv['task'].str.split('_run', expand=True).loc[:,0]
-    df_tsv['task'] = df_tsv['task'].str.split('_bold', expand=True).loc[:,0]
-    df_tsv['run'] = df_tsv['filename'].str.split(df_tsv['task'][0], expand=True).loc[:,1]
-    df_tsv['run'] = df_tsv['run'].str.split('_bold', expand=True).loc[:,0]
-    if not df_tsv['run'][0]: # if no run information
-        df_tsv['run'] = None
-    else:
-        df_tsv['run'] = df_tsv['run'].str.split('-', expand=True).loc[:,1]
     df_tsv['subject'] = df_tsv['filename'].str.split('func/', expand=True).loc[:,1]
-    df_tsv['subject'] = df_tsv['subject'].str.split('_ses', expand=True).loc[:,0]
+    df_tsv['subject'] = df_tsv['subject'].str.split('_', expand=True).loc[:,0]
+    df_tsv['task'] = df_tsv['filename'].str.split('task-', expand=True).loc[:,1]
+    df_tsv['task'] = df_tsv['task'].str.split('_', expand=True)[0]
+    df_tsv['run'] = df_tsv['filename'].apply(lambda x: x.split('run-')[1].split('_')[0] if 'run-' in x else None)
 
     # dataframe with motion information columns that will be populated with info from confounds file
     df_merge = df_tsv
