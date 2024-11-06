@@ -166,10 +166,15 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         import numpy as np
         from nibabel import load
                 
+        # read in confound file to get cosine columns
+        confounds = pd.read_csv(confound_file, sep='\t', na_values='n/a')
+        cosine_columns = confounds.filter(regex='^cosine').columns.tolist()
+                
         # create a dictionary for mapping between config file and labels used in confounds file (more options can be added later)
         regressor_dict = {'fd': 'framewise_displacement',
-                          'dvars':'std_dvars',
+                          'dvars': 'std_dvars',
                           'acompcor': ['a_comp_cor_00', 'a_comp_cor_01', 'a_comp_cor_02', 'a_comp_cor_03', 'a_comp_cor_04'],
+                          'cosine': cosine_columns,
                           'motion_params-6': ['trans_x', 'trans_y', 'trans_z', 'rot_x', 'rot_y', 'rot_z'],
                           'motion_params-12': ['trans_x', 'trans_x_derivative1', 'trans_y', 'trans_y_derivative1', 'trans_z', 'trans_z_derivative1', 'rot_x', 'rot_x_derivative1', 'rot_y', 'rot_y_derivative1', 'rot_z', 'rot_z_derivative1']}
         
@@ -185,8 +190,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             else:
                 regressor_names.append(element)
  
-        # read in and filter confound file according to config file options
-        confounds = pd.read_csv(confound_file, sep='\t', na_values='n/a')
+        # filter confound file according to config file options
         confounds = confounds.filter(regressor_names)
         
         # read in art file, creating an empty dataframe if no outlier volumes (i.e., empty text file)
@@ -346,11 +350,10 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         
         print('Using the following regressors in the model: {}'.format(regressor_names))
         
-        # lowercase trial type column in stimuli to avoid case errors
-        stimuli['trial_type'] = stimuli['trial_type'].str.lower()
-       
         # if there are stimuli/events to process (ie not timecourse regressors)
         if len(stimuli) != 0:
+            # lowercase trial type column in stimuli to avoid case errors
+            stimuli['trial_type'] = stimuli['trial_type'].str.lower()
             trial_types = stimuli[stimuli.trial_type.isin(['{}'.format(e) for e in events])].trial_type.unique()
 
             # extract onset and duration (and amplitude if using modulators) for each trial type
@@ -626,16 +629,10 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
     # read in scans file
     scans_df = pd.read_csv(scans_tsv, sep='\t')
 
-    # extract subject, task, and run information from filenames in scans.tsv file
+    # extract task and run information from filenames in scans.tsv file
     scans_df['task'] = scans_df['filename'].str.split('task-', expand=True).loc[:,1]
-    scans_df['task'] = scans_df['task'].str.split('_run', expand=True).loc[:,0]
-    scans_df['task'] = scans_df['task'].str.split('_bold', expand=True).loc[:,0]
-    scans_df['run'] = scans_df['filename'].str.split(scans_df['task'][0], expand=True).loc[:,1]
-    scans_df['run'] = scans_df['run'].str.split('_bold', expand=True).loc[:,0]
-    if not scans_df['run'][0]: # if no run information
-        scans_df['run'] = None
-    else:
-        scans_df['run'] = scans_df['run'].str.split('-', expand=True).loc[:,1]
+    scans_df['task'] = scans_df['task'].str.split('_', expand=True)[0]
+    scans_df['run'] = scans_df['filename'].apply(lambda x: x.split('run-')[1].split('_')[0] if 'run-' in x else None)
     
     # remove runs tagged with excessive motion, that are for a different task, or aren't in run list in the config file
     if sub_runs != 0:
@@ -673,7 +670,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
         tc_dat= []
         for t in timecourses:
             # read in timecourse file from project/files directory and combine into 1 dataframe
-            tc_files = glob.glob(op.join(projDir, 'files', 'ROI_timecourses', '{}'.format(task), 'TR{}'.format(TR), 'adult_TC-{}.tsv'.format(t)))
+            tc_files = glob.glob(op.join(projDir, 'files', 'ROI_timecourses', 'TR{}'.format(TR), 'adult_TC-{}.tsv'.format(t)))
             tc = pd.read_csv(tc_files[0], sep='\t')
             tc.columns = tc.columns.str.lower()
             tc_dat = tc.join(tc_dat)
