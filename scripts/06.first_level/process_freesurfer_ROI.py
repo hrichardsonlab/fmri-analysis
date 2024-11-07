@@ -21,7 +21,7 @@ def process_roi(projDir, sharedDir, derivDir, sub, FS_ROI, template):
 
     # define directories
     fsDir = op.join(derivDir, 'sourcedata/freesurfer')
-    subDir = op.join(derivDir, 'sourcedata/freesurfer/{}/mri'.format(sub))
+    subDir = op.join(derivDir, 'sourcedata/freesurfer/sub-{}/mri'.format(sub))
     roiDir = op.join(projDir, 'files/ROIs')
     
     # make roi directory if it doesn't exist
@@ -33,7 +33,7 @@ def process_roi(projDir, sharedDir, derivDir, sub, FS_ROI, template):
         
     # read in participant file
     mgz_file = op.join(subDir, 'aparc+aseg.mgz')
-    nii_file = op.join(roiDir, '{}_space-native_aparc+aseg.nii.gz'.format(sub))
+    nii_file = op.join(roiDir, 'sub-{}_space-native_aparc+aseg.nii.gz'.format(sub))
     
     # read in look up table to derive index matching specified ROI
     lut_file = op.join(fsDir, 'desc-aparcaseg_dseg.tsv')
@@ -86,7 +86,7 @@ def process_roi(projDir, sharedDir, derivDir, sub, FS_ROI, template):
         
         # check if an index value was found
         if roi_index > 0:
-            print('Defining {} using {} index from look up table for {}'.format(roi, roi_index, sub))
+            print('Defining {} using {} index from look up table for sub-{}'.format(roi, roi_index, sub))
         else:
             print('No match found')
 
@@ -95,7 +95,7 @@ def process_roi(projDir, sharedDir, derivDir, sub, FS_ROI, template):
         mask_dat = np.where(mask, nii_dat, 0) # set all non roi voxels to 0
         
         # save native space mask file
-        native_roi_file = op.join(fsroiDir, '{}_space-native_{}.nii.gz'.format(sub, roi))
+        native_roi_file = op.join(fsroiDir, 'sub-{}_space-native_{}.nii.gz'.format(sub, roi))
         native_roi_img = image.new_img_like(nii_img, mask_dat)
         nib.save(native_roi_img, native_roi_file)
 
@@ -105,7 +105,7 @@ def process_roi(projDir, sharedDir, derivDir, sub, FS_ROI, template):
             mask_img = image.load_img(native_roi_file)
             
             # define output file
-            mni_roi_file = op.join(fsroiDir, '{}_space-{}_{}.nii.gz'.format(sub, template_name, roi))
+            mni_roi_file = op.join(fsroiDir, 'sub-{}_space-{}_{}.nii.gz'.format(sub, template_name, roi))
             
             # resample roi mask to template space
             mni_roi_img = image.resample_to_img(mask_img, template_img, interpolation='nearest')
