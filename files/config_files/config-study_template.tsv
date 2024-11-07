@@ -25,6 +25,7 @@ contrast
 timecourses	
 regressors	
 template	MNI152NLin2009cAsym_res-02_T1w
+FS_ROI	
 search_spaces	
 match_events	
 top_nvox	
