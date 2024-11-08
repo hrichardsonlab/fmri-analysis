@@ -38,7 +38,7 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
         combinedDir = op.join(subDir, 'model', 'combined_runs', 'splithalf{}'.format(splithalf_id))
     
     # identify each run
-    def get_runs(subDir, derivDir, sub, ses, task):
+    def get_runs(subDir, derivDir, sub, ses, task, space_name):
         from nipype import SelectFiles, Node
         import os
         import os.path as op
