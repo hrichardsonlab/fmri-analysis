@@ -26,7 +26,7 @@ from datetime import datetime
 
 # define first level workflow function
 def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, subDir, 
-                               sub, task, ses, multiecho, runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, TR, detrend,standardize, template, extract_opt, dropvols, splithalves,
+                               sub, task, ses, multiecho, runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, TR, detrend,standardize, template, extract_opt, dropvols, splithalves, space_name,
                                name='sub-{}_task-{}_timecourses'):
     """Processing pipeline"""
 
@@ -56,7 +56,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         print('Spatial smoothing will not be run.')
         
     # define data grabber function
-    def data_grabber(sub, task, mask_opts, sharedDir, projDir, derivDir, resultsDir, smoothDir, subDir, template, dropvols, ses, multiecho, run_id, splithalf_id):
+    def data_grabber(sub, task, mask_opts, sharedDir, projDir, derivDir, resultsDir, smoothDir, subDir, template, dropvols, ses, multiecho, run_id, splithalf_id, space_name):
         """Quick filegrabber ala SelectFiles/DataGrabber"""
         import os
         import os.path as op
@@ -69,13 +69,13 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
             # define path to preprocessed functional and mask data (subject derivatives func folder)
             prefix = 'sub-{}_ses-{}_task-{}'.format(sub, ses, task)
             funcDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func')
-            mni_mask = op.join(funcDir, 'sub-{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses))
+            mni_mask = op.join(funcDir, 'sub-{}_ses-{}_space-{}_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses, space_name))
             
         else: # if session was 'no'
             # define path to preprocessed functional and mask data (subject derivatives func folder)
             prefix = 'sub-{}_task-{}'.format(sub, task)
             funcDir = op.join(derivDir, 'sub-{}'.format(sub), 'func')
-            mni_mask = op.join(funcDir, 'sub-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub))
+            mni_mask = op.join(funcDir, 'sub-{}_space-{}_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, space_name))
         
         # add run info to file prefix if necessary
         if run_id != 0:
@@ -83,10 +83,10 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         
         # identify mni file based on whether data are multiecho
         if multiecho == 'yes': # if multiecho sequence, look for outputs in tedana folder
-            mni_file = op.join(funcDir, 'tedana/{}'.format(task), '{}_space-MNI152NLin2009cAsym_res-2_desc-denoised_bold.nii.gz'.format(prefix))
+            mni_file = op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}_desc-denoised_bold.nii.gz'.format(prefix, space_name))
             print('Will use multiecho outputs from tedana: {}'.format(mni_file))
         else:            
-            mni_file = op.join(funcDir, '{}_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'.format(prefix))
+            mni_file = op.join(funcDir, '{}_space-{}_desc-preproc_bold.nii.gz'.format(prefix, space_name))
 
         # grab the confound, MNI, and rapidart outlier file
         confound_file = op.join(funcDir, '{}_desc-confounds_timeseries.tsv'.format(prefix))
@@ -108,9 +108,9 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         # check to see whether outputs exist in smoothDir (if smoothDir was specified in config file)
         if smoothDir:
             if splithalf_id != 0:
-                smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
+                smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}-preproc_bold_smooth.nii.gz'.format(prefix, space_name))
             else:
-                smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-MNI-preproc_bold_smooth.nii.gz'.format(prefix))
+                smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}-preproc_bold_smooth.nii.gz'.format(prefix, space_name))
             
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
@@ -668,7 +668,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
 
 # define function to extract subject-level data for workflow
 def process_subject(layout, sharedDir, projDir, derivDir, outDir, workDir, 
-                    sub, task, ses, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size,resultsDir,smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf):    
+                    sub, task, ses, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size,resultsDir,smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name):    
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
@@ -729,7 +729,7 @@ def process_subject(layout, sharedDir, projDir, derivDir, outDir, workDir,
 
     # call timecourse workflow with extracted subject-level data
     wf = create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, subDir, sub,
-                                    task, ses, multiecho, keepruns, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves)  
+                                    task, ses, multiecho, keepruns, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves, space_name)  
                                     
                                     
     return wf
@@ -792,6 +792,7 @@ def main(argv=None):
     splithalf=config_file.loc['splithalf',1]
     template=config_file.loc['template',1]
     extract_opt=config_file.loc['extract',1]
+    space=config_file.loc['space',1]
     overwrite=config_file.loc['overwrite',1]
     
     # print if BIDS directory is not found
@@ -804,6 +805,13 @@ def main(argv=None):
     
     # lowercase regressor options - allows flexibility in how users specify in config file
     regressor_opts = [r.lower() for r in regressor_opts]
+    
+    if space == 'MNI':
+        space_name = 'MNI152NLin2009cAsym_res-2'
+        print('Pipeline will be run using outputs in {} space'.format(space_name))
+    if space == 'native':
+        space_name = 'T1w'
+        print('Pipeline will be run using outputs in {} space'.format(space_name))
     
     # define output and working directories
     if resultsDir: # if resultsDir was specified
@@ -874,7 +882,7 @@ def main(argv=None):
               
         # create a process_subject workflow with the inputs defined above
         wf = process_subject(layout, sharedDir, args.projDir, derivDir, outDir, workDir, sub,
-                             task, ses, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf)
+                             task, ses, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name)
    
         # configure workflow options
         wf.config['execution'] = {'crashfile_format': 'txt',
