@@ -44,6 +44,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
             # grab roi file for each mask requested
             roi_masks = list()
             for m in mask_opts:
+                # if a functional ROI was specified
                 if 'fROI' in m:
                     if splithalf_id != 0:
                         # grab mni file (used only if resampling is required)
@@ -67,12 +68,13 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                     if not froi_prefix:
                         print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
                     else:
-                        roi_name = m.split('-')[1]
+                         roi_name = m.split('fROI-')[1]
                         roi_file = glob.glob(op.join('{}'.format(froi_prefix),'*{}*.nii.gz'.format(roi_name)))
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
                 
-                else: # if fROI not specified
+                # if any other ROI was specified
+                else:
                     if splithalf_id != 0:
                         # grab mni file (used only if resampling is required)
                         mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*preproc_bold.nii.gz'))
@@ -82,14 +84,23 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*preproc_bold.nii.gz'))
                         modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(run_id))
 
-                    if template is not None:
-                        template_name = template.split('_')[0] # take full template name
-                        roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}'.format(template_name), '{}*.nii.gz'.format(m)))[0]
+                    # if a freesurfer ROI was specified
+                    if 'FS' in m:
+                        roi_name = m.split('FS-')[1]
+                        roi_file = glob.glob(op.join(projDir, 'files', 'ROIs' , '{}'.format(roi_name), '{}_*_{}.nii.gz'.format(sub, roi_name)))#[0]
+                        roi_masks.append(roi_file)
+                        print('Using {} FreeSurfer defined file from {}'.format(roi_name, roi_file))  
+
+                    # if other ROI was specified
                     else:
-                        roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}*.nii.gz'.format(m)))[0]
-                    
-                    roi_masks.append(roi_file)
-                    print('Using {} ROI file from {}'.format(m, roi_file)) 
+                        if template is not None:
+                            template_name = template.split('_')[0] # take full template name
+                            roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}'.format(template_name), '{}*.nii.gz'.format(m)))[0]
+                        else:
+                            roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}*.nii.gz'.format(m)))[0]
+                        
+                        roi_masks.append(roi_file)
+                        print('Using {} ROI file from {}'.format(m, roi_file)) 
     
             # for each ROI search space
             for r, roi in enumerate(roi_masks):
@@ -149,7 +160,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         # squeeze the statistical map to remove the 4th singleton dimension is using anatomical/atlas ROI
                         # this dimension is not adding any information, so this is fine to do; the 3D map of stats values is preserved.
                         # this step isn't necessary for fROIs because they were defined using the functional data and also have a 4th singleton dimension
-                        if not 'fROI' in mask_opts[r]:
+                        if not 'fROI' in mask_opts[r] and not 'FS' in mask_opts[r]:
                             cope_img = image.math_img('np.squeeze(img)', img=cope_img)
                                                 
                         # mask and extract values depending on extract_opt
@@ -270,7 +281,7 @@ def main(argv=None):
 
     # print if results directory is not specified or found
     if resultsDir == None:
-        raise IOError('No resultsDir was specified in config file, but is required to define fROIs!')
+        raise IOError('No resultsDir was specified in config file, but is required to extract stats!')
     
     if not op.exists(resultsDir):
         raise IOError('Results directory {} not found.'.format(resultsDir))
@@ -282,7 +293,7 @@ def main(argv=None):
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
         if sub_runs == ['NA']: # if run info isn't used in file names
-            sub_runs = 1 # make this '1' instead of '0' because results were output with 'run1' label
+            sub_runs = [1] # make this '1' instead of '0' because results were output with 'run1' label
         else:
             sub_runs=list(map(int, sub_runs)) # convert to integers
             
