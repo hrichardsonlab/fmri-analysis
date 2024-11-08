@@ -17,51 +17,43 @@ import glob
 import shutil
 
 # define first level workflow function
-def process_roi(projDir, sharedDir, derivDir, sub, FS_ROI, template):
+def process_roi(projDir, derivDir, ses, sub, FS_ROI):
 
     # define directories
     fsDir = op.join(derivDir, 'sourcedata/freesurfer')
     subDir = op.join(derivDir, 'sourcedata/freesurfer/sub-{}/mri'.format(sub))
     roiDir = op.join(projDir, 'files/ROIs')
     
-    # make roi directory if it doesn't exist
-    os.makedirs(roiDir, exist_ok=True)
-
+    # define func directory, depending on whether session information is in directory/file names
+    if ses != 'no': # if session was provided
+        funcDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func')
+    else:
+        funcDir = op.join(derivDir, 'sub-{}'.format(sub), 'func')
+    
     # check that fsDir directory exists
     if not op.exists(fsDir):
         raise IOError('FreeSurfer directory {} not found.'.format(fsDir))
-        
-    # read in participant file
-    mgz_file = op.join(subDir, 'aparc+aseg.mgz')
-    nii_file = op.join(roiDir, 'sub-{}_space-native_aparc+aseg.nii.gz'.format(sub))
     
-    # read in look up table to derive index matching specified ROI
+    # make roi directory if it doesn't exist
+    os.makedirs(roiDir, exist_ok=True)
+
+    # grab functional data file (grabs the first one because all that matters is the dimensions of the data)
+    func_file = glob.glob(op.join(funcDir, 'sub-{}_*_space-T1w_desc-preproc_bold.nii.gz'.format(sub)))[0]
+    func_img = image.load_img(func_file)
+    print('ROIs will be resampled to match dimensions of functional data: {}'.format(func_file ))
+
+    # grab freesurfer file for conversion to nifti
+    mgz_file = op.join(subDir, 'aparc+aseg.mgz')
+    nii_file = op.join(roiDir, 'sub-{}_space-T1w_aparc+aseg.nii.gz'.format(sub))
+    
+    # grab look up table to derive index matching specified ROI
     lut_file = op.join(fsDir, 'desc-aparcaseg_dseg.tsv')
     lut = pd.read_csv(lut_file, sep='\t')
+    
     # lowercase ROI name column to avoid case errors
     lut['name'] = lut['name'].str.lower()
-    
-    # grab template
-    if template != 'anat':
-        print('ROIs will be resampled to match dimensions of specified template: {}'. format(template))
-       
-        # grab template
-        template_file = glob.glob(op.join(sharedDir, 'templates', '*{}*').format(template))
 
-        # check projDir directory for template file if not in shared directory
-        if not template_file:
-            template_file = glob.glob(op.join(projDir, 'files', 'templates', '*{}*').format(template))
-        
-        # extract template name
-        #template_name = template[:6] # take first 6 characters
-        template_name = template.split('_')[0] # take full name
-    
-        # load template file
-        #template_img = nib.load(template_file[0])
-        #template_dat = template_img.get_fdata()
-        template_img = image.load_img(template_file[0])
-    
-    # mgz to nii conversion
+    # setup mgz to nii conversion
     mc = MRIConvert()
     mc.inputs.in_file = mgz_file
     mc.inputs.out_file = nii_file
@@ -88,32 +80,20 @@ def process_roi(projDir, sharedDir, derivDir, sub, FS_ROI, template):
         if roi_index > 0:
             print('Defining {} using {} index from look up table for sub-{}'.format(roi, roi_index, sub))
         else:
-            print('No match found')
+            print('No match found in the look up table for {}'.format(roi))
 
         # mask file to only include roi index
         mask = np.isin(nii_dat, roi_index)
         mask_dat = np.where(mask, nii_dat, 0) # set all non roi voxels to 0
+        mask_img = image.new_img_like(nii_img, mask_dat)
         
-        # save native space mask file
-        native_roi_file = op.join(fsroiDir, 'sub-{}_space-native_{}.nii.gz'.format(sub, roi))
-        native_roi_img = image.new_img_like(nii_img, mask_dat)
-        nib.save(native_roi_img, native_roi_file)
+        # define output file
+        roi_file = op.join(fsroiDir, 'sub-{}_space-T1w_{}.nii.gz'.format(sub, roi))
 
-        # resample ROI it to match specified template if requested
-        if template != 'anat':
-            # load roi mask
-            mask_img = image.load_img(native_roi_file)
-            
-            # define output file
-            mni_roi_file = op.join(fsroiDir, 'sub-{}_space-{}_{}.nii.gz'.format(sub, template_name, roi))
-            
-            # resample roi mask to template space
-            mni_roi_img = image.resample_to_img(mask_img, template_img, interpolation='nearest')
-            mni_roi_img.to_filename(mni_roi_file)
-            
-            # delete native space ROI file (could keep if desired)
-            os.remove(native_roi_file)
-            
+        # resample mask to match functional data
+        roi_img = image.resample_to_img(mask_img, func_img, interpolation='nearest')
+        roi_img.to_filename(roi_file)
+        
     # delete native space aseg+aparc nifti file (could keep if desired)
     os.remove(nii_file)
     
@@ -159,25 +139,20 @@ def main(argv=None):
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     derivDir=config_file.loc['derivDir',1]
-    sharedDir=config_file.loc['sharedDir',1]
+    ses=config_file.loc['sessions',1]
     FS_ROI=list(set(config_file.loc['FS_ROI',1].replace(' ','').split(',')))
-    template=config_file.loc['template',1]
-    
-    if not template:
-        template = 'anat'
-        print('No template specified in config file. ROIs will be saved in native T1w space.')
-    
-    # lowercase ROI names to avoid case errors - allows flexibility in how users specify events in config and contrasts files
-    FS_ROI = [r.lower() for r in FS_ROI]
     
     # print if the fMRIPrep directory is not found
     if not op.exists(derivDir):
         raise IOError('Derivatives directory {} not found.'.format(derivDir))
     
+    # lowercase ROI names to avoid case errors - allows flexibility in how users specify ROIs in config file
+    FS_ROI = [r.lower() for r in FS_ROI]
+    
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
        # pass inputs defined above to ROI processing function
-        process_roi(args.projDir, sharedDir, derivDir, sub, FS_ROI, template)
+        process_roi(args.projDir, derivDir, ses, sub, FS_ROI)
    
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
