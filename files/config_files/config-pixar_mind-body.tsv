@@ -2,7 +2,9 @@ sharedDir	/EBC/processing
 bidsDir	/EBC/preprocessedData/TEBC-5y/BIDs_data
 derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
 resultsDir	
+smoothDir	
 resampleDir	
+space	MNI
 task	pixar
 sessions	01
 multiecho	no
@@ -12,21 +14,28 @@ art_norm_thresh	1
 art_z_thresh	3
 ntmpts_exclude	.33
 dropvols	0
-smoothing	0
+smoothing	5
 hpf	100
 filter	butterworth
 detrend	yes
 standardize	no
 splithalf	yes
-events	mind-body
-modulators	
-contrast	yes
+events	mind, body
+modulators	no
+contrast	mind-body
 timecourses	no
 regressors	art, aCompCor
 template	MNI152NLin2009cAsym_res-02_T1w
-search_spaces	DMPFC, LTPJ, MMPFC, PC, RSTS, RTPJ, VMPFC
-match_events	
+FS_ROI	
+search_spaces	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
+match_events	no
 top_nvox	80
-mask	
-extract	
+mask	fROI-LTPJ
+extract	mean
+nonparametric	
+npermutations	
+group_comparison	
+group_variables	
+est_group_variances	
+tfce	
 overwrite	no

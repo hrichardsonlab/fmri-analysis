@@ -4,6 +4,7 @@ derivDir	/EBC/preprocessedData/TEBC-5y/derivatives
 resultsDir	
 smoothDir	
 resampleDir	
+space	MNI
 task	
 sessions	01
 multiecho	no
