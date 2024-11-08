@@ -153,15 +153,26 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
             if 'whole_brain' in m:
                 roi_masks.append(mni_mask)
                 print('Will extract whole brain timecourses')
+            
+            # if a functional ROI was specified
             elif 'fROI' in m:
                 if not froi_prefix: # resultsDir:
                     print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
                 else:
-                    roi_name = m.split('-')[1]
+                    roi_name = m.split('fROI-')[1]
                     # roi_name = roi_name.lower() # if roi names are lowercase in define_fROI.py script
                     roi_file = glob.glob(op.join('{}'.format(froi_prefix),'*{}*.nii.gz'.format(roi_name)))#[0]
                     roi_masks.append(roi_file)
                     print('Using {} fROI file from {}'.format(roi_name, roi_file))
+            
+            # if a freesurfer ROI was specified
+            elif 'FS' in m:
+                roi_name = m.split('FS-')[1]
+                roi_file = glob.glob(op.join(projDir, 'files', 'ROIs' , '{}'.format(roi_name), '{}_*_{}.nii.gz'.format(sub, roi_name)))#[0]
+                roi_masks.append(roi_file)
+                print('Using {} FreeSurfer defined file from {}'.format(roi_name, roi_file))            
+            
+            # if any other ROI was specified
             else:
                 if template is not None:
                     #template_name = template[:6] # take first 6 characters
