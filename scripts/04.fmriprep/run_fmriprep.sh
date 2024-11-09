@@ -49,7 +49,7 @@ then
 fi
 
 # define subjects from text document
-subjs=$(cat $1) 
+subjs=$(cat $1 | awk '{print $1}') 
 
 # extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
 sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
@@ -103,11 +103,10 @@ do
 	--skip_bids_validation												\
 	--nthreads 16														\
 	--omp-nthreads 16													\
-	--dummy-scans 0														\
 	--ignore slicetiming												\
 	--fd-spike-threshold 1												\
 	--dvars-spike-threshold 1.5											\
-	--output-space MNI152NLin2009cAsym:res-2							\
+	--output-space MNI152NLin2009cAsym:res-2 T1w						\
 	--derivatives ${derivDir}											\
 	--stop-on-first-crash												\
 	-w ${singularityDir}												\

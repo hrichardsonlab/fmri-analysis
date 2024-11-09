@@ -51,7 +51,7 @@ then
 fi
 
 # define subjects from text document
-subjs=$(cat $1) 
+subjs=$(cat $1 | awk '{print $1}') 
 
 # extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
 sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
