@@ -18,19 +18,22 @@ from datetime import datetime
 import subprocess
 
 # define first level workflow function
-def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_df, task, ses, splithalf_id, contrast_id, nonparametric, group_opts, group_vars, tfce, nperm):
+def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, runs, sub_df, task, ses, splithalf_id, contrast_id, nonparametric, group_opts, group_vars, est_group_variances, tfce, nperm):
 
     # merge cope and varcope files for specified participants and contrast
     copes_list = []
     varcopes_list = []
     mask_list = []
     for s, sub in enumerate(subs):
-        print('Concatenating copes and varcopes files for {} analysis for sub-{}'.format(contrast_id, sub))
+        print('Concatenating copes and varcopes files for {} analysis for {}'.format(contrast_id, sub))
 
         # grab mask file
-        mask_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', '*BOLDmask.nii.gz'))
-
-        if runs[s] != ['NA'] or len(runs[s]) > 1: # if more than 1 run
+        if ses != 'no': # if session was provided
+            mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func', '{}_ses-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses)))[0]
+        else: # if session was 'no'
+            mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'func', 'sub-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub)))[0]
+        
+        if runs[s] != 'NA' or len(runs[s]) > 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1,)
             # pull outputs from combinedDir
             modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
             
@@ -51,10 +54,10 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
             modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model')
             
             # ensure that correct run name is used to grab files
-            if runs[s] == ['NA']: # if no run info, then look for outputs in run1
-                sub_run == 1
+            if runs[s] == 'NA': # if no run info, then look for outputs in run1
+                sub_run = 1
             else:
-                sub_run == runs[s]
+                sub_run = runs[s]
 
             # grab files
             if splithalf_id != 0:
@@ -96,7 +99,7 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
     # unnest lists
     copes_list = [c for sublist in copes_list for c in sublist]
     varcopes_list = [v for sublist in varcopes_list for v in sublist]
-    mask_list = [m for sublist in mask_list for m in sublist]
+    #mask_list = [m for sublist in mask_list for m in sublist] # needed if masks are read in as lists
     
     # concatenate copes images
     cmd = 'fslmerge -t ' + merged_cope_file + ' ' 
@@ -130,8 +133,11 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
     if group_opts == 'between':
         print('Creating design matrix file for between group analysis')
         
+        # set one sample flag to false
+        one_sample = False
+        
         # list all unique groups
-        groups=sorted(set(sub_df.group))
+        groups = sorted(set(sub_df.group))
         
         # for each group, create a column indexing group assignment
         for g, grp in enumerate(groups):
@@ -139,17 +145,22 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
             sub_df['group'].mask(sub_df['group'] == grp, g+1, inplace=True)
         
         if est_group_variances == 'no':
-            sub_df['group']=1 # overwrite the separate group assigments to estimate variance across all groups
+            sub_df['group'] = 1 # overwrite the separate group assigments to estimate variance across all groups
             
         # put group columns first (will be in alphabetical order)
-        sub_df=sub_df.loc[:, list(groups) + np.sort(sub_df.columns.difference(groups)).tolist()]
-        
+        sub_df = sub_df.loc[:, list(groups) + np.sort(sub_df.columns.difference(groups)).tolist()]
+             
     else:
         print('Creating design matrix file for within group analysis')
         
+        # set one sample flag to true
+        one_sample = True
+        
+        # list group
+        groups = sorted(set(sub_df.group))
+        
         # assign all subs to same group
-        #sub_df.insert(0, 'within', np.ones(len(sub_df), dtype=int))
-        sub_df['group']=1
+        sub_df['group'] = 1
     
     # extract and save group column
     grp_txt = op.join(conDir, '{}_grp.txt'.format(contrast_id))
@@ -157,17 +168,15 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
     sub_df['group'].to_csv(grp_txt, header=None, index=None, sep=' ', mode='a')
     
     # drop colums that aren't needed in design matrix
-    sub_df=sub_df.drop(['sub', 'group'], axis=1)
-
+    sub_df = sub_df.drop(['sub', 'group'], axis=1)
+    
     # lowercase column names
     sub_df.columns = sub_df.columns.str.lower()
-    
+        
     # define output files and save text file
     design_txt = op.join(conDir, '{}_design.txt'.format(contrast_id))
     design_mat = op.join(conDir, '{}_design.mat'.format(contrast_id))
     sub_df.to_csv(design_txt, header=None, index=None, sep=' ', mode='a')
-    
-    print(sub_df)
     
     # convert design.txt to design.mat
     print('Converting design matrix to mat file format for FSL')
@@ -190,12 +199,17 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
     contrasts.columns=contrasts.columns.str.lower()
     
     # remove contrasts based on contrast column (either all or a specific contrast is specified)
-    contrasts[(contrasts.contrast == 'all') | (contrasts.contrast == contrast_id)]
-    print(contrasts)
+    contrasts = contrasts[(contrasts.contrast == 'all') | (contrasts.contrast == contrast_id)].drop('contrast', axis=1)
     
     # filter contrasts
-    contrasts=contrasts[sub_df.columns]
-
+    if sub_df.shape[1] != 0:
+        retain_vars = set(groups + sub_df)
+    else:
+        retain_vars = groups
+    
+    retain_vars = [var.lower() for var in retain_vars]
+    contrasts = contrasts.loc[:, contrasts.columns.isin(retain_vars)]
+    
     print(contrasts)
     
     # define output files and save text file
@@ -209,11 +223,11 @@ def generate_model_files(projDir, resultsDir, outDir, workDir, subs, runs, sub_d
     cmd = cmd + design_con
     result = subprocess.run(cmd, stdout=subprocess.PIPE, shell = True)
     
-    # # submit generated files to model function
-    run_model(conDir, nonparametric, tfce, nperm, merged_cope_file, merged_varcope_file, design_mat, grp_cov, design_con, dilated_mask_file)
+    # submit generated files to model function
+    run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, merged_varcope_file, design_mat, grp_cov, design_con, dilated_mask_file)
 
 # define function to run model
-def run_model(conDir, nonparametric, tfce, nperm, merged_cope_file, merged_varcope_file, design_mat, grp_cov, design_con, dilated_mask_file):
+def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, merged_varcope_file, design_mat, grp_cov, design_con, dilated_mask_file):
     # move to contrasts directory so output files are saved correctly
     os.chdir(conDir)
     
@@ -242,7 +256,8 @@ def run_model(conDir, nonparametric, tfce, nperm, merged_cope_file, merged_varco
                                  demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
                                  num_perm=nperm,
                                  mask=dilated_mask_file, 
-                                 tcon=design_con, 
+                                 tcon=design_con,
+                                 one_sample_group_mean=one_sample,
                                  design_mat=design_mat,
                                  tfce=True)
         
@@ -253,6 +268,7 @@ def run_model(conDir, nonparametric, tfce, nperm, merged_cope_file, merged_varco
                                  num_perm=nperm,
                                  mask=dilated_mask_file, 
                                  tcon=design_con, 
+                                 one_sample_group_mean=one_sample,
                                  design_mat=design_mat,
                                  #c_threshold=2.96,# carry out cluster-based thresholding (requires T threshold)
                                  vox_p_values=True) # output voxelwise (corrected and uncorrected) p-value image
@@ -297,6 +313,7 @@ def main(argv=None):
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     resultsDir=config_file.loc['resultsDir',1]
+    derivDir=config_file.loc['derivDir',1]
     task=config_file.loc['task',1]
     ses=config_file.loc['sessions',1]
     contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
@@ -304,22 +321,32 @@ def main(argv=None):
     nonparametric=config_file.loc['nonparametric',1]
     group_opts=config_file.loc['group_comparison',1]
     group_vars=config_file.loc['group_variables',1].replace(' ','').split(',')
+    est_group_variances=config_file.loc['est_group_variances',1]
     tfce=config_file.loc['tfce',1]
     nperm=int(config_file.loc['npermutations',1])
     overwrite=config_file.loc['overwrite',1]
     
+    # print if the fMRIPrep directory is not found
+    if not op.exists(derivDir):
+        raise IOError('Derivatives directory {} not found.'.format(derivDir))
+        
     # print if the project directory is not found
     if not op.exists(resultsDir):
         raise IOError('Results directory {} not found.'.format(resultsDir))
     
     # lowercase contrast_opts and group_vars to avoid case errors
     contrast_opts = [c.lower() for c in contrast_opts]
-    group_vars = [g.lower() for g in group_vars]
-     
+    
+    # create new group_vars list if no variables were specified in config file
+    if group_vars == ['no']:
+        group_vars = []
+    else:
+        group_vars = [g.lower() for g in group_vars]
+
     # add sub to group_vars list
     group_vars.insert(0, 'group')
     group_vars.insert(0, 'sub')
-
+    
     # make output and working directories
     outDir = op.join(resultsDir, 'group_analysis')
     workDir = op.join(resultsDir,'processing')
@@ -366,9 +393,9 @@ def main(argv=None):
             sub_df=pd.read_csv(args.file[0], sep=' ', converters={'sub': str})
             sub_df.columns = sub_df.columns.str.lower() # lowercase column names
             sub_df=sub_df[group_vars]
-        
+            
             # run secondlevel workflow with the inputs defined above
-            generate_model_files(args.projDir, resultsDir, outDir, workDir, args.subjects, args.runs, sub_df, task, ses, splithalf_id, contrast_id, nonparametric, group_opts, group_vars, tfce, nperm)
+            generate_model_files(args.projDir, derivDir, resultsDir, outDir, workDir, args.subjects, args.runs, sub_df, task, ses, splithalf_id, contrast_id, nonparametric, group_opts, group_vars, est_group_variances, tfce, nperm)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
