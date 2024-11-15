@@ -19,63 +19,84 @@ import subprocess
 
 # define first level workflow function
 def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, runs, sub_df, task, ses, splithalf_id, contrast_id, nonparametric, group_opts, group_vars, est_group_variances, tfce, nperm):
-
+    
+    # process contrast_id if 'paired' flag is present
+    if 'paired' in contrast_id:
+        # parse the string to extract the paired contrasts
+        contrast_id = contrast_id.split('paired:')[1].split(';')
+        contrast_name = '-'.join(contrast_id)
+        paired = True
+        
+        print('A paired contrast was requested. A contrast will be generated between the following subject-level stats files: {}'.format(contrast_name))
+    else:
+        contrast_name = contrast_id
+        contrast_id = [contrast_id] # save as list for looping
+        paired = False
+    
     # merge cope and varcope files for specified participants and contrast
     copes_list = []
     varcopes_list = []
     mask_list = []
+    con_list = []
     for s, sub in enumerate(subs):
-        print('Concatenating copes and varcopes files for {} analysis for {}'.format(contrast_id, sub))
-
-        # grab mask file
-        if ses != 'no': # if session was provided
-            mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func', '{}_ses-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses)))[0]
-        else: # if session was 'no'
-            mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'func', 'sub-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub)))[0]
-        
-        if runs[s] != 'NA' or len(runs[s]) > 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1,)
-            # pull outputs from combinedDir
-            modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
+        for c, con in enumerate(contrast_id):
+            print('Concatenating copes and varcopes files for {} analysis for sub-{}'.format(con, sub))
             
-            # check that runs have been combined
-            if not op.exists(modelDir):
-                raise IOError('Combined run directory not found for sub-{}. Have runs been combined?'.format(sub))
-
-            # grab files
-            if splithalf_id != 0:
-                cope_file = glob.glob(op.join(modelDir, 'splithalf{}'.format(splithalf_id), 'con_*_{}_cope.nii.gz'.format(contrast_id)))
-                varcope_file = glob.glob(op.join(modelDir, 'splithalf{}'.format(splithalf_id), 'con_*_{}_varcope.nii.gz'.format(contrast_id)))
-            else:
-                cope_file = glob.glob(op.join(modelDir, 'con_*_{}_cope.nii.gz'.format(contrast_id)))
-                varcope_file = glob.glob(op.join(modelDir, 'con_*_{}_varcope.nii.gz'.format(contrast_id)))
-                            
-        else: # if only 1 run
-            # pull outputs from run directory
-            modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model')
+            # create one-hot encoding contrast vectors for design matrix
+            row = {'sub': sub}
+            for contrast in contrast_id:
+                row[contrast] = 1 if contrast == con else 0
+            con_list.append(row)
             
-            # ensure that correct run name is used to grab files
-            if runs[s] == 'NA': # if no run info, then look for outputs in run1
-                sub_run = 1
-            else:
-                sub_run = runs[s]
+            # grab mask file
+            if ses != 'no': # if session was provided
+                mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func', 'sub-{}_ses-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses)))[0]
+            else: # if session was 'no'
+                mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'func', 'sub-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub)))[0]
+            
+            if runs[s] != 'NA' or len(runs[s]) > 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1,)
+                # pull outputs from combinedDir
+                modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
+                
+                # check that runs have been combined
+                if not op.exists(modelDir):
+                    raise IOError('Combined run directory not found for sub-{}. Have runs been combined?'.format(sub))
 
-            # grab files
-            if splithalf_id != 0:
-                cope_file = glob.glob(op.join(modelDir, 'run{}_splithalf{}'.format(sub_run, splithalf_id), 'con_*_{}_cope.nii.gz'.format(contrast_id)))
-                varcope_file = glob.glob(op.join(modelDir, 'run{}_splithalf{}'.format(sub_run, splithalf_id), 'con_*_{}_varcope.nii.gz'.format(contrast_id)))
+                # grab files
+                if splithalf_id != 0:
+                    cope_file = glob.glob(op.join(modelDir, 'splithalf{}'.format(splithalf_id), 'con_*_{}_cope.nii.gz'.format(con)))
+                    varcope_file = glob.glob(op.join(modelDir, 'splithalf{}'.format(splithalf_id), 'con_*_{}_varcope.nii.gz'.format(con)))
+                else:
+                    cope_file = glob.glob(op.join(modelDir, 'con_*_{}_cope.nii.gz'.format(con)))
+                    varcope_file = glob.glob(op.join(modelDir, 'con_*_{}_varcope.nii.gz'.format(con)))
+                                
+            else: # if only 1 run
+                # pull outputs from run directory
+                modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model')
+                
+                # ensure that correct run name is used to grab files
+                if runs[s] == 'NA': # if no run info, then look for outputs in run1
+                    sub_run = 1
+                else:
+                    sub_run = runs[s]
+
+                # grab files
+                if splithalf_id != 0:
+                    cope_file = glob.glob(op.join(modelDir, 'run{}_splithalf{}'.format(sub_run, splithalf_id), 'con_*_{}_cope.nii.gz'.format(con)))
+                    varcope_file = glob.glob(op.join(modelDir, 'run{}_splithalf{}'.format(sub_run, splithalf_id), 'con_*_{}_varcope.nii.gz'.format(con)))
+                else:
+                    cope_file = glob.glob(op.join(modelDir, 'run{}'.format(sub_run),'con_*_{}_cope.nii.gz'.format(con)))
+                    varcope_file = glob.glob(op.join(modelDir, 'run{}'.format(sub_run),'con_*_{}_varcope.nii.gz'.format(con)))
+            
+            print(cope_file)
+            print(varcope_file)
+            if not op.isfile(cope_file[0]):
+                print(cope_file, 'is missing!')
             else:
-                cope_file = glob.glob(op.join(modelDir, 'run{}'.format(sub_run),'con_*_{}_cope.nii.gz'.format(contrast_id)))
-                varcope_file = glob.glob(op.join(modelDir, 'run{}'.format(sub_run),'con_*_{}_varcope.nii.gz'.format(contrast_id)))
-        
-        print(cope_file)
-        print(varcope_file)
-        if not op.isfile(cope_file[0]):
-            print(cope_file, 'is missing!')
-        else:
-            copes_list.append(cope_file)
-            varcopes_list.append(varcope_file)
-            mask_list.append(mask_file)          
-    
+                copes_list.append(cope_file)
+                varcopes_list.append(varcope_file)
+                mask_list.append(mask_file)          
+
     # define output directory for this contrast depending on config options
     if nonparametric == 'yes':
         prefix = 'randomise'
@@ -83,9 +104,9 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
         prefix = 'flame'
 
     if splithalf_id != 0:
-        conDir = op.join(outDir, '{}_{}_{}_splithalf{}'.format(prefix, task, contrast_id, splithalf_id))
+        conDir = op.join(outDir, '{}_{}_{}_splithalf{}'.format(prefix, task, contrast_name, splithalf_id))
     else:
-        conDir = op.join(outDir, '{}_{}_{}'.format(prefix, task, contrast_id))
+        conDir = op.join(outDir, '{}_{}_{}'.format(prefix, task, contrast_name))
     
     # make output directory for this contrast
     os.makedirs(conDir, exist_ok = True)
@@ -159,12 +180,25 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
         # list group
         groups = sorted(set(sub_df.group))
         
+        # for each group, create a column indexing group assignment
+        for g, grp in enumerate(groups):
+            sub_df[grp] = np.where(sub_df['group'] == grp , '1', '0')
+            sub_df['group'].mask(sub_df['group'] == grp, g+1, inplace=True)
+        
         # assign all subs to same group
         sub_df['group'] = 1
+
+    # add contrast vectors to sub_df if paired comparisons were requested
+    if paired is True:
+        con_df = pd.DataFrame(con_list)
+        sub_df = pd.merge(sub_df, con_df, on='sub')
+        
+        # drop group label column because contrast_ids will be used as grouping variable
+        #sub_df = sub_df.drop(columns=groups)
     
     # extract and save group column
-    grp_txt = op.join(conDir, '{}_grp.txt'.format(contrast_id))
-    grp_cov = op.join(conDir, '{}_grp.grp'.format(contrast_id))
+    grp_txt = op.join(conDir, '{}_grp.txt'.format(contrast_name))
+    grp_cov = op.join(conDir, '{}_grp.grp'.format(contrast_name))
     sub_df['group'].to_csv(grp_txt, header=None, index=None, sep=' ', mode='a')
     
     # drop colums that aren't needed in design matrix
@@ -172,10 +206,13 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
     
     # lowercase column names
     sub_df.columns = sub_df.columns.str.lower()
+    
+    # put in alphabetical order by column name
+    sub_df = sub_df[sorted(sub_df.columns)]
         
     # define output files and save text file
-    design_txt = op.join(conDir, '{}_design.txt'.format(contrast_id))
-    design_mat = op.join(conDir, '{}_design.mat'.format(contrast_id))
+    design_txt = op.join(conDir, '{}_design.txt'.format(contrast_name))
+    design_mat = op.join(conDir, '{}_design.mat'.format(contrast_name))
     sub_df.to_csv(design_txt, header=None, index=None, sep=' ', mode='a')
     
     # convert design.txt to design.mat
@@ -195,26 +232,31 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
     contrasts_file=op.join(projDir, 'files', 'contrast_files', 'group_contrasts.tsv')
     contrasts=pd.read_csv(contrasts_file, sep='\t')
     
-    # lowercase column names
+    # lowercase column names and contrast names
     contrasts.columns=contrasts.columns.str.lower()
+    contrasts['contrast']=contrasts['contrast'].str.lower()
     
     # remove contrasts based on contrast column (either all or a specific contrast is specified)
-    contrasts = contrasts[(contrasts.contrast == 'all') | (contrasts.contrast == contrast_id)].drop('contrast', axis=1)
+    contrasts = contrasts[(contrasts.contrast == 'all') | (contrasts.contrast == contrast_name)].drop('contrast', axis=1)
     
     # filter contrasts
     if sub_df.shape[1] != 0:
-        retain_vars = set(groups + sub_df)
+        retain_vars = groups + list(sub_df.columns)
     else:
         retain_vars = groups
-    
+ 
     retain_vars = [var.lower() for var in retain_vars]
+    retain_vars = set(retain_vars)
     contrasts = contrasts.loc[:, contrasts.columns.isin(retain_vars)]
+    
+    # put in alphabetical order by column name
+    contrasts = contrasts[sorted(contrasts.columns)]
     
     print(contrasts)
     
     # define output files and save text file
-    contrast_txt = op.join(conDir, '{}_contrasts.txt'.format(contrast_id))
-    design_con = op.join(conDir, '{}_design.con'.format(contrast_id))
+    contrast_txt = op.join(conDir, '{}_contrasts.txt'.format(contrast_name))
+    design_con = op.join(conDir, '{}_design.con'.format(contrast_name))
     contrasts.to_csv(contrast_txt, header=None, index=None, sep=' ', mode='a')
     
     # convert contrasts.txt to contrasts.mat
@@ -253,7 +295,7 @@ def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, 
             print('Using Threshold-Free Cluster Enhancement')
             # set up randomise call
             rand = fsl.Randomise(in_file=merged_cope_file, 
-                                 demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
+                                 #demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
                                  num_perm=nperm,
                                  mask=dilated_mask_file, 
                                  tcon=design_con,
@@ -264,7 +306,7 @@ def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, 
         else:
             # set up randomise call
             rand = fsl.Randomise(in_file=merged_cope_file, 
-                                 demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
+                                 #demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
                                  num_perm=nperm,
                                  mask=dilated_mask_file, 
                                  tcon=design_con, 
