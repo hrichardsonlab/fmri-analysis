@@ -17,16 +17,16 @@ Usage() {
 	echo
 	echo
 	echo "Usage:"
-	echo "./run_first-level.sh <pipeline script> <configuration file name> <list of subjects>"
+	echo "./run_first-level.sh <pipeline script> <configuration file name> <subject-run list>"
 	echo
 	echo "Example:"
 	echo "./run_first-level.sh firstlevel_pipeline.py config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
 	echo
 	echo "The config file name (not path!) should be provided"
 	echo
-	echo "TEBC-5y_subjs.txt is a file containing the participants to process:"
-	echo "001"
-	echo "002"
+	echo "TEBC-5y_subjs.txtis a subject-run file containing the participants and run info to process:"
+	echo "8010 1,2"
+	echo "8011 1,2"
 	echo "..."
 	echo
 	echo
@@ -49,10 +49,11 @@ if [ ! ${pipeline##*.} == "py" ]
 then
 	echo
 	echo "The pipeline script was not found."
-	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
+	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject-run list as in the example below."
 	echo
 	echo "./run_first-level.sh firstlevel_pipeline.py config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
 	echo
+	echo "Make sure the run information is included in the subject list!"
 	
 	# end script and show full usage documentation
 	Usage
@@ -62,10 +63,11 @@ if [ ! ${2##*.} == "tsv" ]
 then
 	echo
 	echo "The configuration file was not found."
-	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
+	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject-run list as in the example below."
 	echo
 	echo "./run_first-level.sh firstlevel_pipeline.py config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
 	echo
+	echo "Make sure the run information is included in the subject list!"
 	
 	# end script and show full usage documentation	
 	Usage
@@ -75,10 +77,11 @@ if [ ! ${3##*.} == "txt" ]
 then
 	echo
 	echo "The list of participants was not found."
-	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject list as in the example below."
+	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3)a subject-run list as in the example below."
 	echo
 	echo "./run_first-level.sh firstlevel_pipeline.py config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
 	echo
+	echo "Make sure the run information is included in the subject list!"
 	
 	# end script and show full usage documentation	
 	Usage

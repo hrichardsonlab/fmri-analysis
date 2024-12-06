@@ -16,14 +16,14 @@
 Usage() {
 	echo
 	echo "Usage:"
-	echo "./generate_eventfiles.sh <list of subjects> <task>"
+	echo "./generate_eventfiles.sh <subject-run list> <task>"
 	echo
 	echo "Example:"
 	echo "./generate_eventfiles.sh TEBC-5y_subjs.txt pixar"
 	echo 
-	echo "TEBC-5y_subjs.txt is a file containing the participants to generate the events.tsv files for:"
-	echo "001"
-	echo "002"
+	echo "TEBC-5y_subjs.txt is a subject-run file containing the participants and run info to generate the events.tsv files for:"
+	echo "8010 1,2"
+	echo "8011 1,2"
 	echo "..."
 	echo
 	echo

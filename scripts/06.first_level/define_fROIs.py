@@ -254,7 +254,7 @@ def main(argv=None):
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
         if sub_runs == ['NA']: # if run info isn't used in file names
-            sub_runs = 1
+            sub_runs = [1]
         else:
             sub_runs=list(map(int, sub_runs)) # convert to integers     
         
