@@ -19,8 +19,8 @@ Usage() {
 	echo "./run_fmriprep.sh TEBC-5y_subjs.txt"
 	echo
 	echo "TEBC-5y_subjs.txt is a file containing the participants to run fMRIPrep on:"
-	echo "001"
-	echo "002"
+	echo "8010"
+	echo "8011"
 	echo "..."
 	echo
 	echo
@@ -107,6 +107,7 @@ do
 	--fd-spike-threshold 1												\
 	--dvars-spike-threshold 1.5											\
 	--output-space MNI152NLin2009cAsym:res-2 T1w						\
+	--return-all-components												\
 	--derivatives ${derivDir}											\
 	--stop-on-first-crash												\
 	-w ${singularityDir}												\
