@@ -679,7 +679,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
 
 # define function to extract subject-level data for workflow
 def process_subject(layout, sharedDir, projDir, derivDir, outDir, workDir, 
-                    sub, task, ses, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size,resultsDir,smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name):    
+                    sub, task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size,resultsDir,smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name):    
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
@@ -709,12 +709,17 @@ def process_subject(layout, sharedDir, projDir, derivDir, outDir, workDir,
     scans_df['task'] = scans_df['task'].str.split('_', expand=True)[0]
     scans_df['run'] = scans_df['filename'].apply(lambda x: x.split('run-')[1].split('_')[0] if 'run-' in x else None)
     
-    # remove runs tagged with excessive motion, that are for a different task, or aren't in run list in the config file
+    # remove runs tagged with excessive motion if requested
+    if ignore_motion == 'no':
+        print('Will exclude runs tagged as having excessive motion')
+        scans_df = scans_df[(scans_df.MotionExclusion == False)]
+    
+    # remove runs that are for a different task, or aren't in run list in the config file
     if sub_runs != 0:
-        keepruns = scans_df[(scans_df.MotionExclusion == False) & (scans_df.task == task) & (scans_df.run.isin(['{:02d}'.format(r) for r in sub_runs]))].run
+        keepruns = scans_df[(scans_df.task == task) & (scans_df.run.isin(['{:02d}'.format(r) for r in sub_runs]))].run
     else:
-        keepruns = scans_df[(scans_df.MotionExclusion == False) & (scans_df.task == task)].run.fillna(value='0')    
-
+        keepruns = scans_df[(scans_df.task == task)].run.fillna(value='0')
+        
     # if split half requested
     if splithalf == 'yes':
         keepruns = keepruns.loc[keepruns.index.repeat(2)] # duplicate runs
@@ -792,6 +797,7 @@ def main(argv=None):
     task=config_file.loc['task',1]
     ses=config_file.loc['sessions',1]
     multiecho=config_file.loc['multiecho',1]
+    ignore_motion=config_file.loc['ignore_motion',1]
     dropvols=int(config_file.loc['dropvols',1])
     smoothing_kernel_size=int(config_file.loc['smoothing',1])
     hpf=int(config_file.loc['hpf',1])
@@ -893,7 +899,7 @@ def main(argv=None):
               
         # create a process_subject workflow with the inputs defined above
         wf = process_subject(layout, sharedDir, args.projDir, derivDir, outDir, workDir, sub,
-                             task, ses, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name)
+                             task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name)
    
         # configure workflow options
         wf.config['execution'] = {'crashfile_format': 'txt',

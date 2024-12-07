@@ -13,6 +13,7 @@ DVARS_thresh	1.5
 art_norm_thresh	1
 art_z_thresh	3
 ntmpts_exclude	.33
+ignore_motion	no
 dropvols	0
 smoothing	
 hpf	
