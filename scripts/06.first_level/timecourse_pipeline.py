@@ -106,12 +106,12 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
             run_name = 'run1' # if no run info is in filename, then results are saved under 'run1'
 
         # check to see whether outputs exist in smoothDir (if smoothDir was specified in config file)
-        if smoothDir:
+        if smoothDir: 
             if splithalf_id != 0:
-                smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}-preproc_bold_smooth.nii.gz'.format(prefix, space_name))
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
             else:
-                smooth_file = op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}-preproc_bold_smooth.nii.gz'.format(prefix, space_name))
-            
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
                 print('Previously smoothed data file has been found and will be used: {}'.format(mni_file))
