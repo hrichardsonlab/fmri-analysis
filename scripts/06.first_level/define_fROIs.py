@@ -29,7 +29,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 'lFFA':'face', 'lOFA':'face', 'lSTS':'face', 'rFFA':'face', 'rOFA':'face', 'rSTS':'face',
                 'lLOC':'object', 'rLOC': 'object',
                 'lPPA':'scene', 'lRSC':'scene', 'lTOS':'scene', 'rPPA':'scene', 'rRSC':'scene', 'rTOS':'scene',
-                'DMPFC':'tom', 'LTPJ':'tom', 'MMPFC':'tom', 'PC':'tom', 'RSTS':'tom', 'RTPJ':'tom', 'VMPFC':'tom',
+                'DMPFC':'tom', 'LTPJ':'tom', 'MMPFC':'tom', 'rMMPFC':'tom', 'lMMPFC':'tom', 'PC':'tom', 'RSTS':'tom', 'RTPJ':'tom', 'VMPFC':'tom',
                 'lvwfa':'vwfa'}
     
     # grab ROI search space files
@@ -164,11 +164,8 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         # save froi file
                         # could use roi_name_lower instead of search_spaces[m] to get all lowercase names
                         sub_froi = image.new_img_like(mask_bin, sub_froi) # create a new image of the same class as the initial image
-                        if r == 0:
-                            sub_roi_file = op.join(froiDir, 'sub-{}_task-{}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, task, s, search_spaces[m], c, top_nvox))
-                        else:
-                            # sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
-                            sub_roi_file = op.join(froiDir, 'sub-{}_task-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, task, r, s, search_spaces[m], c, top_nvox))
+                        # sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
+                        sub_roi_file = op.join(froiDir, 'sub-{}_task-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, task, r, s, search_spaces[m], c, top_nvox))
                         sub_froi.to_filename(sub_roi_file)
 
 # define command line parser function
