@@ -247,6 +247,11 @@ def main(argv=None):
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
         print('Defining fROIs for sub-{}'.format(sub))
+        
+        # check that run info was provided in subject list, otherwise throw an error
+         if not args.runs:
+            raise IOError('Run information missing. Make sure you are passing a subject-run list to the pipeline!')
+                
         # pass runs for this sub
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators

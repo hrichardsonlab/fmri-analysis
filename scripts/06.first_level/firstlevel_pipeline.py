@@ -63,6 +63,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         """Quick filegrabber ala SelectFiles/DataGrabber"""
         import os
         import os.path as op
+        import glob
         import shutil
         from nibabel import load
         
@@ -85,10 +86,10 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         
         # identify mni file based on whether data are multiecho
         if multiecho == 'yes': # if multiecho sequence, look for outputs in tedana folder
-            mni_file = op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}_desc-denoised_bold.nii.gz'.format(prefix, space_name))
+            mni_file = op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name))
             print('Will use multiecho outputs from tedana: {}'.format(mni_file))
         else:            
-            mni_file = op.join(funcDir, '{}_space-{}_desc-preproc_bold.nii.gz'.format(prefix, space_name))
+            mni_file = op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name))
 
         # grab the confound and rapidart outlier file
         confound_file = op.join(funcDir, '{}_desc-confounds_timeseries.tsv'.format(prefix))
@@ -685,7 +686,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
         tc_dat=tc_dat.filter(regressor_opts)
         
         # save as tc regressor file in tcDir
-        tcreg_file = op.join(tcDir, 'sub-{}_ROI_timecourses.txt'.format(sub))
+        tcreg_file = op.join(tcDir, 'sub-{}_adult_timecourses.txt'.format(sub))
         pd.DataFrame(tc_dat).to_csv(tcreg_file, index=False, sep ='\t') 
         
         # assign timecourse files as events_files (duplicating for the number of kept runs because the same timecourses are used for each run)
@@ -845,6 +846,10 @@ def main(argv=None):
 
     # for each subject in the list of subjects
     for index, sub in enumerate(subjects):
+        # check that run info was provided in subject list, otherwise throw an error
+        if not args.runs:
+            raise IOError('Run information missing. Make sure you are passing a subject-run list to the pipeline!')
+                
         # pass runs for this sub
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
