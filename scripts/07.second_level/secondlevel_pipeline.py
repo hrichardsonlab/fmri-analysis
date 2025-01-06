@@ -8,6 +8,7 @@ from nipype.interfaces import fsl
 from nipype import Workflow, Node, IdentityInterface, Function, DataSink, JoinNode, MapNode
 import scipy.stats
 import argparse
+import re
 import os
 import os.path as op
 import numpy as np
@@ -38,9 +39,13 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
     varcopes_list = []
     mask_list = []
     con_list = []
+    sub_ids = []
     for s, sub in enumerate(subs):
         for c, con in enumerate(contrast_id):
             print('Concatenating copes and varcopes files for {} analysis for sub-{}'.format(con, sub))
+            
+            # store subject ID into a vector for defining exchangibility blocks for paired t-tests
+            sub_ids.append(sub)
             
             # create one-hot encoding contrast vectors for design matrix
             row = {'sub': sub}
@@ -54,7 +59,7 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
             else: # if session was 'no'
                 mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'func', 'sub-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub)))[0]
             
-            if runs[s] != 'NA' or len(runs[s]) > 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1,)
+            if runs[s] != 'NA' or len(runs[s]) > 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1)
                 # pull outputs from combinedDir
                 modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
                 
@@ -141,7 +146,7 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
         cmd = cmd + ' '.join(mask_list)
         #print(cmd)
         result = subprocess.run(cmd, stdout=subprocess.PIPE, shell = True)
-        print('Merged all masks') # , result.stdout
+        print('Merged all masks')
         
         # then dilate the mask
         cmd = 'fslmaths ' + merged_mask_file + ' '
@@ -150,7 +155,7 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
         result = subprocess.run(cmd, stdout=subprocess.PIPE, shell = True)
         print('Dilated mask')
         
-    # generate design file needed for models
+    # generate design files needed for model
     if group_opts == 'between':
         print('Creating design matrix file for between group analysis')
         
@@ -188,20 +193,48 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
         # assign all subs to same group
         sub_df['group'] = 1
 
-    # add contrast vectors to sub_df if paired comparisons were requested
+    # if paired comparisons were requested
     if paired is True:
+        # save contrast vectors to sub_df
         con_df = pd.DataFrame(con_list)
         sub_df = pd.merge(sub_df, con_df, on='sub')
+
+        # duplicate each row
+        #sub_df = pd.concat([sub_df, sub_df]).sort_index().reset_index(drop=True)
         
-        # drop group label column because contrast_ids will be used as grouping variable
-        #sub_df = sub_df.drop(columns=groups)
+        # reset grouping variable (exchangibility blocks) to subject labels
+        paired_groups = [int(re.sub(r'\D', '', v)) if re.sub(r'\D', '', v) else None for v in sub_ids]
+        sub_df['group'] = paired_groups
+    
+    # create paired contrast vector instead of modelling all conditions as the same
+    for g, grp in enumerate(groups):
+        # the first condition specified in paired contrast is contrasted with the second condition specified
+        sub_df[grp] = sub_df.apply(lambda row: 1 if row[contrast_id[0]] == 1 else -1 if row[contrast_id[1]] == 1 else 0, axis=1)
+        
+    # drop contrast columns that aren't needed in design matrix
+    sub_df = sub_df.drop(contrast_id, axis=1)
+
+    # add vectors to model mean effect for each subject (random intercepts)
+    print('Generating random intercepts for subjects to be used in paired t-test')
+    
+    # get unique subjects numbers
+    sub_nums = sub_df['group'].unique()
+    
+    # create a one-hot encoded DataFrame
+    one_hot = pd.get_dummies(sub_df['group'])
+
+    # rename columns
+    one_hot.columns = [f'sub{sub_nums}' for sub_nums in one_hot.columns]
+
+    # add one-hot encoded vectors to dataframe
+    sub_df = pd.concat([sub_df, one_hot], axis=1)    
     
     # extract and save group column
     grp_txt = op.join(conDir, '{}_grp.txt'.format(contrast_name))
     grp_cov = op.join(conDir, '{}_grp.grp'.format(contrast_name))
     sub_df['group'].to_csv(grp_txt, header=None, index=None, sep=' ', mode='a')
     
-    # drop colums that aren't needed in design matrix
+    # drop columns that aren't needed in design matrix
     sub_df = sub_df.drop(['sub', 'group'], axis=1)
     
     # lowercase column names
@@ -252,6 +285,17 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
     # put in alphabetical order by column name
     contrasts = contrasts[sorted(contrasts.columns)]
     
+    # if paired comparisons were requested
+    if paired is True:
+        # reset grouping variable to 1 to apply assigned weights to compare subject-level condition maps
+        contrasts[groups[0].lower()] = 1
+             
+        # include 0-weighted contrasts for subject intercepts
+        intercepts = pd.DataFrame(0, index=[0], columns=[f'sub{s}' for s in sub_nums])
+
+        # append the zero columns to contrasts
+        contrasts = pd.concat([contrasts, intercepts], axis=1)
+        
     print(contrasts)
     
     # define output files and save text file
@@ -295,7 +339,7 @@ def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, 
             print('Using Threshold-Free Cluster Enhancement')
             # set up randomise call
             rand = fsl.Randomise(in_file=merged_cope_file, 
-                                 #demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
+                                 demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
                                  num_perm=nperm,
                                  mask=dilated_mask_file, 
                                  tcon=design_con,
@@ -306,7 +350,7 @@ def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, 
         else:
             # set up randomise call
             rand = fsl.Randomise(in_file=merged_cope_file, 
-                                 #demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
+                                 demean=True, # demean the EVs in the design matrix, providing a warning if they initially had non-zero mean
                                  num_perm=nperm,
                                  mask=dilated_mask_file, 
                                  tcon=design_con, 
@@ -413,7 +457,7 @@ def main(argv=None):
         os.mkdir(outDir)
 
     # identify analysis README file
-    readme_file=op.join(resultsDir, 'README.txt')
+    readme_file = op.join(resultsDir, 'README.txt')
     
     # add config details to project README file
     with open(args.config, 'r') as file_1, open(readme_file, 'a') as file_2:
@@ -432,9 +476,9 @@ def main(argv=None):
     for c, contrast_id in enumerate(contrast_opts):
         for s, splithalf_id in enumerate(splithalves):
             # extract details from subject file
-            sub_df=pd.read_csv(args.file[0], sep=' ', converters={'sub': str})
+            sub_df = pd.read_csv(args.file[0], sep=' ', converters={'sub': str})
             sub_df.columns = sub_df.columns.str.lower() # lowercase column names
-            sub_df=sub_df[group_vars]
+            sub_df = sub_df[group_vars]
             
             # run secondlevel workflow with the inputs defined above
             generate_model_files(args.projDir, derivDir, resultsDir, outDir, workDir, args.subjects, args.runs, sub_df, task, ses, splithalf_id, contrast_id, nonparametric, group_opts, group_vars, est_group_variances, tfce, nperm)
