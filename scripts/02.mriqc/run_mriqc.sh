@@ -45,7 +45,7 @@ singularityDir="${projDir}/singularity_images"
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 if [ ! -d ${singularityDir}/mriqc_sandbox ]
 then
-	singularity build --sandbox ${singularityDir}/mriqc_sandbox ${singularityDir}/mriqc-24.0.0.simg
+	apptainer build --sandbox ${singularityDir}/mriqc_sandbox ${singularityDir}/mriqc-24.0.0.simg
 fi
 
 # define subjects from text document
@@ -82,26 +82,26 @@ echo "Running MRIQC for..."
 echo "${subjs}"
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
-export SINGULARITY_TMPDIR=${singularityDir}
-export SINGULARITY_CACHEDIR=${singularityDir}
+export APPTAINER_TMPDIR=${singularityDir}
+export APPTAINER_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # run MRIQC (https://mriqc.readthedocs.io/en/latest/running.html#singularity-containers)
 ## generate subject reports
-singularity run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
-${singularityDir}/mriqc_sandbox																			\
-${bidsDir} ${qcDir}																						\
-participant																								\
---participant_label ${subjs}																			\
---no-sub 																								\
---fd_thres 1																							\
--m T1w bold 																							\
+apptainer run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
+${singularityDir}/mriqc_sandbox																		\
+${bidsDir} ${qcDir}																					\
+participant																							\
+--participant_label ${subjs}																		\
+--no-sub 																							\
+--fd_thres 1																						\
+-m T1w bold 																						\
 -w ${singularityDir}
 
 # generate group reports
-singularity run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
-${singularityDir}/mriqc_sandbox																			\
-${bidsDir} ${qcDir} group 																				\
+apptainer run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
+${singularityDir}/mriqc_sandbox																		\
+${bidsDir} ${qcDir} group 																			\
 -m T1w bold
 
 # remove hidden files in singularity directory to avoid space issues

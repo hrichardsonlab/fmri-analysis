@@ -110,7 +110,7 @@ outDir="${projDir}/analysis/${proj_name}/${analysis_name}"
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 if [ ! -d ${singularityDir}/nipype_sandbox ]
 then
-	singularity build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype_nilearn.simg
+	apptainer build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype_nilearn.simg
 fi
 
 # define output logfile
@@ -122,8 +122,8 @@ else
 fi
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
-export SINGULARITY_TMPDIR=${singularityDir}
-export SINGULARITY_CACHEDIR=${singularityDir}
+export APPTAINER_TMPDIR=${singularityDir}
+export APPTAINER_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # display subjects
@@ -132,7 +132,7 @@ echo "Running" ${pipeline} "for..."
 echo "${subjs}"
 
 # run second-level workflow using script specified in script call
-singularity exec -C -B /EBC:/EBC						\
+apptainer exec -C -B /EBC:/EBC							\
 ${singularityDir}/nipype_sandbox						\
 /neurodocker/startup.sh python ${codeDir}/${pipeline}	\
 -p ${projDir}											\

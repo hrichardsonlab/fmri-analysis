@@ -45,7 +45,7 @@ singularityDir="${projDir}/singularity_images"
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 if [ ! -d ${singularityDir}/fmriprep_sandbox ]
 then
-	singularity build --sandbox ${singularityDir}/fmriprep_sandbox ${singularityDir}/fmriprep-24.0.0.simg
+	apptainer build --sandbox ${singularityDir}/fmriprep_sandbox ${singularityDir}/fmriprep-24.0.0.simg
 fi
 
 # define subjects from text document
@@ -73,8 +73,8 @@ fi
 export license=/EBC/local/infantFS/freesurfer/license.txt
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
-export SINGULARITY_TMPDIR=${singularityDir}
-export SINGULARITY_CACHEDIR=${singularityDir}
+export APPTAINER_TMPDIR=${singularityDir}
+export APPTAINER_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # prepare some writeable bind-mount points
@@ -95,7 +95,7 @@ do
 	echo
 
 	# run singularity
-	singularity run -C -B /EBC:/EBC,${singularityDir}:/opt/templateflow	\
+	apptainer run -C -B /EBC:/EBC,${singularityDir}:/opt/templateflow	\
 	${singularityDir}/fmriprep_sandbox  								\
 	${bidsDir} ${derivDir}												\
 	participant															\
