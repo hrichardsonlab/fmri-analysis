@@ -194,7 +194,7 @@ do
 		rm ${bidsDir}/${subDir}/dwi/*.bv*
 		
 		# generate new diffusion files (more info: https://mrtrix.readthedocs.io/en/dev/reference/commands/dwiextract.html)
-		/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
+		/EBC/local/MRtrix3.0.4/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
 														 -fslgrad ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bval \
 														 -shells 0,500,1000,2000 ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
 														 -export_grad_fsl ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bval
