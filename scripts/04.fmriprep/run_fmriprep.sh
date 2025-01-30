@@ -78,7 +78,7 @@ export APPTAINER_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # prepare some writeable bind-mount points
-export SINGULARITYENV_TEMPLATEFLOW_HOME=${singularityDir}/fmriprep/.cache/templateflow
+export APPTAINERENV_TEMPLATEFLOW_HOME=${singularityDir}/fmriprep/.cache/templateflow
 
 # display subjects
 echo
