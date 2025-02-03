@@ -55,17 +55,17 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
             
             # grab mask file
             if ses != 'no': # if session was provided
-                mask_file = glob.glob(op.join(derivDir, '{}'.format(sub), 'ses-{}'.format(ses), 'func', '{}_ses-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses)))[0]
+                mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func', '{}_ses-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses)))[0]
             else: # if session was 'no'
-                mask_file = glob.glob(op.join(derivDir, '{}'.format(sub), 'func', '{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub)))[0]
+                mask_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'func', 'sub-{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub)))[0]
             
-            if runs[s] != 'NA' or len(runs[s]) > 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1)
+            if runs[s] != 'NA' and len(runs[s]) > 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1)
                 # pull outputs from combinedDir
-                modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs')
+                modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
                 
                 # check that runs have been combined
                 if not op.exists(modelDir):
-                    raise IOError('Combined run directory not found for {}. Have runs been combined?'.format(sub))
+                    raise IOError('Combined run directory not found for sub-{}. Have runs been combined?'.format(sub))
 
                 # grab files
                 if splithalf_id != 0:
@@ -77,7 +77,7 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
                                 
             else: # if only 1 run
                 # pull outputs from run directory
-                modelDir = op.join(resultsDir, '{}'.format(sub), 'model')
+                modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model')
                 
                 # ensure that correct run name is used to grab files
                 if runs[s] == 'NA': # if no run info, then look for outputs in run1
