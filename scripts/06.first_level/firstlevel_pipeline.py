@@ -86,10 +86,10 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         
         # identify mni file based on whether data are multiecho
         if multiecho == 'yes': # if multiecho sequence, look for outputs in tedana folder
-            mni_file = op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name))
+            mni_file = glob.glob(op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name)))[0]
             print('Will use multiecho outputs from tedana: {}'.format(mni_file))
         else:            
-            mni_file = op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name))
+            mni_file = glob.glob(op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name)))[0]
 
         # grab the confound and rapidart outlier file
         confound_file = op.join(funcDir, '{}_desc-confounds_timeseries.tsv'.format(prefix))
