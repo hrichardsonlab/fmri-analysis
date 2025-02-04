@@ -19,8 +19,8 @@ def concat_masks(derivDir, sub, ses):
         
         # define path to inputs (subjects preprocessed functional data)
         subDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func')
-        mni_img_fname = '{}/{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
-        t1w_img_fname = '{}/{}_ses-{}_space-T1w_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
+        mni_img_fname = '{}/sub-{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
+        t1w_img_fname = '{}/sub-{}_ses-{}_space-T1w_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
         
     else: # if session was 'no'
         # define path to inputs (subjects preprocessed functional data)
