@@ -79,7 +79,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             prefix = 'sub-{}_task-{}'.format(sub, task)
             funcDir = op.join(derivDir, 'sub-{}'.format(sub), 'func')
             mni_mask = op.join(funcDir, 'sub-{}_space-{}_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses, space_name))
-        
+
         # add run info to file prefix if necessary
         if run_id != 0:
             prefix = '{}_run-{:02d}'.format(prefix, run_id)
@@ -90,7 +90,8 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             print('Will use multiecho outputs from tedana: {}'.format(mni_file))
         else:            
             mni_file = glob.glob(op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name)))[0]
-
+            
+        
         # grab the confound and rapidart outlier file
         confound_file = op.join(funcDir, '{}_desc-confounds_timeseries.tsv'.format(prefix))
         if run_id != 0: # if run info is in filename
@@ -110,9 +111,9 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
         # check to see whether outputs exist in smoothDir (if smoothDir was specified in config file)
         if smoothDir: 
             if splithalf_id != 0:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
             else:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
 
             if os.path.exists(smooth_file):
                 mni_file = smooth_file

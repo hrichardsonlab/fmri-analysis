@@ -83,11 +83,11 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         
         # identify mni file based on whether data are multiecho
         if multiecho == 'yes': # if multiecho sequence, look for outputs in tedana folder
-            mni_file = op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name))
+            mni_file = glob.glob(op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name)))[0]
             print('Will use multiecho outputs from tedana: {}'.format(mni_file))
         else:            
-            mni_file = op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name))
-
+            mni_file = glob.glob(op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name)))[0]
+        
         # grab the confound, MNI, and rapidart outlier file
         confound_file = op.join(funcDir, '{}_desc-confounds_timeseries.tsv'.format(prefix))
         
@@ -104,13 +104,13 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
             run_name = 'run{}'.format(run_id)
         else:
             run_name = 'run1' # if no run info is in filename, then results are saved under 'run1'
-
+        
         # check to see whether outputs exist in smoothDir (if smoothDir was specified in config file)
         if smoothDir: 
             if splithalf_id != 0:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
             else:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, 'sub-{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
 
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
@@ -209,6 +209,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
     datasource.inputs.ses = ses
     datasource.inputs.dropvols = dropvols
     datasource.inputs.multiecho = multiecho
+    datasource.inputs.space_name = space_name
 
     # if drop volumes requested
     if dropvols != 0:
