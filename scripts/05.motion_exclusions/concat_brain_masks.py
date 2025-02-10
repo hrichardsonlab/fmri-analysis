@@ -30,7 +30,7 @@ def concat_masks(derivDir, sub, ses):
     
     # identify all mask files (there should be 1 per functional run)
     mni_maskfiles = glob.glob(op.join(subDir, '*MNI152NLin2009cAsym_res-2_desc-brain_mask.nii.gz'))  
-    t1w_maskfiles = glob.glob(op.join(subDir, '*T1w_desc-brain_mask.nii.gz'))  
+    t1w_maskfiles = glob.glob(op.join(subDir, '*T1w_desc-brain_mask.nii.gz'))
 
     # generate MNI mask
     if len(mni_maskfiles) == 0: # if no mask files were found
@@ -60,7 +60,7 @@ def concat_masks(derivDir, sub, ses):
 
     # generate T1w mask
     if len(t1w_maskfiles) == 0: # if no mask files were found
-        print('No MNI space brain masks found for sub-{}'.format(sub))
+        print('No native space brain masks found for sub-{}'.format(sub))
     
     else: # if mni mask files were found
         t1w_basemask = t1w_maskfiles[0] # take the first mask file as the base image
