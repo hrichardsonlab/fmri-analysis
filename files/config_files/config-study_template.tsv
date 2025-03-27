@@ -39,4 +39,7 @@ group_comparison
 group_variables	
 est_group_variances	
 tfce	
+stat_thresh	
+cluster_size	
+top_nregions	
 overwrite	no
