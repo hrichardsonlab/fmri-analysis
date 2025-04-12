@@ -93,9 +93,17 @@ fi
 # define pipeline, configuration options and subjects from files passed in script call
 pipeline=$1
 config=$2
-subjs=$(cat $3 | awk 'NR>1 {print $1}') 
+if [[ ${pipeline} == 'reverse_correlation.py' ]]
+then
+	# do not skip first row
+	subjs=$(cat $3 | awk '{print $1}') 
+	runs=$(cat $3 | awk '{print $2}') 
+else
+	# skip first row with column headers
+	subjs=$(cat $3 | awk 'NR>1 {print $1}') 
+	runs=$(cat $3 | awk ' NR>1{print $2}') 
+fi
 sub_file=$(readlink -f $3)
-runs=$(cat $3 | awk ' NR>1{print $2}') 
 
 # extract project and analysis name from config file
 proj_name=` basename ${config} | cut -d '-' -f 2 | cut -d '_' -f 1 ` # name provided after hyphen and before underscore
