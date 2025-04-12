@@ -42,4 +42,7 @@ tfce
 stat_thresh	
 cluster_size	
 top_nregions	
+hrf_lag	
+rc_ntps	
+rc_thresh	
 overwrite	no
