@@ -3,11 +3,10 @@
 ################################################################################
 # SUBMIT FMRIPREP PREPROCESSED MULTIECHO DATA TO TEDANA TO DENOISE
 #
-# This script takes the preprocessed multi-echos output from fmriprep and (1) runs them through
-# tedana to denoise and optimally recombine them and (2) normalize the data to MNI space
-#
-# The nipype singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+# This script:
+# (1) generates a combined grey + white matter mask, registers this mask to EPI space, and combines the mask with the BOLD mask for optimal coverage of ventral ATL
+# (2) rus the preprocessed multi-echos output from fmriprep through tedana to denoise and optimally recombine them
+# (3) normalizes optimally combined data to MNI space
 #
 ################################################################################
 
@@ -19,9 +18,9 @@ Usage() {
 	echo "./run_tedana.sh <list of subjects>"
 	echo
 	echo "Example:"
-	echo "./run_tedana.sh Narrative_Comprehension-subjs.txt"
+	echo "./run_tedana.sh fMRI_Semantics-subjs.txt"
 	echo
-	echo "Narrative_Comprehension-subjs.txt is a file containing the participants to check:"
+	echo "fMRI_Semantics-subjs.txt is a file containing the participants to check:"
 	echo "001"
 	echo "002"
 	echo "..."
@@ -32,13 +31,18 @@ Usage() {
 }
 [ "$1" = "" ] && Usage
 
+# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
+if [[ ! "$PWD" =~ "/EBC/" ]]
+then Usage
+fi
+
 if [ ! ${1##*.} == "txt" ]
 then
 	echo
 	echo "The list of participants was not found."
 	echo "The script must be submitted with a subject list as in the example below."
 	echo
-	echo "./run_tedana.sh Narrative_Comprehension-subjs.txt"
+	echo "./run_tedana.sh fMRI_Semantics-subjs.txt"
 	echo
 	
 	# end script and show full usage documentation	
@@ -46,7 +50,7 @@ then
 fi
 
 # indicate whether session folders are used
-sessions='no'
+sessions='yes'
 
 # define subjects from text document
 subjs=$(cat $1 | awk '{print $1}') 
@@ -55,13 +59,23 @@ subjs=$(cat $1 | awk '{print $1}')
 study=` basename $1 | cut -d '-' -f 1 `
 
 # define data directories depending on sample information
-bidsDir="/projects/${study}/BIDS"
-derivDir="${bidsDir}/derivatives"
+if [[ ${sample} == 'pilot' ]]
+then
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	derivDir="/EBC/preprocessedData/${cohort}/derivatives/pilot"
+elif [[ ${sample} == 'HV' ]]
+then
+	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	derivDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
+else
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
+	derivDir="/EBC/preprocessedData/${cohort}/derivatives"
+fi
 
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
-codeDir="${projDir}/scripts/03.fmriprep"
+codeDir="${projDir}/scripts/04.fmriprep"
 
 # convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
 # if [ ! -d ${singularityDir}/nipype_sandbox ]
@@ -75,13 +89,13 @@ export SINGULARITY_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # run singularity to submit tedana script
-singularity exec -C -B /archive:/archive -B /projects:/projects -B ${projDir}:${projDir}	\
-${singularityDir}/nipype_nilearn.simg							\
-/neurodocker/startup.sh python ${codeDir}/denoise_echos.py		\
--s ${subjs}														\
--n ${sessions}													\
--b ${bidsDir}													\
--d ${derivDir}													\
+singularity exec -C -B /EBC:/EBC -B ${projDir}:${projDir}	\
+${singularityDir}/nipype_nilearn.simg						\
+/neurodocker/startup.sh python ${codeDir}/denoise_echos.py	\
+-s ${subjs}													\
+-n ${sessions}												\
+-b ${bidsDir}												\
+-d ${derivDir}												\
 -c 4
 
 # normalize tedana outputs within fmriprep singularity
@@ -106,7 +120,7 @@ do
     tasks=`ls -d ${subDir_deriv}/func/tedana/* | sed -r 's/^.+\///'`
 		
     # grab normalized anat transform file
-	T1w_MNI_transform=${subDir_deriv}/anat/*from-T1w_to-MNI152NLin2009cAsym_mode-image_xfm.h5
+	T1w_MNI_transform=${subDir_deriv}/anat/*from-T1w_to-MNI152NLin2009cAsym*mode-image_xfm.h5
 	
 	# for each task
 	for t in ${tasks}
@@ -117,22 +131,37 @@ do
 		
 		# grab denoised and transform files
 		denoised_img=${subDir_deriv}/func/tedana/${t}/*_desc-denoised_bold.nii.gz
-		reference_img=${subDir_deriv}/func/*${t}*MNI152NLin2009cAsym_res-2_boldref.nii.gz
+		reference_img=${subDir_deriv}/func/*${t}*MNI152NLin2009cAsym*_boldref.nii.gz
 		native_T1w_transform=${subDir_deriv}/func/*${t}*from-boldref_to-T1w_mode-image_desc-coreg_xfm.txt
 		
-		# define output file
-		normalized_img=${subDir_deriv}/func/tedana/${t}/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym_res-2_desc-denoised_bold.nii.gz
-	
-		singularity exec -C -B /archive:/archive -B /projects:/projects -B ${projDir}:${projDir}	\
-		${singularityDir}/fmriprep-24.0.0.simg 														\
-		antsApplyTransforms -e 3 																	\
-							-i ${denoised_img} 														\
-							-r ${reference_img}														\
-							-o ${normalized_img}													\
-							-n LanczosWindowedSinc													\
-							-t ${native_T1w_transform}												\
+		# grab combined mask file
+		combined_mask=${subDir_deriv}/func/tedana/${t}/*_space-T1w_desc-gmwmbold_mask.nii.gz
+		
+		# define output files
+		normalized_img=${subDir_deriv}/func/tedana/${t}/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym-denoised_bold.nii.gz
+		normalized_mask=${subDir_deriv}/func/tedana/${t}/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-gmwmbold_mask.nii.gz
+		
+		# normalize tedana denoised data to MNI space
+		singularity exec -C -B /EBC:/EBC -B ${projDir}:${projDir}	\
+		${singularityDir}/fmriprep-24.0.0.simg 						\
+		antsApplyTransforms -e 3 									\
+							-i ${denoised_img} 						\
+							-r ${reference_img}						\
+							-o ${normalized_img}					\
+							-n LanczosWindowedSinc					\
+							-t ${native_T1w_transform}				\
 							   ${T1w_MNI_transform} 											
-							   
+							
+		# normalize combined grey matter, white matter, bold mask to MNI space
+		singularity exec -C -B /EBC:/EBC -B /projects:/projects -B ${projDir}:${projDir}	\
+		${singularityDir}/fmriprep-24.0.0.simg 												\
+		antsApplyTransforms -d 3 															\
+							-i ${combined_mask} 											\
+							-r ${reference_img}												\
+							-o ${normalized_mask}											\
+							-n NearestNeighbor												\
+							-t ${native_T1w_transform}										\
+							   ${T1w_MNI_transform} 	
 	done
 	
 done <$1

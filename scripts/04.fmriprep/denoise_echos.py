@@ -1,42 +1,89 @@
 # import modules
-from nipype import Workflow, Node
-from tedana import workflows
-from multiprocessing import Pool
 #from nipype.interfaces.ants import ApplyTransforms
-import nibabel as nib
+import glob
+import json
+import re
+import os
 import os.path as op
 import pandas as pd
 import numpy as np
 import argparse
 import shutil
-import glob
-import json
-import os
-import re
+import nibabel as nib
+from tedana import workflows
+from multiprocessing import Pool
+from nilearn import image
+from nilearn.image import resample_to_img, math_img, load_img
 
 # define function that will extract echo information and run tedana
 def denoise_echoes(sub, session, bidsDir, derivDir, cores):
-    # print current subject
-    print('Denoising and optimally combining data for sub-{}'.format(sub))
-    
-    # grab echo files
+    # define subject files prefix based on whether session information is used
     if session == 'yes':
-        sub_prefix = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'ses-01'))
+        sub_prefix = op.join(derivDir, 'sub-{}'.format(sub), 'ses-01')
     else:
-        sub_prefix = glob.glob(op.join(derivDir, 'sub-{}'.format(sub)))
-        
+        sub_prefix = op.join(derivDir, 'sub-{}'.format(sub))
+    
+    # grab grey and white matter mask files
+    gm_mask = op.join(sub_prefix, 'anat', 'sub-{}_label-GM_probseg.nii.gz'.format(sub))
+    wm_mask = op.join(sub_prefix, 'anat', 'sub-{}_label-WM_probseg.nii.gz'.format(sub))
+    
+    # confirm that masks were found
+    if len(gm_mask) == 0 or len(wm_mask) == 0:
+        print('No brain mask found for sub-{}'.format(sub))
+    
+    # grab echo bold files
     echo_imgs = glob.glob(op.join(sub_prefix, 'func', '*_echo-*_bold.nii.gz'))
         
     # extract file prefixes before echoes (i.e., individual runs)
     prefix_list = [re.search('(.*)_echo-',f).group(1) for f in echo_imgs]
     prefix_list = set(prefix_list)
     
-    # make a dataframe with sub, inputFiles, and echo times
+    # loop through each unique task/run
     dat = []
-    for run in prefix_list: # for each run
+    for run in prefix_list:
         # extract task and run info
         task = re.search('task-(.*)', run).group(1)
-
+        
+        # make tedana output directory
+        outDir = op.join(sub_prefix, 'func', 'tedana/{}'.format(task))
+        os.makedirs(outDir, exist_ok=True)
+        
+        # grab bold and mask file
+        bold_file = op.join('{}_echo-1_desc-preproc_bold.nii.gz'.format(run))
+        bold_mask = op.join('{}_desc-brain_mask.nii.gz'.format(run))
+        
+        # resample and combine subject grey and white matter native space mask
+        print('Resampling and combining grey and white matter masks for: {}'.format(run))
+        
+        gm_resampled = resample_to_img(gm_mask, bold_file, interpolation='continuous')
+        wm_resampled = resample_to_img(wm_mask, bold_file, interpolation='continuous')
+        
+        # threshold and binarize gm and wm masks
+        gm_bin = math_img('img > 0.1', img = gm_resampled)
+        wm_bin = math_img('img > 0.1', img = wm_resampled)
+        
+        # combine masks
+        gmwm_img = image.math_img('img1 + img2', img1 = gm_bin, img2 = wm_bin)
+        
+        # binarize mask
+        gmwm_bin = image.math_img('img > 0', img = gmwm_img)
+        
+        # load and binarize bold mask
+        bold_bin = image.math_img('img > 0', img = bold_mask)
+        
+        # combine bold and gmwm masks
+        combined_mask = image.math_img('img1 + img2', img1 = gmwm_bin, img2 = bold_bin)
+        
+        # binarize combined mask
+        combined_mask = image.math_img('img > 0', img = combined_mask)
+        
+        # save masks
+        mask_file = op.join(outDir, 'sub-{}_task-{}_space-T1w_desc-gmwmbold_mask.nii.gz'.format(sub, task))
+        combined_mask.to_filename(mask_file)
+        print('Combined grey matter, white matter, bold mask saved to: {}'.format(mask_file))
+        
+        print('Denoising and optimally combining data for: {}'.format(run))
+        
         # grab the json files with appropriate header info
         header_info = glob.glob(op.join(sub_prefix, 'func', '{}*_echo-*desc-preproc_bold.json'.format(run)))
 
@@ -53,6 +100,7 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
             # extract echo number
             echo_num = re.search('echo-(.*)_desc', echo).group(1)
             
+            # grab echo file
             img = glob.glob(op.join(sub_prefix, 'func', '{}_echo-{}_desc-preproc_bold.nii.gz'.format(run, echo_num)))
             
             # add TR info to header
@@ -64,10 +112,11 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
             img_dat.header.set_zooms(new_zooms)
             nib.save(img_dat, img[0])
             
+            # add run to run_list
             run_list.append(img)
         
         run_list.sort()
-
+        
         # remove nested lists if present
         run_imgs = []
         for element in run_list:
@@ -76,25 +125,22 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
                     run_imgs.append(item)
             else:
                run_imgs.append(element)
-
-        # define output directory
-        os.makedirs(op.join(sub_prefix, 'func', 'tedana'), exist_ok=True)
-        outDir = op.join(sub_prefix, 'func', 'tedana/{}'.format(task))
-
-        # save files and outDir to dat
-        dat.append([sub, task, run_imgs, echo_times, outDir])
+               
+        # make a dataframe with sub, input files, and echo times
+        dat.append([sub, task, run_imgs, mask_file, echo_times, outDir])
     
-    print('Outputs will be saved to {}'.format(outDir))
-    tedana_df = pd.DataFrame(data=dat, columns=['sub', 'task', 'EchoFiles', 'EchoTimes', 'outDir'])
-    args=zip(tedana_df['sub'].tolist(),
-             tedana_df['task'].tolist(),
-             tedana_df['EchoFiles'].tolist(),
-             tedana_df['EchoTimes'].tolist(),
-             tedana_df['outDir'].tolist())
+        print('Outputs will be saved to {}'.format(outDir))
+        tedana_df = pd.DataFrame(data=dat, columns=['sub', 'task', 'EchoFiles', 'MaskFile', 'EchoTimes', 'outDir'])
+        args=zip(tedana_df['sub'].tolist(),
+                 tedana_df['task'].tolist(),
+                 tedana_df['EchoFiles'].tolist(),
+                 tedana_df['MaskFile'].tolist(),
+                 tedana_df['EchoTimes'].tolist(),
+                 tedana_df['outDir'].tolist())
              
-    # run tedana
-    pool = Pool(cores)
-    results = pool.starmap(call_tedana, args)
+        # run tedana
+        pool = Pool(cores)
+        results = pool.starmap(call_tedana, args)
     
     # the code below is used to normalized the denoised optimally combined tedana outputs to MNI space using the tranform files output by fMRIPrep. The version of ants available in the nipype singularity can't read these files however, so the code is commented out (more here: https://github.com/nipreps/fmriprep/issues/2756).
     
@@ -114,16 +160,18 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
         # normalize_data(denoised_img, reference_img, native_T1w_transform, T1w_MNI_transform)
 
 # define function to pass to multiprocess 
-def call_tedana(sub, task, EchoFiles, EchoTimes, outDir):
-    if os.path.isdir(outDir): # if subject tedana files already exist
-        print('skipping tedana because tedana outputs found for sub-{}'.format(sub))
-
+def call_tedana(sub, task, EchoFiles, MaskFile, EchoTimes, outDir):
+    print(op.join(outDir, 'sub-{}_task-{}_space-T1w_tedana_report.html'.format(sub, task)))
+    if os.path.isfile(op.join(outDir, 'sub-{}_task-{}_space-T1w_tedana_report.html'.format(sub, task))): # if subject tedana report already exists
+        print('Skipping tedana because tedana outputs found for sub-{}'.format(sub))
+        
     else: # if subject tedana files don't exist
         # for more info: https://tedana.readthedocs.io/en/stable/generated/tedana.workflows.tedana_workflow.html
         workflows.tedana_workflow(EchoFiles, 
                                   EchoTimes,
+                                  mask = MaskFile,
                                   out_dir = outDir,
-                                  prefix = 'sub-{}_task-{}_space-native'.format(sub, task),
+                                  prefix = 'sub-{}_task-{}_space-T1w'.format(sub, task),
                                   fittype = 'curvefit',
                                   tedpca = 'kic',
                                   overwrite = True,
@@ -131,7 +179,7 @@ def call_tedana(sub, task, EchoFiles, EchoTimes, outDir):
 
 # def normalize_data(denoised_img, reference_img, native_T1w_transform, T1w_MNI_transform):
     # # extract file prefix from img for naming outputs
-    # img_prefix = re.search('(.*)-native', denoised_img).group(1)
+    # img_prefix = re.search('(.*)-T1w', denoised_img).group(1)
     # normalized_img = op.join('{}-MNI152NLin2009cAsym_res-2_desc-denoised_bold.nii.gz'.format(img_prefix))
 
     # if os.path.isfile(normalized_img): # if output file already exists
