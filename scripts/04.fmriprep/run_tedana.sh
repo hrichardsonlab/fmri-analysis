@@ -138,7 +138,7 @@ do
 		combined_mask=${subDir_deriv}/func/tedana/${t}/*_space-T1w_desc-gmwmbold_mask.nii.gz
 		
 		# define output files
-		normalized_img=${subDir_deriv}/func/tedana/${t}/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym-denoised_bold.nii.gz
+		normalized_img=${subDir_deriv}/func/tedana/${t}/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-denoised_bold.nii.gz
 		normalized_mask=${subDir_deriv}/func/tedana/${t}/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-gmwmbold_mask.nii.gz
 		
 		# normalize tedana denoised data to MNI space
