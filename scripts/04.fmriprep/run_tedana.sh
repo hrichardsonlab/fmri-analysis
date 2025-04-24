@@ -84,12 +84,12 @@ codeDir="${projDir}/scripts/04.fmriprep"
 # fi
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
-export SINGULARITY_TMPDIR=${singularityDir}
-export SINGULARITY_CACHEDIR=${singularityDir}
+export APPTAINER_TMPDIR=${singularityDir}
+export APPTAINER_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # run singularity to submit tedana script
-singularity exec -C -B /EBC:/EBC -B ${projDir}:${projDir}	\
+apptainer exec -C -B /EBC:/EBC -B ${projDir}:${projDir}		\
 ${singularityDir}/nipype_nilearn.simg						\
 /neurodocker/startup.sh python ${codeDir}/denoise_echos.py	\
 -s ${subjs}													\
@@ -142,7 +142,7 @@ do
 		normalized_mask=${subDir_deriv}/func/tedana/${t}/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-gmwmbold_mask.nii.gz
 		
 		# normalize tedana denoised data to MNI space
-		singularity exec -C -B /EBC:/EBC -B ${projDir}:${projDir}	\
+		apptainer exec -C -B /EBC:/EBC -B ${projDir}:${projDir}		\
 		${singularityDir}/fmriprep-24.0.0.simg 						\
 		antsApplyTransforms -e 3 									\
 							-i ${denoised_img} 						\
@@ -153,7 +153,7 @@ do
 							   ${T1w_MNI_transform} 											
 							
 		# normalize combined grey matter, white matter, bold mask to MNI space
-		singularity exec -C -B /EBC:/EBC -B /projects:/projects -B ${projDir}:${projDir}	\
+		apptainer exec -C -B /EBC:/EBC -B /projects:/projects -B ${projDir}:${projDir}		\
 		${singularityDir}/fmriprep-24.0.0.simg 												\
 		antsApplyTransforms -d 3 															\
 							-i ${combined_mask} 											\
