@@ -83,8 +83,13 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         
         # identify mni file based on whether data are multiecho
         if multiecho == 'yes': # if multiecho sequence, look for outputs in tedana folder
-            mni_file = glob.glob(op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name)))[0]
-            mni_mask = glob.glob(op.join(funcDir, 'tedana/{}'.format(task), '{}_space-{}*desc-gmwmbold_mask.nii.gz'.format(prefix, space_name)))[0]
+            if run_id != 0:
+                tedana_folder = 'tedana/{}_run-{:02d}'.format(task, run_id)
+            else:
+                tedana_folder = 'tedana/{}'.format(task)
+                
+            mni_file = glob.glob(op.join(funcDir, '{}'.format(tedana_folder), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name)))[0]
+            mni_mask = glob.glob(op.join(funcDir, '{}'.format(tedana_folder), '{}_space-{}*desc-gmwmbold_mask.nii.gz'.format(prefix, space_name)))[0]
             print('Will use multiecho outputs from tedana: {}'.format(mni_file))
         else:            
             mni_file = glob.glob(op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name)))[0]
