@@ -4,6 +4,7 @@ Script to define subject functional ROIs using contrast maps generated in firstl
 More information on what this script is doing - beyond the commented code - is provided on the lab's github wiki page
 
 """
+import sys
 import pandas as pd
 import numpy as np
 import argparse
@@ -73,25 +74,25 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(r))
                 froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}'.format(r))
                 # grab functional file for resampling
-                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(r), '*preproc_bold.nii.gz'))
+                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(r), '*preproc_bold*.nii.gz'))[0]
             elif s == 0 and r == 0:
                 modelDir = combinedDir
                 froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined')
                 # grab functional file for resampling (doesn't matter which one)
-                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1', '*preproc_bold.nii.gz'))
+                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1', '*preproc_bold*.nii.gz'))[0]
             elif s != 0 and r != 0:
                 modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}_splithalf{}'.format(r,s))
                 froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf{}'.format(r,s))
                 # grab functional file for resampling
-                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*preproc_bold.nii.gz'))
+                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*preproc_bold*.nii.gz'))[0]
             elif s != 0 and r == 0:
                 modelDir = op.join(combinedDir, 'splithalf{}'.format(s))
                 froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined', 'splithalf{}'.format(s))
                 # grab functional file for resampling (doesn't matter which one)
-                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(s), '*preproc_bold.nii.gz'))           
+                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(s), '*preproc_bold*.nii.gz'))[0]         
             # make frois directory
             os.makedirs(froiDir, exist_ok=True)
-              
+            
             # load and binarize mni file
             mni_img = image.load_img(mni_file)
             mni_bin = mni_img.get_fdata() # get image data (as floating point data)
@@ -195,6 +196,9 @@ def argparser():
 
 # define main function that parses the config file and runs the functions defined above
 def main(argv=None):
+    # don't buffer messages
+    sys.stdout = open(sys.stdout.fileno(), mode='w', buffering=1)
+    
     # call argparser function that defines command line inputs
     parser = argparser()
     args = parser.parse_args(argv) 
@@ -213,15 +217,13 @@ def main(argv=None):
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
     splithalf=config_file.loc['splithalf',1]
-    #events=config_file.loc['events',1].replace(' ','').split(',')
     contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
     search_spaces=config_file.loc['search_spaces',1].replace(' ','').split(',')
     match_events=config_file.loc['match_events',1]
     template=config_file.loc['template',1]
     top_nvox=int(config_file.loc['top_nvox',1])
     
-    # lowercase events to avoid case errors - allows flexibility in how users specify events in config and contrasts files
-    #events = [e.lower() for e in events]
+    # lowercase contrast option to avoid case errors - allows flexibility in how users specify events in config and contrasts files
     contrast_opts = [c.lower() for c in contrast_opts]
     
     if splithalf == 'yes':
@@ -244,14 +246,14 @@ def main(argv=None):
         file_1.write('\n')
         file_1.write('fROIs were defined using the define_ROIs.py script \n')
         file_1.write('The following search spaces were specified in the config file: {} \n'.format(search_spaces))
-        file_1.write('The top {} voxels were selected for each search space within the contrast: {} \n'.format(top_nvox, config_file.loc['events',1]))
+        file_1.write('The top {} voxels were selected for each search space within the contrast: {} \n'.format(top_nvox, contrast_opts))
 
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
         print('Defining fROIs for sub-{}'.format(sub))
         
         # check that run info was provided in subject list, otherwise throw an error
-         if not args.runs:
+        if not args.runs:
             raise IOError('Run information missing. Make sure you are passing a subject-run list to the pipeline!')
                 
         # pass runs for this sub
@@ -263,7 +265,7 @@ def main(argv=None):
             sub_runs=list(map(int, sub_runs)) # convert to integers     
         
         # create a process_subject workflow with the inputs defined above
-        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, events, splithalves, search_spaces, match_events, template, top_nvox)
+        process_subject(args.projDir, sharedDir, resultsDir, sub, sub_runs, task, contrast_opts, splithalves, search_spaces, match_events, template, top_nvox)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
