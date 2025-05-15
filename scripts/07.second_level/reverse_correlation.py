@@ -35,22 +35,22 @@ def process_timecourses(resultsDir, outDir, subjects, runs, task, TR, mask_id, s
         for run in sub_runs:
             # define file name based on whether run info is present
             if run == 'NA':
-                prefix = op.join(resultsDir, '{}'.format(sub), 'timecourses', '{}_task-{}'.format(sub, task))
+                prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'timecourses', 'sub-{}_task-{}*'.format(sub, task))
             else:
-                prefix = op.join(resultsDir, '{}'.format(sub), 'timecourses', '{}_task-{}_run-{:02d}'.format(sub, task, int(run)))
+                prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'timecourses', 'sub-{}_task-{}_run-{:02d}'.format(sub, task, int(run)))
             
             # define file name based on whether splithalf info is present
             if splithalf_id != 0:
                 prefix = prefix + '_splithalf-{:02d}_{}*'.format(splithalf_id, mask_id)
             else:
                 prefix = prefix + '_{}*'.format(mask_id)
-                        
+            
             # check that file exists and warn if not         
             if glob.glob(prefix):
                 sub_file = glob.glob(prefix)[0]
                 print('Will use {}'.format(sub_file))
             else:
-                print('Timecourse file for {} for {} not found'.format(mask_id, sub))
+                print('Timecourse file for {} for sub-{} not found'.format(mask_id, sub))
                 continue
             
             # read in file and append timecourse column to dataframe
