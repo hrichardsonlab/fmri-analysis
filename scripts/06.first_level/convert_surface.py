@@ -107,7 +107,7 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             vol2surf.inputs.sampling_range = 0.5
             vol2surf.inputs.sampling_units = 'frac' 
             vol2surf.inputs.interp_method = 'trilinear'
-            vol2surf.inputs.target_subject = 'fsaverage'
+            vol2surf.inputs.target_subject = 'fsaverage6'
             vol2surf.run()
             
             import nibabel as nib
