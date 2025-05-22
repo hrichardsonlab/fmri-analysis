@@ -26,6 +26,7 @@ modulators	no
 contrast	mind-body
 timecourses	no
 regressors	art, aCompCor
+convert_surf	
 template	MNI152NLin2009cAsym_res-02_T1w
 FS_ROI	
 search_spaces	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
