@@ -87,7 +87,7 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             if run != 0:
                 surf_prefix = op.join(surfDir, 'sub-{}_task-{}_run-{:02d}_hem-{}'.format(sub, task, run, hem))
             else:
-                surf_prefix = op.join(surfDir, 'sub-{}_task-{}_hem-{}'.format(sub, task, run, hem))
+                surf_prefix = op.join(surfDir, 'sub-{}_task-{}_hem-{}'.format(sub, task, hem))
             
             ## PROJECT TO SURFACE (uses mri_vol2surf)
             # also resamples outputs to fsaverage space for comparison across subjects
