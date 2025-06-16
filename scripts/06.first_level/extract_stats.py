@@ -4,6 +4,7 @@ Script to mask the contrast maps generated in firstlevel pipeline and extract me
 More information on what this script is doing - beyond the commented code - is provided on the lab's github wiki page
 
 """
+import sys
 import pandas as pd
 import numpy as np
 import argparse
@@ -68,7 +69,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                     if not froi_prefix:
                         print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
                     else:
-                         roi_name = m.split('fROI-')[1]
+                        roi_name = m.split('fROI-')[1]
                         roi_file = glob.glob(op.join('{}'.format(froi_prefix),'*{}*.nii.gz'.format(roi_name)))
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
@@ -247,6 +248,9 @@ def argparser():
 
 # define main function that parses the config file and runs the functions defined above
 def main(argv=None):
+    # don't buffer messages
+    sys.stdout = open(sys.stdout.fileno(), mode='w', buffering=1)
+    
     # call argparser function that defines command line inputs
     parser = argparser()
     args = parser.parse_args(argv) 
