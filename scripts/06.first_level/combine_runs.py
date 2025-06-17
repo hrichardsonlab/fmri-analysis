@@ -149,7 +149,7 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
     fixed_fx = create_fixed_effects_flow()
     
     # process subject files (i.e., run functions defined above)
-    sub_runs = get_runs(subDir, derivDir, sub, ses, task)
+    sub_runs = get_runs(subDir, derivDir, sub, ses, task, space_name)
     
     # convert tuple to easier to work with format
     if type(sub_runs.run) is str:
