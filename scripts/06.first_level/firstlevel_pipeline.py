@@ -683,7 +683,7 @@ def process_subject(layout, projDir, derivDir, outDir, workDir,
         tc_dat= []
         for t in timecourses:
             # read in timecourse file from project/files directory and combine into 1 dataframe
-            tc_files = glob.glob(op.join(projDir, 'files', 'ROI_timecourses', 'TR{}'.format(TR), 'adult_TC-{}.tsv'.format(t)))
+            tc_files = glob.glob(op.join(projDir, 'files', 'ROI_timecourses', '{}'.format(task), 'TR{}'.format(TR), 'adult_TC-{}.tsv'.format(t)))
             tc = pd.read_csv(tc_files[0], sep='\t')
             tc.columns = tc.columns.str.lower()
             tc_dat = tc.join(tc_dat)
