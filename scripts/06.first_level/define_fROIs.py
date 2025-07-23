@@ -77,7 +77,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(r), '*preproc_bold*.nii.gz'))[0]
             elif s == 0 and r == 0:
                 modelDir = combinedDir
-                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined')
+                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined_runs')
                 # grab functional file for resampling (doesn't matter which one)
                 mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1', '*preproc_bold*.nii.gz'))[0]
             elif s != 0 and r != 0:
@@ -87,7 +87,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*preproc_bold*.nii.gz'))[0]
             elif s != 0 and r == 0:
                 modelDir = op.join(combinedDir, 'splithalf{}'.format(s))
-                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined', 'splithalf{}'.format(s))
+                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined_runs', 'splithalf{}'.format(s))
                 # grab functional file for resampling (doesn't matter which one)
                 mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(s), '*preproc_bold*.nii.gz'))[0]         
             # make frois directory
