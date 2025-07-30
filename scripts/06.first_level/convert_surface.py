@@ -17,10 +17,8 @@ import nipype.interfaces.freesurfer as fs
 # define project surface function
 def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothing_kernel_size, convert_surf):
     
-    # create subject surf output directory (delete it if it already exists)
+    # create subject surf output directory
     surfDir =  op.join(resultsDir, 'sub-{}'.format(sub), 'surf')
-    if op.exists(surfDir):
-        shutil.rmtree(surfDir)
     os.makedirs(surfDir, exist_ok=True)
     
     # define freesurfer directory
