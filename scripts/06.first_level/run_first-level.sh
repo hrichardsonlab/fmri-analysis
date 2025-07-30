@@ -138,6 +138,20 @@ echo
 echo "Running" ${pipeline} "for..."
 echo "${subjs}"
 
+# ensure fMRIPrep subject files are saved in freesurfer directory
+if [[ ${pipeline} == 'convert_surface.py' ]]
+then
+	# grab derivDir from config file
+	derivDir=$(awk -F'\t' '$1 == "derivDir" { print $2 }' "${projDir}/$2")
+	fsDir=${derivDir}/sourcedata/freesurfer
+	
+	echo "Coping fsaverage6 subject files to:" ${fsDir}
+	
+	apptainer exec -B ${derivDir}:${derivDir}	\
+	  ${singularityDir}/fmriprep-24.0.0.simg	\
+	  cp -r /opt/freesurfer/subjects/fsaverage6 ${fsDir}
+fi
+
 # run first-level workflow using script specified in script call
 apptainer exec -C -B /EBC:/EBC							\
 ${singularityDir}/nipype_sandbox						\
