@@ -116,8 +116,8 @@ do
 		participant															\
 		--participant-label ${NAME}											\
 		--skip_bids_validation												\
-		--nthreads 16														\
-		--omp-nthreads 16													\
+		--nthreads 8														\
+		--omp-nthreads 4													\
 		--anat-only															\
 		--output-space MNI152NLin2009cAsym:res-2 T1w						\
 		--derivatives ${derivDir}											\

@@ -101,8 +101,8 @@ do
 	participant															\
 	--participant-label ${NAME}											\
 	--skip_bids_validation												\
-	--nthreads 16														\
-	--omp-nthreads 16													\
+	--nthreads 8														\
+	--omp-nthreads 4													\
 	--ignore slicetiming												\
 	--fd-spike-threshold 1												\
 	--dvars-spike-threshold 1.5											\
