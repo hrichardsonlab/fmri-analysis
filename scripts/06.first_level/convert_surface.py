@@ -45,7 +45,7 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             print('Will convert fMRIprep preprocessed data to surface: {}'. format(vol_file))
             
         elif convert_surf == 'denoised':
-            vol_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'denoised', '{}/{}_denoised_bold.nii.gz'.format(runDir, prefix, run)))[0]
+            vol_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'denoised', '{}/{}_denoised_padded_bold.nii.gz'.format(runDir, prefix, run)))[0]
             
             print('Will convert denoised data to surface: {}'. format(vol_file))
         
