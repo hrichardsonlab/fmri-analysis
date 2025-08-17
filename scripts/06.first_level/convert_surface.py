@@ -76,7 +76,7 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             bbreg.inputs.subject_id = 'sub-{}'.format(sub)
             bbreg.inputs.source_file = vol_file
             bbreg.inputs.init = 'header'
-            bbreg.inputs.contrast_type = 't2'
+            bbreg.inputs.contrast_type = 'bold'
             bbreg.inputs.subjects_dir = fsDir
             bbreg.inputs.out_reg_file = reg_file
             bbreg.run()
