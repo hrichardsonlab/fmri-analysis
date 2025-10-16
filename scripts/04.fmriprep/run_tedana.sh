@@ -61,15 +61,15 @@ study=` basename $1 | cut -d '-' -f 1 `
 # define data directories depending on sample information
 if [[ ${sample} == 'pilot' ]]
 then
-	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives/pilot"
+	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	derivDir="/data/EBC/preprocessedData/${cohort}/derivatives/pilot"
 elif [[ ${sample} == 'HV' ]]
 then
-	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
-	derivDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
+	bidsDir="/data/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	derivDir="/data/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
 else
-	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives"
+	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data"
+	derivDir="/data/EBC/preprocessedData/${cohort}/derivatives"
 fi
 
 # define directories
@@ -89,7 +89,7 @@ export APPTAINER_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # run singularity to submit tedana script
-apptainer exec -C -B /EBC:/EBC -B ${projDir}:${projDir}		\
+apptainer exec -C -B /data/EBC:/data/EBC -B ${projDir}:${projDir}		\
 ${singularityDir}/nipype_nilearn.simg						\
 /neurodocker/startup.sh python ${codeDir}/denoise_echos.py	\
 -s ${subjs}													\
@@ -142,7 +142,7 @@ do
 		normalized_mask=${subDir_deriv}/func/tedana/${t}/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-gmwmbold_mask.nii.gz
 		
 		# normalize tedana denoised data to MNI space
-		apptainer exec -C -B /EBC:/EBC -B ${projDir}:${projDir}		\
+		apptainer exec -C -B /data/EBC:/data/EBC -B ${projDir}:${projDir}		\
 		${singularityDir}/fmriprep-24.0.0.simg 						\
 		antsApplyTransforms -e 3 									\
 							-i ${denoised_img} 						\
@@ -153,7 +153,7 @@ do
 							   ${T1w_MNI_transform} 											
 							
 		# normalize combined grey matter, white matter, bold mask to MNI space
-		apptainer exec -C -B /EBC:/EBC -B /projects:/projects -B ${projDir}:${projDir}		\
+		apptainer exec -C -B /data/EBC:/data/EBC -B /projects:/projects -B ${projDir}:${projDir}		\
 		${singularityDir}/fmriprep-24.0.0.simg 												\
 		antsApplyTransforms -d 3 															\
 							-i ${combined_mask} 											\

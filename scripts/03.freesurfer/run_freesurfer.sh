@@ -6,7 +6,7 @@
 # This step must be run before the data can be fully processed through fMRIPrep
 #
 # The fMRIPrep singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/fmriprep-24.0.0.simg docker://nipreps/fmriprep:24.0.0
+# 	SINGULARITY_TMPDIR=/data/EBC/processing SINGULARITY_CACHEDIR=/data/EBC/processing singularity build /data/EBC/processing/singularity_images/fmriprep-24.0.0.simg docker://nipreps/fmriprep:24.0.0
 #
 ################################################################################
 
@@ -26,8 +26,8 @@ Usage() {
 	echo "..."
 	echo
 	echo
-	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /EBC/ directory."
+	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /data/EBC/ directory."
 	echo
 	echo "Script created by Manuel Blesa & Melissa Thye"
 	echo
@@ -60,15 +60,15 @@ cohort=` basename $1 | cut -d '_' -f 1 `
 # define data directories depending on sample information
 if [[ ${sample} == 'pilot' ]]
 then
-	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives/pilot"
+	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	derivDir="/data/EBC/preprocessedData/${cohort}/derivatives/pilot"
 elif [[ ${sample} == 'HV' ]]
 then
-	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
-	derivDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
+	bidsDir="/data/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	derivDir="/data/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
 else
-	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives"
+	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data"
+	derivDir="/data/EBC/preprocessedData/${cohort}/derivatives"
 fi
 
 # create derivatives directory if it doesn't exist
@@ -78,7 +78,7 @@ then
 fi
 
 # export freesurfer license file location
-export license=/EBC/local/infantFS/freesurfer/license.txt
+export license=/data/EBC/local/infantFS/freesurfer/license.txt
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
 export APPTAINER_TMPDIR=${singularityDir}
@@ -110,14 +110,14 @@ do
 		mkdir -p ${derivDir}/sub-${NAME}
 
 		# run singularity
-		apptainer run -C -B /EBC:/EBC,${singularityDir}:/opt/templateflow \
+		apptainer run -C -B /data/EBC:/data/EBC,${singularityDir}:/opt/templateflow \
 		${singularityDir}/fmriprep_sandbox  								\
 		${bidsDir} ${derivDir}												\
 		participant															\
 		--participant-label ${NAME}											\
 		--skip_bids_validation												\
-		--nthreads 8														\
-		--omp-nthreads 4													\
+		--nthreads 16														\
+		--omp-nthreads 16													\
 		--anat-only															\
 		--output-space MNI152NLin2009cAsym:res-2 T1w						\
 		--derivatives ${derivDir}											\

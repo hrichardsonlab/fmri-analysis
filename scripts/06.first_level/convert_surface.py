@@ -45,7 +45,7 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             print('Will convert fMRIprep preprocessed data to surface: {}'. format(vol_file))
             
         elif convert_surf == 'denoised':
-            vol_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'denoised', '{}/{}_denoised_padded_bold.nii.gz'.format(runDir, prefix, run)))[0]
+            vol_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'denoised', '{}/{}_denoised_bold.nii.gz'.format(runDir, prefix, run)))[0]
             
             print('Will convert denoised data to surface: {}'. format(vol_file))
         
@@ -76,7 +76,7 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             bbreg.inputs.subject_id = 'sub-{}'.format(sub)
             bbreg.inputs.source_file = vol_file
             bbreg.inputs.init = 'header'
-            bbreg.inputs.contrast_type = 'bold'
+            bbreg.inputs.contrast_type = 't2'
             bbreg.inputs.subjects_dir = fsDir
             bbreg.inputs.out_reg_file = reg_file
             bbreg.run()
@@ -87,7 +87,7 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             if run != 0:
                 surf_prefix = op.join(surfDir, 'sub-{}_task-{}_run-{:02d}_hem-{}'.format(sub, task, run, hem))
             else:
-                surf_prefix = op.join(surfDir, 'sub-{}_task-{}_hem-{}'.format(sub, task, hem))
+                surf_prefix = op.join(surfDir, 'sub-{}_task-{}_hem-{}'.format(sub, task, run, hem))
             
             ## PROJECT TO SURFACE (uses mri_vol2surf)
             # also resamples outputs to fsaverage space for comparison across subjects

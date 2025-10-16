@@ -4,7 +4,7 @@
 # RUN MRIQC ON BIDS FORMATTED DATA
 #
 # The MRIQC singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/mriqc-24.0.0.simg docker://nipreps/mriqc:24.0.0
+# 	SINGULARITY_TMPDIR=/data/EBC/processing SINGULARITY_CACHEDIR=/data/EBC/processing singularity build /data/EBC/processing/singularity_images/mriqc-24.0.0.simg docker://nipreps/mriqc:24.0.0
 #
 ################################################################################
 
@@ -24,8 +24,8 @@ Usage() {
 	echo "..."
     echo
 	echo
-	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /EBC/ directory."
+	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /data/EBC/ directory."
 	echo
     echo "Script created by Melissa Thye"
     echo
@@ -58,16 +58,16 @@ cohort=` basename $1 | cut -d '_' -f 1 `
 # define data directories depending on sample information
 if [[ ${sample} == 'pilot' ]]
 then
-	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
-	qcDir="/EBC/preprocessedData/${cohort}/derivatives/pilot/mriqc"
+	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	qcDir="/data/EBC/preprocessedData/${cohort}/derivatives/pilot/mriqc"
 elif [[ ${sample} == 'HV' ]]
 then
-	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
-	qcDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives/mriqc"
+	bidsDir="/data/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	qcDir="/data/EBC/preprocessedData/${cohort}-adultpilot/derivatives/mriqc"
 
 else
-	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
-	qcDir="/EBC/preprocessedData/${cohort}/derivatives/mriqc"
+	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data"
+	qcDir="/data/EBC/preprocessedData/${cohort}/derivatives/mriqc"
 fi
 
 # create QCdirectory if they don't exist

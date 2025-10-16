@@ -4,10 +4,10 @@
 # SETUP PROJECT DIRECTORY WITH NECESSARY SCRIPTS AND DATA FILES
 #
 # This script should be run in the directory where the project folder will be generated
-# This should typically be in your EBC/home/UUN folder
+# This should typically be in your /data/EBC/home/UUN folder
 #
 # This script copies and organizes the scripts and data files saved in the 
-# shared location (e.g., EBC/processing) to your project folder and generates
+# shared location (e.g., /data/EBC/processing) to your project folder and generates
 # a PATHS.txt file. Larger data files (e.g., ROI files) won't be transferred
 #
 ################################################################################
@@ -26,8 +26,8 @@ Usage() {
 	echo
 	echo "For non-EBC data, the 'cohort' argument passed in the script call will be the name of the study or dataset"
 	echo
-	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /EBC/ directory."
+	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /data/EBC/ directory."
 	echo
 	echo "This script only needs to be run once when setting up your project folder."
 	echo
@@ -44,7 +44,7 @@ cohort=$1
 proj=$2
 
 # define directories
-dataDir="/EBC/processing" # location of shared files
+dataDir="/data/EBC/processing" # location of shared files
 
 # if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/EBC/" ]]; 

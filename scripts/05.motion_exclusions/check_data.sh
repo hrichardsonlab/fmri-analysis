@@ -10,7 +10,7 @@
 # If more than the specified proportion of the volumes in a run are tagged, the run is marked for exclusion in a generated tsv file (in subject derivatives folder and data checking directory)
 #
 # The nipype singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+# 	SINGULARITY_TMPDIR=/data/EBC/processing SINGULARITY_CACHEDIR=/data/EBC/processing singularity build /data/EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
 #
 ################################################################################
 
@@ -30,8 +30,8 @@ Usage() {
 	echo "..."
 	echo
 	echo
-	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /EBC/ directory."
+	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /data/EBC/ directory."
 	echo
 	echo "Script created by Melissa Thye"
 	echo
@@ -101,14 +101,14 @@ do
 	sub=$(echo ${p} | awk '{print $1}')
 			
 	# run singularity to create average functional mask
-	apptainer exec -C -B /EBC:/EBC								\
+	apptainer exec -C -B /data/EBC:/data/EBC						\
 	${singularityDir}/nipype_sandbox								\
 	/neurodocker/startup.sh python ${codeDir}/concat_brain_masks.py \
 	-s ${sub} \
 	-c ${projDir}/${config}
 	
 	# run singularity to generate files with motion information for run exclusion
-	apptainer exec -C -B /EBC:/EBC									\
+	apptainer exec -C -B /data/EBC:/data/EBC							\
 	${singularityDir}/nipype_sandbox 									\
 	/neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py \
 	-s ${sub} 															\

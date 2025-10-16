@@ -8,7 +8,7 @@
 # the pipeline. These parameters are likely to vary for each study, so must be specified for each project.
 #
 # The nipype singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+# 	SINGULARITY_TMPDIR=/data/EBC/processing SINGULARITY_CACHEDIR=/data/EBC/processing singularity build /data/EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
@@ -24,8 +24,8 @@ Usage() {
 	echo "the config file name (not path!) should be provided"
 	echo
 	echo
-	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /EBC/ directory."
+	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /data/EBC/ directory."
 	echo
 	echo "Script created by Melissa Thye"
 	echo
@@ -91,7 +91,7 @@ echo "Running" ${script} "for..."
 echo
 
 # run first-level workflow using script specified in script call
-apptainer exec -C -B /EBC:/EBC						\
+apptainer exec -C -B /data/EBC:/data/EBC				\
 ${singularityDir}/nipype_sandbox						\
 /neurodocker/startup.sh python ${codeDir}/${script}		\
 -p ${projDir}											\

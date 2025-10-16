@@ -30,8 +30,8 @@ Usage() {
 	echo "..."
 	echo
 	echo
-	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /EBC/ directory."
+	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /data/EBC/ directory."
 	echo
 	echo "Script created by Melissa Thye"
 	echo
@@ -58,12 +58,12 @@ cohort=` basename $1 | cut -d '_' -f 1 `
 # define data directories depending on sample information
 if [[ ${sample} == 'pilot' ]]
 then
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives/pilot"
+	derivDir="/data/EBC/preprocessedData/${cohort}/derivatives/pilot"
 elif [[ ${sample} == 'HV' ]]
 then
-	derivDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
+	derivDir="/data/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
 else
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives"
+	derivDir="/data/EBC/preprocessedData/${cohort}/derivatives"
 fi
 
 # print confirmation of sample and directory

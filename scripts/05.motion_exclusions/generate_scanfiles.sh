@@ -38,15 +38,15 @@ cohort=` basename $1 | cut -d '_' -f 1 `
 # define data directories depending on sample information
 if [[ ${sample} == 'pilot' ]]
 then
-	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives/pilot"
+	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	derivDir="/data/EBC/preprocessedData/${cohort}/derivatives/pilot"
 elif [[ ${sample} == 'HV' ]]
 then
-	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
-	derivDir="/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
+	bidsDir="/data/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	derivDir="/data/EBC/preprocessedData/${cohort}-adultpilot/derivatives"
 else
-	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
-	derivDir="/EBC/preprocessedData/${cohort}/derivatives"
+	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data"
+	derivDir="/data/EBC/preprocessedData/${cohort}/derivatives"
 fi
 
 # print confirmation of sample and directory

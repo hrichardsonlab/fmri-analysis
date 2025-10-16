@@ -45,15 +45,15 @@ sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
 # define data directories depending on sample information
 if [[ ${sample} == 'pilot' ]]
 then
-	bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot"
-	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
+	bidsDir="/data/EBC/preprocessedData/TEBC-5y/BIDs_data/pilot"
+	derivDir="/data/EBC/preprocessedData/TEBC-5y/derivatives/pilot"
 elif [[ ${sample} == 'HV' ]]
 then
-	bidsDir="/EBC/preprocessedData/TEBC-5y-adultpilot/BIDs_data"
-	derivDir="/EBC/preprocessedData/TEBC-5y-adultpilot/derivatives"
+	bidsDir="/data/EBC/preprocessedData/TEBC-5y-adultpilot/BIDs_data"
+	derivDir="/data/EBC/preprocessedData/TEBC-5y-adultpilot/derivatives"
 else
-	bidsDir="/EBC/preprocessedData/TEBC-5y/BIDs_data"
-	derivDir="/EBC/preprocessedData/TEBC-5y/derivatives"
+	bidsDir="/data/EBC/preprocessedData/TEBC-5y/BIDs_data"
+	derivDir="/data/EBC/preprocessedData/TEBC-5y/derivatives"
 fi
 
 # print confirmation of sample and directory

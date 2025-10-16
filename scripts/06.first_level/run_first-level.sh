@@ -8,7 +8,7 @@
 # the pipeline. These parameters are likely to vary for each study, so must be specified for each project.
 #
 # The nipype singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/EBC/processing SINGULARITY_CACHEDIR=/EBC/processing singularity build /EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+# 	SINGULARITY_TMPDIR=/data/EBC/processing SINGULARITY_CACHEDIR=/data/EBC/processing singularity build /data/EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
 #
 ################################################################################
 
@@ -30,8 +30,8 @@ Usage() {
 	echo "..."
 	echo
 	echo
-	echo "This script must be run within the /EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /EBC/ directory."
+	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /data/EBC/ directory."
 	echo
 	echo "Script created by Melissa Thye"
 	echo
@@ -138,22 +138,8 @@ echo
 echo "Running" ${pipeline} "for..."
 echo "${subjs}"
 
-# ensure fMRIPrep subject files are saved in freesurfer directory
-if [[ ${pipeline} == 'convert_surface.py' ]]
-then
-	# grab derivDir from config file
-	derivDir=$(awk -F'\t' '$1 == "derivDir" { print $2 }' "${projDir}/$2")
-	fsDir=${derivDir}/sourcedata/freesurfer
-	
-	echo "Coping fsaverage6 subject files to:" ${fsDir}
-	
-	apptainer exec -B ${derivDir}:${derivDir}	\
-	  ${singularityDir}/fmriprep-24.0.0.simg	\
-	  cp -r /opt/freesurfer/subjects/fsaverage6 ${fsDir}
-fi
-
 # run first-level workflow using script specified in script call
-apptainer exec -C -B /EBC:/EBC							\
+apptainer exec -C -B /data/EBC:/data/EBC				\
 ${singularityDir}/nipype_sandbox						\
 /neurodocker/startup.sh python ${codeDir}/${pipeline}	\
 -p ${projDir}											\
