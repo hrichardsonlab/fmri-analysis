@@ -196,14 +196,20 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         print('Skipping {} search space for the {} contrast'.format(mask_opts[r], c))
                     else: 
                         print('Extracting stats from {} mask within {} contrast'.format(mask_opts[r], c))
-                        cope_file = glob.glob(op.join(modelDir, '*{}_zstat.nii.gz'.format(c)))
-                        cope_img = image.load_img(cope_file)
+                        # z-stats copes file
+                        zcope_file = glob.glob(op.join(modelDir, '*{}_zstat.nii.gz'.format(c)))
+                        zcope_img = image.load_img(zcope_file)
+                        
+                        # t-stats copes file
+                        tcope_file = glob.glob(op.join(modelDir, '*{}_tstat.nii.gz'.format(c)))
+                        tcope_img = image.load_img(tcope_file)
 
                         # squeeze the statistical map to remove the 4th singleton dimension is using anatomical/atlas ROI
                         # this dimension is not adding any information, so this is fine to do; the 3D map of stats values is preserved.
                         # this step isn't necessary for fROIs because they were defined using the functional data and also have a 4th singleton dimension
                         if not 'fROI' in mask_opts[r] and not 'FS' in mask_opts[r]:
-                            cope_img = image.math_img('np.squeeze(img)', img=cope_img)
+                            zcope_img = image.math_img('np.squeeze(img)', img=zcope_img)
+                            tcope_img = image.math_img('np.squeeze(img)', img=tcope_img)
                         
                         # use more transparent run label for cases when stats are extracted from combined data
                         if combined == 'yes':
@@ -214,11 +220,17 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         # mask and extract values depending on extract_opt
                         if extract_opt == 'mean': # if mean requested
                             # mask contrast image with roi image
-                            masked_img = image.math_img('img1 * img2', img1 = cope_img, img2 = mask_bin)
-                            masked_data = masked_img.get_fdata()
+                            ## z-stats
+                            masked_zimg = image.math_img('img1 * img2', img1 = zcope_img, img2 = mask_bin)
+                            masked_zdata = masked_zimg.get_fdata()
+                            
+                            ## t-stats
+                            masked_timg = image.math_img('img1 * img2', img1 = tcope_img, img2 = mask_bin)
+                            masked_tdata = masked_timg.get_fdata()
                             
                             # take the mean of voxels within mask
-                            mean_val = np.nanmean(masked_data)
+                            mean_zval = np.nanmean(masked_zdata) # z-stats
+                            mean_tval = np.nanmean(masked_tdata) # t-stats
                         
                             if splithalf_id != 0:
                                 df_row = pd.DataFrame({'sub': sub,
@@ -227,16 +239,18 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                                                        'half' : splithalf_id,
                                                        'mask': mask_opts[r],
                                                        'roi_file' : roi,
-                                                       'contrast' : c, 
-                                                       'mean_val' : mean_val}, index=[0])
+                                                       'contrast' : c,
+                                                       'mean_tval' : mean_tval,
+                                                       'mean_zval' : mean_zval}, index=[0])
                             else:
                                 df_row = pd.DataFrame({'sub': sub,
                                                        'task' : task,
                                                        'run' : run_label,
                                                        'mask': mask_opts[r],
                                                        'roi_file' : roi,
-                                                       'contrast' : c, 
-                                                       'mean_val' : mean_val}, index=[0])
+                                                       'contrast' : c,
+                                                       'mean_tval' : mean_tval,                                                     
+                                                       'mean_zval' : mean_zval}, index=[0])
                             
                             if not os.path.isfile(stats_file): # if the stats output file doesn't exist
                                 # save current row as file
@@ -249,18 +263,25 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         else:
                             # mask contrast image with roi image and return 2D array
                             masker = NiftiMasker(mask_img=mask_bin)
-                            masked_data = masker.fit_transform(cope_img)
+                            ## z-stats
+                            masked_zdata = masker.fit_transform(zcope_img)
+                            ## t-stats
+                            masked_tdata = masker.fit_transform(tcope_img)
                             
                             # convert to data frame
-                            masked_df = pd.DataFrame(masked_data).transpose()
+                            ## z-stats
+                            masked_df = pd.DataFrame(masked_zdata).transpose()
+                            masked_df = masked_df.rename(columns={0: 'z-stat'})
                             
-                            # add columns with run, split, and mask info
+                            # add columns with t-stats, run, task, split, and mask info
+                            masked_df.insert(loc=0, column='t-stat', value=pd.DataFrame(masked_tdata).transpose())
                             masked_df.insert(loc=0, column='voxel_index', value=range(len(masked_df)))
                             masked_df.insert(loc=0, column='mask', value=mask_opts[r])
                             masked_df.insert(loc=0, column='contrast', value=c)
                             if splithalf_id != 0:
                                 masked_df.insert(loc=0, column='half', value=splithalf_id)
                             masked_df.insert(loc=0, column='run', value=run_label)
+                            masked_df.insert(loc=0, column='task', value=task)
                             masked_df.insert(loc=0, column='sub', value='sub-{}'.format(sub))
                             
                             if not os.path.isfile(stats_file): # if the stats output file doesn't exist
