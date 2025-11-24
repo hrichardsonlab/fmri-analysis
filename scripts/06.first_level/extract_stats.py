@@ -56,6 +56,9 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
             # grab roi file for each mask requested
             roi_masks = list()
             for m in mask_opts:
+                # define aroi prefix
+                aroi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'arois', 'sub-{}_roi-'.format(sub))
+                
                 # if a functional ROI was specified
                 if 'fROI' in m:
                     if splithalf_id != 0 and combined == 'no':
@@ -131,6 +134,17 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         roi_masks.append(roi_file)
                         print('Using {} FreeSurfer defined file from {}'.format(roi_name, roi_file))  
                     
+                    # if an anatomical ROI was specified
+                    if 'aROI' in m:
+                        if not aroi_prefix: # resultsDir:
+                            print('ERROR: unable to locate aROI file. Make sure a resultsDir is provided in the config file!')
+                        else:
+                            roi_name = m.split('aROI-')[1].split('_')[0]
+                            roi_name = roi_name.lower()
+                            roi_file = glob.glob(op.join('{}*{}*.nii.gz'.format(aroi_prefix, roi_name)))#[0]
+                            roi_masks.append(roi_file)
+                            print('Using {} aROI file from {}'.format(roi_name, roi_file))  
+                    
                     # if other ROI was specified
                     else:
                         if template is not None:
@@ -191,7 +205,12 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         mask_name = mask_opts[r].split('-')[1].lower()
                     else:
                         mask_name = mask_opts[r]
-
+                    
+                    if 'aROI' in mask_opts[r]:
+                        mask_name = mask_opts[r].split('-')[1].lower()
+                    else:
+                        mask_name = mask_opts[r]
+                    
                     if match_events == 'yes' and mask_name not in c: # if the search space (lowercase) is contained within the contrast_opts specified
                         print('Skipping {} search space for the {} contrast'.format(mask_opts[r], c))
                     else: 
@@ -203,11 +222,11 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         # t-stats copes file
                         tcope_file = glob.glob(op.join(modelDir, '*{}_tstat.nii.gz'.format(c)))
                         tcope_img = image.load_img(tcope_file)
-
-                        # squeeze the statistical map to remove the 4th singleton dimension is using anatomical/atlas ROI
+                        
+                        # squeeze the statistical map to remove the 4th singleton dimension if using anatomical/atlas ROI
                         # this dimension is not adding any information, so this is fine to do; the 3D map of stats values is preserved.
                         # this step isn't necessary for fROIs because they were defined using the functional data and also have a 4th singleton dimension
-                        if not 'fROI' in mask_opts[r] and not 'FS' in mask_opts[r]:
+                        if not 'fROI' in mask_opts[r] and not 'FS' in mask_opts[r] and not 'aROI' in mask_opts[r]:
                             zcope_img = image.math_img('np.squeeze(img)', img=zcope_img)
                             tcope_img = image.math_img('np.squeeze(img)', img=tcope_img)
                         

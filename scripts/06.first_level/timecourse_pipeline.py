@@ -128,6 +128,9 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         
         # define froi prefix if resultsDir was provided
         if resultsDir:
+            # define aroi prefix
+            aroi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'arois', 'sub-{}_roi-'.format(sub))
+            
             if splithalf_id != 0:                    
                     # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
                     if splithalf_id == 1:
@@ -176,7 +179,18 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
                 roi_name = m.split('FS-')[1]
                 roi_file = glob.glob(op.join(projDir, 'files', 'ROIs' , '{}'.format(roi_name), '{}_*_{}.nii.gz'.format(sub, roi_name)))#[0]
                 roi_masks.append(roi_file)
-                print('Using {} FreeSurfer defined file from {}'.format(roi_name, roi_file))            
+                print('Using {} FreeSurfer defined file from {}'.format(roi_name, roi_file))
+                
+            # if an anatomical ROI was specified
+            elif 'aROI' in m:
+                if not aroi_prefix: # resultsDir:
+                    print('ERROR: unable to locate aROI file. Make sure a resultsDir is provided in the config file!')
+                else:
+                    roi_name = m.split('aROI-')[1].split('_')[0]
+                    roi_name = roi_name.lower()
+                    roi_file = glob.glob(op.join('{}*{}*.nii.gz'.format(aroi_prefix, roi_name)))#[0]
+                    roi_masks.append(roi_file)
+                    print('Using {} aROI file from {}'.format(roi_name, roi_file))                  
             
             # if group ROI was specified
             elif 'group' in m:
@@ -641,9 +655,10 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
                     tc_prefix = op.join('{}_splithalf-{:02d}_{}-{}-{}'.format(run_prefix, splithalf_id, froi, contrast, roi_splithalf))
                 else:
                     tc_prefix = op.join('{}_splithalf-{:02d}_{}'.format(run_prefix, splithalf_id, mask_opts[m]))
+                    
             else:
                 tc_prefix = op.join('{}_{}'.format(run_prefix, mask_opts[m]))
-            
+                
             # average data in mask if requested and add info to output file name
             if extract_opt == 'mean':
                 # average voxelwise timecourses
