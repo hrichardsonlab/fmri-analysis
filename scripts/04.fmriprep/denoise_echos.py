@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 import argparse
 import shutil
+import subprocess
 import nibabel as nib
 from tedana import workflows
 from multiprocessing import Pool
@@ -23,17 +24,21 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
     else:
         sub_prefix = op.join(derivDir, 'sub-{}'.format(sub))
     
-    # grab grey and white matter mask files
-    gm_mask = op.join(sub_prefix, 'anat', 'sub-{}_label-GM_probseg.nii.gz'.format(sub))
-    wm_mask = op.join(sub_prefix, 'anat', 'sub-{}_label-WM_probseg.nii.gz'.format(sub))
+    # grab grey and white matter mask files (we want to use native space files, not MNI files)
+    gm_mask = glob.glob(op.join(sub_prefix, 'anat', 'sub-{}*_label-GM_probseg.nii.gz'.format(sub)))
+    wm_mask = glob.glob(op.join(sub_prefix, 'anat', 'sub-{}*_label-WM_probseg.nii.gz'.format(sub)))
+    
+    # remove MNI space masks
+    gm_mask = [m for m in gm_mask if 'MNI' not in m][0]
+    wm_mask = [m for m in wm_mask if 'MNI' not in m][0]
     
     # confirm that masks were found
     if len(gm_mask) == 0 or len(wm_mask) == 0:
-        print('No brain mask found for sub-{}'.format(sub))
+        print('No brain masks found for sub-{}'.format(sub))
     
     # grab echo bold files
     echo_imgs = glob.glob(op.join(sub_prefix, 'func', '*_echo-*_bold.nii.gz'))
-        
+    
     # extract file prefixes before echoes (i.e., individual runs)
     prefix_list = [re.search('(.*)_echo-',f).group(1) for f in echo_imgs]
     prefix_list = set(prefix_list)
@@ -49,44 +54,52 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
         os.makedirs(outDir, exist_ok=True)
         
         # grab bold and mask file
-        bold_file = op.join('{}_echo-1_desc-preproc_bold.nii.gz'.format(run))
+        bold_file = glob.glob(op.join('{}_echo-*1_desc-preproc_bold.nii.gz'.format(run)))[0]
         bold_mask = op.join('{}_desc-brain_mask.nii.gz'.format(run))
         
-        # resample and combine subject grey and white matter native space mask
-        print('Resampling and combining grey and white matter masks for: {}'.format(run))
+        # dilate the bold mask to ensure coverage of whole brain
+        dilated_mask_file = op.join(outDir, 'sub-{}_task-{}_desc-dilated_brain_mask.nii.gz'.format(sub, task))
+        print('Generating and saving dilated BOLD mask: {}'.format(dilated_mask_file))
+        cmd = 'fslmaths ' + bold_mask + ' '
+        cmd = cmd + '-dilM -bin ' + dilated_mask_file
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, shell = True)
+             
+        # # resample and combine subject grey and white matter native space mask
+        # run into issues if data aren't actually co-registered! 
+        # print('Resampling and combining grey and white matter masks for: {}'.format(run))
         
-        gm_resampled = resample_to_img(gm_mask, bold_file, interpolation='continuous')
-        wm_resampled = resample_to_img(wm_mask, bold_file, interpolation='continuous')
+        # gm_resampled = resample_to_img(gm_mask, bold_file, interpolation='nearest')
+        # wm_resampled = resample_to_img(wm_mask, bold_file, interpolation='nearest')
         
-        # threshold and binarize gm and wm masks
-        gm_bin = math_img('img > 0.1', img = gm_resampled)
-        wm_bin = math_img('img > 0.1', img = wm_resampled)
+        # # threshold and binarize gm and wm masks
+        # gm_bin = math_img('img > 0.1', img = gm_resampled)
+        # wm_bin = math_img('img > 0.1', img = wm_resampled)
         
-        # combine masks
-        gmwm_img = image.math_img('img1 + img2', img1 = gm_bin, img2 = wm_bin)
+        # # combine masks
+        # gmwm_img = image.math_img('img1 + img2', img1 = gm_bin, img2 = wm_bin)
         
-        # binarize mask
-        gmwm_bin = image.math_img('img > 0', img = gmwm_img)
+        # # binarize mask
+        # gmwm_bin = image.math_img('img > 0', img = gmwm_img)
         
-        # load and binarize bold mask
-        bold_bin = image.math_img('img > 0', img = bold_mask)
+        # # load and binarize bold mask
+        # bold_bin = image.math_img('img > 0', img = bold_mask)
         
-        # combine bold and gmwm masks
-        combined_mask = image.math_img('img1 + img2', img1 = gmwm_bin, img2 = bold_bin)
+        # # combine bold and gmwm masks
+        # combined_mask = image.math_img('img1 + img2', img1 = gmwm_bin, img2 = bold_bin)
         
-        # binarize combined mask
-        combined_mask = image.math_img('img > 0', img = combined_mask)
+        # # binarize combined mask
+        # combined_mask = image.math_img('img > 0', img = combined_mask)
         
-        # save masks
-        mask_file = op.join(outDir, 'sub-{}_task-{}_space-T1w_desc-gmwmbold_mask.nii.gz'.format(sub, task))
-        combined_mask.to_filename(mask_file)
-        print('Combined grey matter, white matter, bold mask saved to: {}'.format(mask_file))
+        # # save masks
+        # mask_file = op.join(outDir, 'sub-{}_task-{}_desc-gmwmbold_mask.nii.gz'.format(sub, task))
+        # combined_mask.to_filename(mask_file)
+        # print('Combined grey matter, white matter, bold mask saved to: {}'.format(mask_file))
         
         print('Denoising and optimally combining data for: {}'.format(run))
         
         # grab the json files with appropriate header info
         header_info = glob.glob(op.join(sub_prefix, 'func', '{}*_echo-*desc-preproc_bold.json'.format(run)))
-
+        
         # extract echo times out of header info and sort
         echo_times = [json.load(open(f))['EchoTime'] for f in header_info]
         echo_times.sort()
@@ -127,9 +140,10 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
                run_imgs.append(element)
                
         # make a dataframe with sub, input files, and echo times
-        dat.append([sub, task, run_imgs, mask_file, echo_times, outDir])
+        dat.append([sub, task, run_imgs, dilated_mask_file, echo_times, outDir])
     
         print('Outputs will be saved to {}'.format(outDir))
+        tedana_df = []
         tedana_df = pd.DataFrame(data=dat, columns=['sub', 'task', 'EchoFiles', 'MaskFile', 'EchoTimes', 'outDir'])
         args=zip(tedana_df['sub'].tolist(),
                  tedana_df['task'].tolist(),
@@ -161,19 +175,22 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
 
 # define function to pass to multiprocess 
 def call_tedana(sub, task, EchoFiles, MaskFile, EchoTimes, outDir):
-    print(op.join(outDir, 'sub-{}_task-{}_space-T1w_tedana_report.html'.format(sub, task)))
-    if os.path.isfile(op.join(outDir, 'sub-{}_task-{}_space-T1w_tedana_report.html'.format(sub, task))): # if subject tedana report already exists
+    print(op.join(outDir, 'sub-{}_task-{}_tedana_report.html'.format(sub, task)))
+    if os.path.isfile(op.join(outDir, 'sub-{}_task-{}_tedana_report.html'.format(sub, task))): # if subject tedana report already exists
         print('Skipping tedana because tedana outputs found for sub-{}'.format(sub))
         
     else: # if subject tedana files don't exist
         # for more info: https://tedana.readthedocs.io/en/stable/generated/tedana.workflows.tedana_workflow.html
+        print('Echo Times: {}'.format(EchoTimes))
+        
         workflows.tedana_workflow(EchoFiles, 
                                   EchoTimes,
                                   mask = MaskFile,
                                   out_dir = outDir,
-                                  prefix = 'sub-{}_task-{}_space-T1w'.format(sub, task),
+                                  prefix = 'sub-{}_task-{}'.format(sub, task),
                                   fittype = 'curvefit',
-                                  tedpca = 'kic',
+                                  tedpca = 'aic', # default is aic (least aggressive), kic is a moderate option
+                                  #ica_method = 'robustica',
                                   overwrite = True,
                                   gscontrol = None) 
 
