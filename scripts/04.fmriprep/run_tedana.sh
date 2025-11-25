@@ -170,12 +170,11 @@ do
 		apptainer exec -C -B /data/EBC:/data/EBC -B ${projDir}:${projDir}				\
 		${singularityDir}/fmriprep-24.0.0.simg											\
 		antsApplyTransforms -e 3														\
-			-i ${denoised_img}															\
+			-i ${denoised_T1w}															\
 			-r ${T1w_MNI_img}															\
 			-o ${denoised_MNI}															\
 			-n LanczosWindowedSinc														\
-			-t ${bold_to_T1w}															\
-			   ${T1w_to_MNI}
+			-t ${T1w_to_MNI}
 		
 		# STEP 3: move gmwmbold mask from T1w space to MNI space
 		echo "...transforming combined gray matter, white matter, bold mask from T1w to MNI space..."
