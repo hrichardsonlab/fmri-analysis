@@ -56,6 +56,7 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
         # grab bold and mask file
         bold_file = glob.glob(op.join('{}_echo-*1_desc-preproc_bold.nii.gz'.format(run)))[0]
         bold_mask = op.join('{}_desc-brain_mask.nii.gz'.format(run))
+        bold_t1w_mask = op.join('{}_space-T1w_desc-brain_mask.nii.gz'.format(run))
         
         # dilate the bold mask to ensure coverage of whole brain
         dilated_mask_file = op.join(outDir, 'sub-{}_task-{}_desc-dilated_brain_mask.nii.gz'.format(sub, task))
@@ -64,36 +65,36 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
         cmd = cmd + '-dilM -bin ' + dilated_mask_file
         result = subprocess.run(cmd, stdout=subprocess.PIPE, shell = True)
              
-        # # resample and combine subject grey and white matter native space mask
-        # run into issues if data aren't actually co-registered! 
-        # print('Resampling and combining grey and white matter masks for: {}'.format(run))
+        # combine subject grey and white matter native space mask with BOLD mask in T1w space
+        print('Combining grey and white matter masks for: {}'.format(run))
         
-        # gm_resampled = resample_to_img(gm_mask, bold_file, interpolation='nearest')
-        # wm_resampled = resample_to_img(wm_mask, bold_file, interpolation='nearest')
+        gm_resampled = resample_to_img(gm_mask, bold_t1w_mask, interpolation='nearest')
+        wm_resampled = resample_to_img(wm_mask, bold_t1w_mask, interpolation='nearest')
         
-        # # threshold and binarize gm and wm masks
-        # gm_bin = math_img('img > 0.1', img = gm_resampled)
-        # wm_bin = math_img('img > 0.1', img = wm_resampled)
+        # threshold and binarize gm and wm masks
+        gm_bin = math_img('img > 0.1', img = gm_resampled)
+        wm_bin = math_img('img > 0.1', img = wm_resampled)
         
-        # # combine masks
-        # gmwm_img = image.math_img('img1 + img2', img1 = gm_bin, img2 = wm_bin)
+        # combine masks
+        gmwm_img = image.math_img('img1 + img2', img1 = gm_bin, img2 = wm_bin)
         
-        # # binarize mask
-        # gmwm_bin = image.math_img('img > 0', img = gmwm_img)
+        # binarize mask
+        gmwm_bin = image.math_img('img > 0', img = gmwm_img)
         
-        # # load and binarize bold mask
-        # bold_bin = image.math_img('img > 0', img = bold_mask)
+        # load and binarize bold masks
+        bold_bin = image.math_img('img > 0', img = bold_mask)
+        bold_t1w_bin = image.math_img('img > 0', img = bold_t1w_mask)
         
-        # # combine bold and gmwm masks
-        # combined_mask = image.math_img('img1 + img2', img1 = gmwm_bin, img2 = bold_bin)
+        # combine bold and gmwm masks
+        combined_mask = image.math_img('img1 + img2', img1 = gmwm_bin, img2 = bold_t1w_bin)
         
-        # # binarize combined mask
-        # combined_mask = image.math_img('img > 0', img = combined_mask)
+        # binarize combined mask
+        combined_mask = image.math_img('img > 0', img = combined_mask)
         
-        # # save masks
-        # mask_file = op.join(outDir, 'sub-{}_task-{}_desc-gmwmbold_mask.nii.gz'.format(sub, task))
-        # combined_mask.to_filename(mask_file)
-        # print('Combined grey matter, white matter, bold mask saved to: {}'.format(mask_file))
+        # save masks
+        mask_file = op.join(sub_prefix, 'func', 'sub-{}_task-{}_space-T1w_desc-gmwmbold_mask.nii.gz'.format(sub, task))
+        combined_mask.to_filename(mask_file)
+        print('Combined grey matter, white matter, bold mask saved to: {}'.format(mask_file))
         
         print('Denoising and optimally combining data for: {}'.format(run))
         
@@ -143,7 +144,6 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
         dat.append([sub, task, run_imgs, dilated_mask_file, echo_times, outDir])
     
         print('Outputs will be saved to {}'.format(outDir))
-        tedana_df = []
         tedana_df = pd.DataFrame(data=dat, columns=['sub', 'task', 'EchoFiles', 'MaskFile', 'EchoTimes', 'outDir'])
         args=zip(tedana_df['sub'].tolist(),
                  tedana_df['task'].tolist(),
