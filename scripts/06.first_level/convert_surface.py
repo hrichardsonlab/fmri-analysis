@@ -27,9 +27,9 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
     # loop through specified runs
     for r, run in enumerate(runs):
         # define file prefix and add run info to file prefix if necessary
-        prefix = 'sub-{}*task-{}'.format(sub, task)
+        prefix = '{}*task-{}'.format(sub, task)
         if run != 0:
-            prefix = '{}_run-{:02d}'.format(prefix, run)
+            prefix = '{}_run-{:03d}'.format(prefix, run)
             runDir = 'run{}'.format(run)
         else:
             runDir = 'run1'
@@ -37,32 +37,32 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
         # grab volume data file to convert to surface based on option provided to convert_surf
         if convert_surf == 'fmriprep':
             if ses != 'no': # if session was provided
-                vol_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func', '{}_space-T1w_desc-preproc_bold.nii.gz'.format(prefix)))[0]
+                vol_file = glob.glob(op.join(derivDir, '{}'.format(sub), 'ses-{}'.format(ses), 'func', '{}_space-T1w_desc-preproc_bold.nii.gz'.format(prefix)))[0]
                 
             else: # if session was 'no'
-                vol_file = glob.glob(op.join(derivDir, 'sub-{}'.format(sub), 'func', '{}_space-T1w_desc-preproc_bold.nii.gz'.format(prefix)))[0]
+                vol_file = glob.glob(op.join(derivDir, '{}'.format(sub), 'func', '{}_space-T1w_desc-preproc_bold.nii.gz'.format(prefix)))[0]
             
             print('Will convert fMRIprep preprocessed data to surface: {}'. format(vol_file))
             
         elif convert_surf == 'denoised':
-            vol_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'denoised', '{}/{}_denoised_bold.nii.gz'.format(runDir, prefix, run)))[0]
+            vol_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'denoised', '{}/{}_denoised_padded_bold.nii.gz'.format(runDir, prefix, run)))[0]
             
             print('Will convert denoised data to surface: {}'. format(vol_file))
         
         # define output files depending on if run info is in file name
         if run != 0:
             # registration file
-            reg_file = op.join(surfDir, 'sub-{}_task-{}_run-{:02d}_vol2surf.dat'.format(sub, task, run))
+            reg_file = op.join(surfDir, '{}_task-{}_run-{:03d}_vol2surf.dat'.format(sub, task, run))
             
             # surface file
-            surf_file = op.join(surfDir, 'sub-{}_task-{}_run-{:02d}_surf.mgh'.format(sub, task, run))
+            surf_file = op.join(surfDir, '{}_task-{}_run-{:03d}_surf.mgh'.format(sub, task, run))
             
         else:
             # registration file
-            reg_file = op.join(surfDir, 'sub-{}_task-{}_vol2surf.dat'.format(sub, task))
+            reg_file = op.join(surfDir, '{}_task-{}_vol2surf.dat'.format(sub, task))
             
             # surface file
-            surf_file = op.join(surfDir, 'sub-{}_task-{}_surf.mgh'.format(sub, task))
+            surf_file = op.join(surfDir, '{}_task-{}_surf.mgh'.format(sub, task))
             
         ## GENERATE REGISTRATION
         # check if registration file already exists and generate if it does not
@@ -73,10 +73,10 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             print('Calculating registration file and saving to: {}'.format(reg_file))
             # register functional data to surface
             bbreg = fs.BBRegister()
-            bbreg.inputs.subject_id = 'sub-{}'.format(sub)
+            bbreg.inputs.subject_id = '{}'.format(sub)
             bbreg.inputs.source_file = vol_file
             bbreg.inputs.init = 'header'
-            bbreg.inputs.contrast_type = 't2'
+            bbreg.inputs.contrast_type = 'bold'
             bbreg.inputs.subjects_dir = fsDir
             bbreg.inputs.out_reg_file = reg_file
             bbreg.run()
@@ -85,9 +85,9 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
         for hem in ['lh', 'rh']:
            # define prefix for surface files depending on if run info is in file name
             if run != 0:
-                surf_prefix = op.join(surfDir, 'sub-{}_task-{}_run-{:02d}_hem-{}'.format(sub, task, run, hem))
+                surf_prefix = op.join(surfDir, '{}_task-{}_run-{:03d}_hem-{}'.format(sub, task, run, hem))
             else:
-                surf_prefix = op.join(surfDir, 'sub-{}_task-{}_hem-{}'.format(sub, task, run, hem))
+                surf_prefix = op.join(surfDir, '{}_task-{}_hem-{}'.format(sub, task, hem))
             
             ## PROJECT TO SURFACE (uses mri_vol2surf)
             # also resamples outputs to fsaverage space for comparison across subjects
@@ -96,7 +96,7 @@ def project_surface(sub, runs, projDir, derivDir, resultsDir, task, ses, smoothi
             vol2surf.inputs.source_file = vol_file
             vol2surf.inputs.reg_file = reg_file
             #vol2surf.inputs.reg_header = True # this works fine with BOLD data already in T1w space, but passing a reg file is slightly better for aligning the BOLD and surface data. Can skip the bbregister step if this is uncommented and reg_file is commented (the commands are mutually exclusive)
-            vol2surf.inputs.subject_id = 'sub-{}'.format(sub)
+            vol2surf.inputs.subject_id = '{}'.format(sub)
             vol2surf.inputs.hemi = hem
             vol2surf.inputs.reshape = True
             vol2surf.inputs.smooth_surf = smoothing_kernel_size

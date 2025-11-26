@@ -1,0 +1,6 @@
+task	desc	conds	weights
+tomloc	belief-photo	belief photo	1 -1
+langloc	sentence-nonword	sentence nonword	1 -1
+awe	emo-phys	emo phys	1 -1
+awe	phys-emo	phys emo	1 -1
+

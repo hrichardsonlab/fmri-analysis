@@ -1,7 +1,5 @@
 The purpose of events files is to describe timing and other properties of events recorded during a run. Events are stimuli presented to the participant or participant responses.
 
-The same events file can be used for the 5y and 7y EBC data given that the same functional paradigms are used for both datasets.
-
 Several important things to note: 
 
 - A single event file MAY include any combination of stimulus, response, and other events.

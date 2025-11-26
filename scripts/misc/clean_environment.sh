@@ -22,18 +22,19 @@ Usage() {
 }
 
 if [ ! -f ../../PATHS.txt ]
-then Usage
+	then Usage
 fi
 
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 
-# remove temporary files and directories leaving only singularity images
+# display subjects
 echo
-echo "Cleaning up temporary singularity workflow directories in..." ${singularityDir}
+echo "Cleaning up temporary workflow directories in..." ${singularityDir}
 echo
 
+# remove temporary files and directories leaving only singularity images
 find ${singularityDir}/. -type f ! -iname "*.simg" -delete
 rm -rf -- ${singularityDir}/./*/
 

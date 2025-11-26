@@ -4,10 +4,10 @@
 # SETUP PROJECT DIRECTORY WITH NECESSARY SCRIPTS AND DATA FILES
 #
 # This script should be run in the directory where the project folder will be generated
-# This should typically be in your /data/EBC/home/UUN folder
+# This should typically be in your RichardsonLab/home/<name> folder
 #
 # This script copies and organizes the scripts and data files saved in the 
-# shared location (e.g., /data/EBC/processing) to your project folder and generates
+# shared location (e.g., RichardsonLab/processing) to your project folder and generates
 # a PATHS.txt file. Larger data files (e.g., ROI files) won't be transferred
 #
 ################################################################################
@@ -17,17 +17,16 @@ Usage() {
 	echo
 	echo
 	echo "Usage:"
-	echo "./setup_project cohort PROJECT_NAME"
+	echo "./setup_project study PROJECT_NAME"
 	echo
-	echo "You must provide (1) the cohort for analysis and (2) a PROJECT_NAME (with no spaces) so the associated project folder can be generated"
+	echo "You must provide (1) the study for analysis and (2) a PROJECT_NAME (with no spaces) so the associated project folder can be generated"
 	echo
 	echo "Example:"
-	echo "./setup_project TEBC-5y pixar"
+	echo "./setup_project KMVPA kmvpa_analysis"
 	echo
-	echo "For non-EBC data, the 'cohort' argument passed in the script call will be the name of the study or dataset"
 	echo
-	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /data/EBC/ directory."
+	echo "This script must be run within the /RichardsonLab/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /RichardsonLab/ directory."
 	echo
 	echo "This script only needs to be run once when setting up your project folder."
 	echo
@@ -37,17 +36,17 @@ Usage() {
 }
 [ "$1" = "" ] | [ "$2" = "" ] && Usage
 
-# define cohort
-cohort=$1
+# define study
+study=$1
 
 # define project as text provided after script call
 proj=$2
 
 # define directories
-dataDir="/data/EBC/processing" # location of shared files
+dataDir="/RichardsonLab/processing" # location of shared files
 
-# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
-if [[ ! "$PWD" =~ "/EBC/" ]]; 
+# if the script is run outside of the RichardsonLab directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
+if [[ ! "$PWD" =~ "/RichardsonLab/" ]]; 
 then Usage
 fi
 
@@ -81,31 +80,31 @@ else
 	echo
 	
 	# some studies won't have all these files so (where relevant) check that directory exists first befoe trying to copy to project folder
-	cp -r ${dataDir}/scripts/fMRI/. ${proj}/scripts
+	cp -r ${dataDir}/scripts/. ${proj}/scripts
 	
 	# subj lists
-	if [ -d "${dataDir}/subj_lists/${cohort}" ]
+	if [ -d "${dataDir}/subj_lists/${study}" ]
 	then
-		cp -r ${dataDir}/subj_lists/${cohort}/. ${proj}/files/subj_lists
+		cp -r ${dataDir}/subj_lists/${study}/. ${proj}/files/subj_lists
 	fi
 	# event files
-	if [ -d "${dataDir}/event_files" ]
+	if [ -d "${dataDir}/event_files/${study}" ]
 	then
-		cp -r ${dataDir}/event_files ${proj}/files
+		cp -r ${dataDir}/event_files/${study}/. ${proj}/files/event_files
 	fi
 	
 	# contrast files
-	if [ -d "${dataDir}/contrast_files" ]
+	if [ -d "${dataDir}/contrast_files/${study}" ]
 	then
-		cp -r ${dataDir}/contrast_files ${proj}/files
+		cp -r ${dataDir}/contrast_files/${study}/. ${proj}/files/contrast_files
 	fi
 	
 	# ROI timecourses
-	if [ -d "${dataDir}/ROI_timecourses" ]
+	if [ -d "${dataDir}/ROI_timecourses/${study}" ]
 	then
-		cp -r ${dataDir}/ROI_timecourses ${proj}/files
+		cp -r ${dataDir}/ROI_timecourses/${study}/. ${proj}/files/ROI_timecourses
 	fi
-	
+
 	# copy example config file as template with motion thresholds that were already applied to data
 	cp -r ${dataDir}/config_files/config-study_template.tsv ${proj}
 fi

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ################################################################################
-# CREATE SYMBOLIC LINKS TO SHARED SINGULARITIES IN /data/EBC/processing/singularity_images
+# CREATE SYMBOLIC LINKS TO SHARED SINGULARITIES IN /RichardsonLab/processing/singularity_images
 #
 # We want singularity images accessible but we don't want a bunch of copies
 # so this creates a symbolic link for all the content of the lab standard 
@@ -17,8 +17,8 @@ Usage() {
 	echo
 	echo "You must have a PATHS.txt file in your project folder with the path to your project folder within the text file."
 	echo
-	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /EBC/ directory."
+	echo "This script must be run within the /RichardsonLab/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /RichardsonLab/ directory."
 	echo
 	echo "This script only needs to be run once when setting up your project folder."
 	echo
@@ -27,8 +27,8 @@ Usage() {
 	exit
 }
 
-# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
-if [[ ! "$PWD" =~ "/EBC/" ]]; 
+# if the script is run outside of the RichardsonLab directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
+if [[ ! "$PWD" =~ "/RichardsonLab/" ]]; 
 then Usage
 fi
 
@@ -38,7 +38,7 @@ then Usage
 fi
 
 # location of shared singularity images
-masterDir="/data/EBC/processing/singularity_images"
+masterDir="/RichardsonLab/processing/singularity_images"
 
 # study folder to create symlink
 projDir=`cat ../../PATHS.txt`

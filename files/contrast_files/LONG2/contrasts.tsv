@@ -1,0 +1,13 @@
+task	desc	conds	weights
+mini_mnm	mental_gt_physical	a_mental b_social c_physical f_response	1 0 -1 0
+mini_mnm	mental_gt_social	a_mental b_social c_physical f_response	1 -1 0 0
+mini_mnm	response_gt_rest	a_mental b_social c_physical f_response	0 0 0 1
+mini_mnm	social_gt_physical	a_mental b_social c_physical f_response	0 1 -1 0
+mini_mnm	mentalsocialphysical_gt_response	a_mental b_social c_physical f_response	0.33 0.33 0.33 -1
+mini_mnm	mentalsocial_gt_physical	a_mental b_social c_physical f_response	0.5 0.5 -1 0
+mini_long_mnm	mental_gt_physical	a_mental b_social c_physical f_response	1 0 -1 0
+mini_long_mnm	mental_gt_social	a_mental b_social c_physical f_response	1 -1 0 0
+mini_long_mnm	response_gt_rest	a_mental b_social c_physical f_response	0 0 0 1
+mini_long_mnm	social_gt_physical	a_mental b_social c_physical f_response	0 1 -1 0
+mini_long_mnm	mentalsocialphysical_gt_response	a_mental b_social c_physical f_response	0.33 0.33 0.33 -1
+mini_long_mnm	mentalsocial_gt_physical	a_mental b_social c_physical f_response	0.5 0.5 -1 0

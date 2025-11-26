@@ -1,0 +1,49 @@
+sharedDir	/RichardsonLab/processing
+bidsDir	/RichardsonLab/preprocessedData/EMF/
+derivDir	/RichardsonLab/preprocessedData/EMF/derivatives
+resultsDir	
+smoothDir	
+resampleDir	
+space	MNI
+task	mnm
+sessions	no
+multiecho	no
+FD_thresh	1
+DVARS_thresh	1.5
+art_norm_thresh	1
+art_z_thresh	3
+ntmpts_exclude	0.33
+ignore_motion	no
+dropvols	0
+smoothing	0
+hpf	128
+filter	butterworth
+detrend	no
+standardize	no
+splithalf	no
+events	a_mental, b_social, c_physical, d_foreign, e_music,  f_response
+modulators	no
+contrast	mental-social, mental, social
+timecourses	no
+regressors	art, aCompCor
+convert_surf	
+template	MNI152NLin2009cAsym_res-02_T1w
+FS_ROI	
+search_spaces	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
+match_events	no
+top_nvox	80
+mask	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
+extract	mean
+nonparametric	yes
+npermutations	5000
+group_comparison	within
+group_variables	no
+est_group_variances	no
+tfce	yes
+stat_thresh	0.95
+cluster_size	10
+top_nregions	6
+hrf_lag	4
+rc_ntps	2
+rc_thresh	0.05
+overwrite	no

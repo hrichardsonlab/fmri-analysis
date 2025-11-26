@@ -9,32 +9,40 @@ import os.path as op
 import glob
 
 # define mask concatenation function
-def concat_masks(derivDir, sub, ses): 
+def concat_masks(derivDir, sub, ses, multiecho): 
     # print current subject
-    print('concatenating BOLD masks for sub-{}'.format(sub))
+    print('concatenating BOLD masks for {}'.format(sub))
     
     # define output filename and path, depending on whether session information is in BIDS directory/file names
     if ses != 'no':
         print('Session information provided. Assuming data are organized into session folders.')
         
         # define path to inputs (subjects preprocessed functional data)
-        subDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func')
-        mni_img_fname = '{}/sub-{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
-        t1w_img_fname = '{}/sub-{}_ses-{}_space-T1w_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
+        subDir = op.join(derivDir, '{}'.format(sub), 'ses-{}'.format(ses), 'func')
+        mni_img_fname = '{}/{}_ses-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
+        t1w_img_fname = '{}/{}_ses-{}_space-T1w_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
         
     else: # if session was 'no'
         # define path to inputs (subjects preprocessed functional data)
-        subDir = op.join(derivDir, 'sub-{}'.format(sub), 'func')
-        mni_img_fname = '{}/sub-{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
-        t1w_img_fname = '{}/sub-{}_space-T1w_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
+        subDir = op.join(derivDir, '{}'.format(sub), 'func')
+        mni_img_fname = '{}/{}_space-MNI152NLin2009cAsym_res-2_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
+        t1w_img_fname = '{}/{}_space-T1w_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(subDir, sub, ses)
     
     # identify all mask files (there should be 1 per functional run)
-    mni_maskfiles = glob.glob(op.join(subDir, '*MNI152NLin2009cAsym_res-2_desc-brain_mask.nii.gz'))  
-    t1w_maskfiles = glob.glob(op.join(subDir, '*T1w_desc-brain_mask.nii.gz'))
+    if multiecho == 'yes':
+        print('Data are multi-echo...')
+        print('Using combined grey matter, white matter, and bold masks for mask generation')
+        mni_maskfiles = glob.glob(op.join(subDir, '*MNI152NLin2009cAsym_desc-gmwmbold_mask.nii.gz'))  
+        t1w_maskfiles = glob.glob(op.join(subDir, '*T1w_desc-gmwmbold_mask.nii.gz'))  
+    else:
+        print('Data are not multi-echo...')
+        print('Using standard fMRIPrep generated masks for mask generation')
+        mni_maskfiles = glob.glob(op.join(subDir, '*MNI152NLin2009cAsym_res-2_desc-brain_mask.nii.gz'))  
+        t1w_maskfiles = glob.glob(op.join(subDir, '*T1w_desc-brain_mask.nii.gz'))  
 
     # generate MNI mask
     if len(mni_maskfiles) == 0: # if no mask files were found
-        print('No MNI space brain masks found for sub-{}'.format(sub))
+        print('No MNI space brain masks found for {}'.format(sub))
     
     else: # if mni mask files were found
         mni_basemask = mni_maskfiles[0] # take the first mask file as the base image
@@ -60,7 +68,7 @@ def concat_masks(derivDir, sub, ses):
 
     # generate T1w mask
     if len(t1w_maskfiles) == 0: # if no mask files were found
-        print('No native space brain masks found for sub-{}'.format(sub))
+        print('No native space brain masks found for {}'.format(sub))
     
     else: # if mni mask files were found
         t1w_basemask = t1w_maskfiles[0] # take the first mask file as the base image
@@ -105,13 +113,14 @@ def main(argv=None):
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0)
     derivDir=config_file.loc['derivDir',1]
     ses=config_file.loc['sessions',1]
+    multiecho=config_file.loc['multiecho',1]
 
     # print if the fMRIPrep directory is not found
     if not op.exists(derivDir):
         raise IOError('Derivatives directory {} not found.'.format(derivDir))       
     
     # run concat_masks function with different inputs depending on config options
-    concat_masks(derivDir, args.sub, ses)
+    concat_masks(derivDir, args.sub, ses, multiecho)
     
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':

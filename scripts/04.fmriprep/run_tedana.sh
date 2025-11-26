@@ -10,7 +10,7 @@
 #
 ################################################################################
 
-# usage documentation - shown if no text file is provided or if script is run outside EBC directory
+# usage documentation - shown if no text file is provided or if script is run outside RichardsonLab directory
 Usage() {
 	echo
 	echo
@@ -32,8 +32,8 @@ Usage() {
 }
 [ "$1" = "" ] | [ "$2" = "" ] && Usage
 
-# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
-if [[ ! "$PWD" =~ "/EBC/" ]]
+# if the script is run outside of the RichardsonLab directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
+if [[ ! "$PWD" =~ "/RichardsonLab/" ]]; 
 then Usage
 fi
 
@@ -82,19 +82,13 @@ bidsDir="${bidsDir%$'\r'}"
 derivDir="${derivDir%$'\r'}"
 sessions="${sessions%$'\r'}"
 
-# convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
-# if [ ! -d ${singularityDir}/nipype_sandbox ]
-# then
-	# singularity build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype_nilearn.simg
-# fi
-
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
 export APPTAINER_TMPDIR=${singularityDir}
 export APPTAINER_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
 # run singularity to submit tedana script
-apptainer exec -C -B /data/EBC:/data/EBC -B ${projDir}:${projDir}				\
+singularity exec -C -B /RichardsonLab:/RichardsonLab -B ${projDir}:${projDir}	\
 ${singularityDir}/nipype_nilearn.simg											\
 /neurodocker/startup.sh python ${codeDir}/denoise_echos.py						\
 -s ${subjs}																		\
@@ -119,9 +113,9 @@ do
 	# define subject derivatives directory depending on whether data are organized in session folders
 	if [[ ${sessions} == 'yes' ]]
 	then
-		subDir_deriv="${derivDir}/sub-${sub}/ses-01"
+		subDir_deriv="${derivDir}/${sub}/ses-01"
 	else
-		subDir_deriv="${derivDir}/sub-${sub}"
+		subDir_deriv="${derivDir}/${sub}"
 	fi
 	
 	# extract task names
@@ -147,16 +141,16 @@ do
 		bold_to_T1w=${subDir_deriv}/func/*${t}*from-boldref_to-T1w*_xfm.txt
 		
 		# grab combined mask file
-		mask_T1w=${subDir_deriv}/func/sub-${sub}_task-${t}_space-T1w_desc-gmwmbold_mask.nii.gz
+		mask_T1w=${subDir_deriv}/func/${sub}_task-${t}_space-T1w_desc-gmwmbold_mask.nii.gz
 		
 		# define output files
-		denoised_T1w=${subDir_deriv}/func/sub-${sub}_task-${t}_space-T1w_desc-denoised_bold.nii.gz
-		denoised_MNI=${subDir_deriv}/func/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-denoised_bold.nii.gz
-		mask_MNI=${subDir_deriv}/func/sub-${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-gmwmbold_mask.nii.gz
+		denoised_T1w=${subDir_deriv}/func/${sub}_task-${t}_space-T1w_desc-denoised_bold.nii.gz
+		denoised_MNI=${subDir_deriv}/func/${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-denoised_bold.nii.gz
+		mask_MNI=${subDir_deriv}/func/${sub}_task-${t}_space-MNI152NLin2009cAsym_desc-gmwmbold_mask.nii.gz
 		
 		# STEP 1: move denoised file from bold to T1w space
 		echo "...transforming denoised file from BOLD to T1w space..."
-		apptainer exec -C -B /data/EBC:/data/EBC -B ${projDir}:${projDir}				\
+		singularity exec -C -B /RichardsonLab:/RichardsonLab -B ${projDir}:${projDir}	\
 		${singularityDir}/fmriprep-24.0.0.simg											\
 		antsApplyTransforms -e 3														\
 			-i ${denoised_img}															\
@@ -165,9 +159,9 @@ do
 			-n LanczosWindowedSinc														\
 			-t ${bold_to_T1w}
 		
-		# STEP 2: move denoised file from bold to MNI space
-		echo "...transforming denoised file from BOLD to MNI space..."
-		apptainer exec -C -B /data/EBC:/data/EBC -B ${projDir}:${projDir}				\
+		# STEP 2: move denoised file from T1w space to MNI space
+		echo "...transforming denoised file from T1w to MNI space..."
+		singularity exec -C -B /RichardsonLab:/RichardsonLab -B ${projDir}:${projDir}	\
 		${singularityDir}/fmriprep-24.0.0.simg											\
 		antsApplyTransforms -e 3														\
 			-i ${denoised_T1w}															\
@@ -178,7 +172,7 @@ do
 		
 		# STEP 3: move gmwmbold mask from T1w space to MNI space
 		echo "...transforming combined gray matter, white matter, bold mask from T1w to MNI space..."
-		apptainer exec -C -B /data/EBC:/data/EBC -B ${projDir}:${projDir}				\
+		singularity exec -C -B /RichardsonLab:/RichardsonLab -B ${projDir}:${projDir}	\
 		${singularityDir}/fmriprep-24.0.0.simg											\
 		antsApplyTransforms -e 3														\
 			-i ${mask_T1w}																\

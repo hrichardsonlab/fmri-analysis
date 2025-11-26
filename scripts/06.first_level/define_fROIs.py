@@ -57,9 +57,9 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 roi_file = glob.glob(op.join(projDir, 'files', 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
         
         roi_masks.append(roi_file)
-    
+        
     # define combined run directory for this subject
-    combinedDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
+    combinedDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs')
     
     # check if combinedDir exists
     if op.exists(combinedDir): # if yes, generate fROIs for the combined runs
@@ -71,28 +71,28 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
         # for each splithalf
         for s in splithalves:
             if s == 0 and r != 0:
-                modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(r))
-                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}'.format(r))
+                modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}'.format(r))
+                froiDir = op.join(resultsDir, '{}'.format(sub), 'frois', 'run{}'.format(r))
                 # grab functional file for resampling
-                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(r), '*preproc_bold*.nii.gz'))[0]
+                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}'.format(r), '*preproc_bold*.nii.gz'))[0]
             elif s == 0 and r == 0:
                 modelDir = combinedDir
-                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined_runs')
+                froiDir = op.join(resultsDir, '{}'.format(sub), 'frois', 'combined_runs')
                 # grab functional file for resampling (doesn't matter which one)
-                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1', '*preproc_bold*.nii.gz'))[0]
+                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1', '*preproc_bold*.nii.gz'))[0]
             elif s != 0 and r != 0:
-                modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}_splithalf{}'.format(r,s))
-                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf{}'.format(r,s))
+                modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}_splithalf{}'.format(r,s))
+                froiDir = op.join(resultsDir, '{}'.format(sub), 'frois', 'run{}_splithalf{}'.format(r,s))
                 # grab functional file for resampling
-                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*preproc_bold*.nii.gz'))[0]
+                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*preproc_bold*.nii.gz'))[0]
             elif s != 0 and r == 0:
                 modelDir = op.join(combinedDir, 'splithalf{}'.format(s))
-                froiDir = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined_runs', 'splithalf{}'.format(s))
+                froiDir = op.join(resultsDir, '{}'.format(sub), 'frois', 'combined_runs', 'splithalf{}'.format(s))
                 # grab functional file for resampling (doesn't matter which one)
-                mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(s), '*preproc_bold*.nii.gz'))[0]         
+                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(s), '*preproc_bold*.nii.gz'))[0]       
             # make frois directory
             os.makedirs(froiDir, exist_ok=True)
-            
+              
             # load and binarize mni file
             mni_img = image.load_img(mni_file)
             mni_bin = mni_img.get_fdata() # get image data (as floating point data)
@@ -146,19 +146,12 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         masked_img = image.math_img('img1 * img2', img1 = z_img, img2 = mask_bin)
                         masked_data = masked_img.get_fdata()
                         
-                        # set all voxels that fall outside the search space to nan
-                        # this is done because the voxels will be ranked in descending order so negative values will be ranked after 0 values meaning that voxels outside the search space 
-                        # would be included in the fROI definition if the number of voxels with positive values is fewer than the requested nvox threshold
-                        # the problem with this approach is that if the search space doesn't overlap with the contrast data/acquired data, then 0s will remain in the search space that should be removed
-                        #masked_data[zero_vox_inds] = np.nan
-                        
-                        # an alternative approach is to set 0 values to nan before grabbing top voxels
-                        # this *could* set voxels in the search space that are within the contrast map to 0 but safer than the prior approach and an unlikely outcome
-                        masked_data[masked_data == 0.00000000] = np.nan
+                        # set 0 values to nan before grabbing top voxels
+                        # masked_data[masked_data == 0.00000000] = np.nan
 
                         # save masked file (optional data checking step)
-                        #masked_img_file = op.join(froiDir, '{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
-                        #masked_img.to_filename(masked_img_file)
+                        # masked_img_file = op.join(froiDir, '{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
+                        # masked_img.to_filename(masked_img_file)
                         
                         # get top voxels
                         masked_data_inds = (-masked_data).argsort(axis = None) # the negative ensures that values are returned in decending order
@@ -174,8 +167,8 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         # save froi file
                         # could use roi_name_lower instead of search_spaces[m] to get all lowercase names
                         sub_froi = image.new_img_like(mask_bin, sub_froi) # create a new image of the same class as the initial image
-                        # sub_roi_file = op.join(froiDir, 'sub-{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
-                        sub_roi_file = op.join(froiDir, 'sub-{}_task-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, task, r, s, search_spaces[m], c, top_nvox))
+                        # sub_roi_file = op.join(froiDir, '{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, top_nvox)) # include network in file output name
+                        sub_roi_file = op.join(froiDir, '{}_task-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, task, r, s, search_spaces[m], c, top_nvox))
                         sub_froi.to_filename(sub_roi_file)
 
 # define command line parser function
@@ -257,12 +250,12 @@ def main(argv=None):
 
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
-        print('Defining fROIs for sub-{}'.format(sub))
+        print('Defining fROIs for {}'.format(sub))
         
         # check that run info was provided in subject list, otherwise throw an error
         if not args.runs:
             raise IOError('Run information missing. Make sure you are passing a subject-run list to the pipeline!')
-                
+            
         # pass runs for this sub
         sub_runs=args.runs[index]
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators

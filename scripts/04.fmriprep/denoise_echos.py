@@ -20,13 +20,13 @@ from nilearn.image import resample_to_img, math_img, load_img
 def denoise_echoes(sub, session, bidsDir, derivDir, cores):
     # define subject files prefix based on whether session information is used
     if session == 'yes':
-        sub_prefix = op.join(derivDir, 'sub-{}'.format(sub), 'ses-01')
+        sub_prefix = op.join(derivDir, '{}'.format(sub), 'ses-01')
     else:
-        sub_prefix = op.join(derivDir, 'sub-{}'.format(sub))
+        sub_prefix = op.join(derivDir, '{}'.format(sub))
     
     # grab grey and white matter mask files (we want to use native space files, not MNI files)
-    gm_mask = glob.glob(op.join(sub_prefix, 'anat', 'sub-{}*_label-GM_probseg.nii.gz'.format(sub)))
-    wm_mask = glob.glob(op.join(sub_prefix, 'anat', 'sub-{}*_label-WM_probseg.nii.gz'.format(sub)))
+    gm_mask = glob.glob(op.join(sub_prefix, 'anat', '{}*_label-GM_probseg.nii.gz'.format(sub)))
+    wm_mask = glob.glob(op.join(sub_prefix, 'anat', '{}*_label-WM_probseg.nii.gz'.format(sub)))
     
     # remove MNI space masks
     gm_mask = [m for m in gm_mask if 'MNI' not in m][0]
@@ -34,7 +34,7 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
     
     # confirm that masks were found
     if len(gm_mask) == 0 or len(wm_mask) == 0:
-        print('No brain masks found for sub-{}'.format(sub))
+        print('No brain masks found for {}'.format(sub))
     
     # grab echo bold files
     echo_imgs = glob.glob(op.join(sub_prefix, 'func', '*_echo-*_bold.nii.gz'))
@@ -59,7 +59,7 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
         bold_t1w_mask = op.join('{}_space-T1w_desc-brain_mask.nii.gz'.format(run))
         
         # dilate the bold mask to ensure coverage of whole brain
-        dilated_mask_file = op.join(outDir, 'sub-{}_task-{}_desc-dilated_brain_mask.nii.gz'.format(sub, task))
+        dilated_mask_file = op.join(outDir, '{}_task-{}_desc-dilated_brain_mask.nii.gz'.format(sub, task))
         print('Generating and saving dilated BOLD mask: {}'.format(dilated_mask_file))
         cmd = 'fslmaths ' + bold_mask + ' '
         cmd = cmd + '-dilM -bin ' + dilated_mask_file
@@ -92,7 +92,7 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
         combined_mask = image.math_img('img > 0', img = combined_mask)
         
         # save masks
-        mask_file = op.join(sub_prefix, 'func', 'sub-{}_task-{}_space-T1w_desc-gmwmbold_mask.nii.gz'.format(sub, task))
+        mask_file = op.join(sub_prefix, 'func', '{}_task-{}_space-T1w_desc-gmwmbold_mask.nii.gz'.format(sub, task))
         combined_mask.to_filename(mask_file)
         print('Combined grey matter, white matter, bold mask saved to: {}'.format(mask_file))
         
@@ -175,9 +175,9 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
 
 # define function to pass to multiprocess 
 def call_tedana(sub, task, EchoFiles, MaskFile, EchoTimes, outDir):
-    print(op.join(outDir, 'sub-{}_task-{}_tedana_report.html'.format(sub, task)))
-    if os.path.isfile(op.join(outDir, 'sub-{}_task-{}_tedana_report.html'.format(sub, task))): # if subject tedana report already exists
-        print('Skipping tedana because tedana outputs found for sub-{}'.format(sub))
+    print(op.join(outDir, '{}_task-{}_tedana_report.html'.format(sub, task)))
+    if os.path.isfile(op.join(outDir, '{}_task-{}_tedana_report.html'.format(sub, task))): # if subject tedana report already exists
+        print('Skipping tedana because tedana outputs found for {}'.format(sub))
         
     else: # if subject tedana files don't exist
         # for more info: https://tedana.readthedocs.io/en/stable/generated/tedana.workflows.tedana_workflow.html
@@ -187,7 +187,7 @@ def call_tedana(sub, task, EchoFiles, MaskFile, EchoTimes, outDir):
                                   EchoTimes,
                                   mask = MaskFile,
                                   out_dir = outDir,
-                                  prefix = 'sub-{}_task-{}'.format(sub, task),
+                                  prefix = '{}_task-{}'.format(sub, task),
                                   fittype = 'curvefit',
                                   tedpca = 'aic', # default is aic (least aggressive), kic is a moderate option
                                   #ica_method = 'robustica',
@@ -200,7 +200,7 @@ def call_tedana(sub, task, EchoFiles, MaskFile, EchoTimes, outDir):
     # normalized_img = op.join('{}-MNI152NLin2009cAsym_res-2_desc-denoised_bold.nii.gz'.format(img_prefix))
 
     # if os.path.isfile(normalized_img): # if output file already exists
-        # print('Skipping normalization because normalized outputs found for sub-{}'.format(sub))
+        # print('Skipping normalization because normalized outputs found for {}'.format(sub))
         
     # else:
         # print('Normalizing tedana outputs')

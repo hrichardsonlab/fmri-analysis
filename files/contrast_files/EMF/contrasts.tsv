@@ -1,0 +1,23 @@
+task	desc	conds	weights
+mnm	mental_gt_physical	a_mental b_social c_physical d_foreign e_music f_response	1 0 -1 0 0 0
+mnm	physical_gt_music	a_mental b_social c_physical d_foreign e_music f_response	0 0 1 0 -1 0
+mnm	mental_gt_social	a_mental b_social c_physical d_foreign e_music f_response	1 -1 0 0 0 0
+mnm	physical_gt_foreign	a_mental b_social c_physical d_foreign e_music f_response	0 0 1 -1 0 0
+mnm	response_gt_rest	a_mental b_social c_physical d_foreign e_music f_response	0 0 0 0 0 1
+mnm	social_gt_physical	a_mental b_social c_physical d_foreign e_music f_response	0 1 -1 0 0 0
+mnm	music_gt_physical	a_mental b_social c_physical d_foreign e_music f_response	0 0 -1 0 1 0
+mnm	foreign_gt_physical	a_mental b_social c_physical d_foreign e_music f_response	0 0 -1 1 0 0
+mnm	mental_gt_music	a_mental b_social c_physical d_foreign e_music f_response	1 0 0 0 -1 0
+mnm	social_gt_music	a_mental b_social c_physical d_foreign e_music f_response	0 1 0 0 -1 0
+mnm	mentalsocialphysical_gt_music	a_mental b_social c_physical d_foreign e_music f_response	0.33 0.33 0.33 0 -1 0
+mnm	music_gt_response	a_mental b_social c_physical d_foreign e_music f_response	0 0 0 0 1 -1
+mnm	foreign_gt_response	a_mental b_social c_physical d_foreign e_music f_response	0 0 0 1 0 -1
+mnm	mentalsocialphysical_gt_musicforeign	a_mental b_social c_physical d_foreign e_music f_response	0.33 0.33 0.33 -0.5 -0.5 0
+mnm	mentalsocialphysical_gt_foreign	a_mental b_social c_physical d_foreign e_music f_response	0.33 0.33 0.33 -1 0 0
+mnm	mental_gt_foreign	a_mental b_social c_physical d_foreign e_music f_response	1 0 0 -1 0 0
+mnm	music_gt_foreign	a_mental b_social c_physical d_foreign e_music f_response	0 0 0 -1 1 0
+mnm	mentalsocialphysical_gt_response	a_mental b_social c_physical d_foreign e_music f_response	0.33 0.33 0.33 0 0 -1
+mnm	musicforeign_gt_response	a_mental b_social c_physical d_foreign e_music f_response	0 0 0 0.5 0.5 -1
+mnm	foreign_gt_music	a_mental b_social c_physical d_foreign e_music f_response	0 0 0 1 -1 0
+mnm	mentalsocial_gt_physical	a_mental b_social c_physical d_foreign e_music f_response	0.5 0.5 -1 0 0 0
+mnm	all_gt_response	a_mental b_social c_physical d_foreign e_music f_response	0.2 0.2 0.2 0.2 0.2 -1

@@ -1,5 +1,3 @@
-The current contrasts.tsv file only includes contrasts for the pixar data but additional contrasts for pixar or sesame data can be added to this file. The same contrasts file can be used for the 5y and 7y EBC data given that the same functional paradigms are used for both datasets.
-
 Several important things to note: 
 
 - multiple tasks (experiments) can be included in the same contrasts file. In fact, you should only have one contrasts file per BIDS dataset. The column 'task' indicates which task the contrasts belong to. Task names must be consistent across functional data and the contrasts / event files, etc. This will allow matching to correct functional data files.  

@@ -1,0 +1,8 @@
+task	desc	conds	weights
+t_kmvpa	direct_gt_indirect	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg response	0.25 0.25 -0.5 -0.5 0.25 0.25 0
+t_kmvpa	pos_gt_neg	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg response	1 -1 1 -1 1 -1 0
+t_kmvpa	response_gt_rest	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg response	0 0 0 0 0 0 1
+t_kmvpa	all_gt_response	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg response	0.167 0.167 0.167 0.167 0.167 0.167 -1
+t_kmvpa	seeing_gt_hearing	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg response	0.25 0.25 0.25 0.25 -0.5 -0.5 0
+t_kmvpa	seeingdirect_gt_seeingindirect	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg response	1 1 -1 -1 0 0 0
+t_kmvpa	seeingdirect_gt_hearingdirect	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg response	1 1 0 0 -1 -1 0

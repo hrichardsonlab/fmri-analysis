@@ -1,0 +1,16 @@
+task	desc	conds	weights
+kmvpa_st	mental_gt_physical	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0.125 0.125 0.125 0.125 0.125 0.125 0.125 0.125 -0.5 -0.5 0 0
+kmvpa_st	direct_gt_indirect	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	1 1 -1 -1 1 1 -1 -1 0 0 0 0
+kmvpa_st	pos_gt_neg	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	1 -1 1 -1 1 -1 1 -1 1 -1 0 0
+kmvpa_st	mentpos_gt_mentneg	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	1 -1 1 -1 1 -1 1 -1 0 0 0 0
+kmvpa_st	response_gt_rest	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0 0 0 0 0 0 0 0 0 0 1 0
+kmvpa_st	stimstart_gt_rest	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0 0 0 0 0 0 0 0 0 0 0 1
+kmvpa_st	all_gt_response	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 -1 0
+kmvpa_st	physpos_gt_physneg	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0 0 0 0 0 0 0 0 1 -1 0 0
+kmvpa_st	ment_gt_response	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0.125 0.125 0.125 0.125 0.125 0.125 0.125 0.125 0 0 -1 0
+kmvpa_st	phys_gt_response	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0 0 0 0 0 0 0 0 0.5 0.5 -1 0
+kmvpa_st	all_gt_stimstart	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0.1 0 -1
+kmvpa_st	seeing_gt_hearing	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	1 1 1 1 -1 -1 -1 -1 0 0 0 0
+kmvpa_st	seeingdirect_gt_seeingindirect	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	1 1 -1 -1 0 0 0 0 0 0 0 0
+kmvpa_st	seeingdirect_gt_hearingdirect	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	1 1 0 0 -1 -1 0 0 0 0 0 0
+kmvpa_st	hearingdirect_gt_hearingindirect	ment_SD_pos ment_SD_neg ment_SI_pos ment_SI_neg ment_HD_pos ment_HD_neg ment_HI_pos ment_HI_neg phys_pos phys_neg response stim_start	0 0 0 0 1 1 -1 -1 0 0 0 0

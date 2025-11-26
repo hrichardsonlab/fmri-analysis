@@ -1,14 +1,14 @@
 #!/bin/bash
 
 ################################################################################
-# RUN FMRIPREP ON BIDS DATA ALREADY RUN THROUGH FREESURFER
+# RUN FMRIPREP ON BIDS DATA
 #
 # The fMRIPrep singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/data/EBC/processing SINGULARITY_CACHEDIR=/data/EBC/processing singularity build /data/EBC/processing/singularity_images/fmriprep-24.0.0.simg docker://nipreps/fmriprep:24.0.0
+# 	SINGULARITY_TMPDIR=/RichardsonLab/processing SINGULARITY_CACHEDIR=/RichardsonLab/processing sudo singularity build /RichardsonLab/processing/singularity_images/fmriprep-24.0.0.simg docker://nipreps/fmriprep:24.0.0 
 #
 ################################################################################
 
-# usage documentation - shown if no text file is provided or if script is run outside EBC directory
+# usage documentation - shown if no text file is provided or if script is run outside RichardsonLab directory
 Usage() {
 	echo
 	echo
@@ -16,25 +16,25 @@ Usage() {
 	echo "./run_fmriprep.sh <config file> <list of subjects>"
 	echo
 	echo "Example:"
-	echo "./run_fmriprep.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
+	echo "./run_fmriprep.sh config-pixar_mind-body.tsv open-pixar_subjs.txt"
 	echo
-	echo "TEBC-5y_subjs.txt is a file containing the participants to run fMRIPrep on:"
-	echo "8010"
-	echo "8011"
+	echo "open-pixar_subjs.txt is a file containing the participants to run fMRIPrep on:"
+	echo "sub-pixar001"
+	echo "sub-pixar002"
 	echo "..."
 	echo
 	echo
-	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /data/EBC/ directory."
+	echo "This script must be run within the /RichardsonLab/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /RichardsonLab/ directory."
 	echo
 	echo "Script created by Melissa Thye"
 	echo
 	exit
 }
-[ "$1" = "" ] && Usage
+[ "$1" = "" ] | [ "$2" = "" ] && Usage
 
-# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
-if [[ ! "$PWD" =~ "/EBC/" ]]
+# if the script is run outside of the RichardsonLab directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
+if [[ ! "$PWD" =~ "/RichardsonLab/" ]]; 
 then Usage
 fi
 
@@ -44,7 +44,7 @@ then
 	echo "The configuration file was not found."
 	echo "The script must be submitted with (1) a configuration file name and (2) a subject-run list as in the example below."
 	echo
-	echo "./run_fmriprep.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
+	echo "./run_fmriprep.sh config-pixar_mind-body.tsv open-pixar_subjs.txt"
 	echo	
 	# end script and show full usage documentation	
 	Usage
@@ -56,7 +56,7 @@ then
 	echo "The list of participants was not found."
 	echo "The script must be submitted with (1) a configuration file name and (2) a subject-run list as in the example below."
 	echo
-	echo "./run_fmriprep.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
+	echo "./run_fmriprep.sh config-pixar_mind-body.tsv open-pixar_subjs.txt"
 	echo	
 	# end script and show full usage documentation	
 	Usage
@@ -74,6 +74,7 @@ subjs=$(cat $2 | awk '{print $1}')
 sharedDir=$(awk -F'\t' '$1=="sharedDir"{print $2}' "$config")
 bidsDir=$(awk -F'\t' '$1=="bidsDir"{print $2}' "$config")
 derivDir=$(awk -F'\t' '$1=="derivDir"{print $2}' "$config")
+scratchDir=/Scratch/RichardsonLab/fmriprep
 
 # extract preprocessing relevant values from config file
 multiecho=$(awk -F'\t' '$1=="multiecho"{print $2}' "$config")
@@ -84,14 +85,19 @@ bidsDir="${bidsDir%$'\r'}"
 derivDir="${derivDir%$'\r'}"
 multiecho="${multiecho%$'\r'}"
 
-# convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
-if [ ! -d ${singularityDir}/fmriprep_sandbox ]
-then
-	apptainer build --sandbox ${singularityDir}/fmriprep_sandbox ${singularityDir}/fmriprep-24.0.0.simg
+# export freesurfer license file location
+export license=${sharedDir}/tools/license.txt
+
+# create derivatives directory if it doesn't exist
+if [ ! -d ${derivDir} ]
+then 
+	mkdir -p ${derivDir}
 fi
 
-# export freesurfer license file location
-export license=/data/EBC/local/infantFS/freesurfer/license.txt
+if [ ! -d ${scratchDir} ]
+then 
+	mkdir -p ${scratchDir}
+fi
 
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
 export APPTAINER_TMPDIR=${singularityDir}
@@ -112,8 +118,11 @@ do
 	sub=` basename ${p} `
 
 	echo
-	echo "Running fMRIprep for sub-${sub}"
+	echo "Running fMRIprep for ${sub}"
 	echo
+	
+	# make output subject derivatives directory
+	mkdir -p ${scratchDir}/${sub}
 	
 	# run fmriprep depending on whether data are multi-echo
 	if [[ "${multiecho}" == "yes" ]]
@@ -121,14 +130,14 @@ do
 		echo "Data were aquired with a multi-echo sequence. Running multi-echo fMRIPrep command..."
 		
 		# run singularity
-		apptainer run -C -B /data/EBC:/data/EBC,${singularityDir}:/opt/templateflow				\
-		${singularityDir}/fmriprep_sandbox														\
-		${bidsDir} ${derivDir}																	\
+		singularity run -B /RichardsonLab:/RichardsonLab,/Scratch:/Scratch,${singularityDir}:/opt/templateflow	\
+		${singularityDir}/fmriprep-24.0.0.simg													\
+		${bidsDir} ${scratchDir}																\
 		participant																				\
 		--participant-label ${sub}																\
 		--skip_bids_validation																	\
-		--nthreads 16																			\
-		--omp-nthreads 16																		\
+		--nthreads 8																			\
+		--omp-nthreads 4																		\
 		--ignore slicetiming																	\
 		--fd-spike-threshold 1																	\
 		--dvars-spike-threshold 1.5																\
@@ -136,39 +145,41 @@ do
 		--me-output-echos																		\
 		--output-space MNI152NLin2009cAsym:res-2 T1w											\
 		--return-all-components																	\
-		--derivatives ${derivDir}																\
+		--derivatives ${scratchDir}																\
 		--stop-on-first-crash																	\
 		-w ${singularityDir}																	\
-		--fs-license-file ${license}  > ${derivDir}/sub-${sub}/log_fmriprep_sub-${sub}.txt
+		--fs-license-file ${license}  > ${scratchDir}/${sub}/log_fmriprep_${sub}.txt
 	# if data were not acquired with multiecho sequence
 	else
 		echo "Data were not acquired with a multi-echo sequence. Running default fMRIPrep command..."
 		
 		# run singularity
-		apptainer run -C -B /data/EBC:/data/EBC,${singularityDir}:/opt/templateflow				\
-		${singularityDir}/fmriprep_sandbox														\
-		${bidsDir} ${derivDir}																	\
+		singularity run -B /RichardsonLab:/RichardsonLab,/Scratch:/Scratch,${singularityDir}:/opt/templateflow	\
+		${singularityDir}/fmriprep-24.0.0.simg													\
+		${bidsDir} ${scratchDir}																\
 		participant																				\
 		--participant-label ${sub}																\
 		--skip_bids_validation																	\
-		--nthreads 16																			\
-		--omp-nthreads 16																		\
+		--nthreads 8																			\
+		--omp-nthreads 4																		\
 		--ignore slicetiming																	\
 		--fd-spike-threshold 1																	\
 		--dvars-spike-threshold 1.5																\
 		--output-space MNI152NLin2009cAsym:res-2 T1w											\
 		--return-all-components																	\
-		--derivatives ${derivDir}																\
+		--derivatives ${scratchDir}																\
 		--stop-on-first-crash																	\
 		-w ${singularityDir}																	\
-		--fs-license-file ${license}  > ${derivDir}/sub-${sub}/log_fmriprep_sub-${sub}.txt
+		--fs-license-file ${license}  > ${scratchDir}/${sub}/log_fmriprep_${sub}.txt
 	fi
 	
 	# move subject report and freesurfer output files to appropriate directories
-	mv ${derivDir}/*dseg.tsv ${derivDir}/sourcedata/freesurfer
-	mv ${derivDir}/sub-${sub}.html ${derivDir}/sub-${sub}
+	mv ${scratchDir}/*dseg.tsv ${scratchDir}/sourcedata/freesurfer
+	mv ${scratchDir}/${sub}.html ${scratchDir}/${sub}
 	
-	# give other users permissions to created files
-	#chmod -R a+wrx ${derivDir}/sub-${sub}
+	# move files from scratch directory to derivatives directory
+	mv ${scratchDir}/${sub} ${derivDir}
+	mv ${scratchDir}/logs ${derivDir}
+	mv ${scratchDir}/sourcedata ${derivDir}
 
 done <$2

@@ -32,3 +32,6 @@ Lists of subjects passed to most of the pipeline scripts. Some of the subject li
 
 templates / :
 MNI (typically) template files used to resample participant and ROI files to a common atlas space.
+
+tools / :
+Contains shared toolboxes or files used for analysis. At the moment the FreeSurfer license file is saved here because it needs to be referenced when calling fMRIPrep.

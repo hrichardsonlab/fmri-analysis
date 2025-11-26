@@ -4,37 +4,37 @@
 # RUN MRIQC ON BIDS FORMATTED DATA
 #
 # The MRIQC singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/data/EBC/processing SINGULARITY_CACHEDIR=/data/EBC/processing singularity build /data/EBC/processing/singularity_images/mriqc-24.0.0.simg docker://nipreps/mriqc:24.0.0
+# 	SINGULARITY_TMPDIR=/RichardsonLab/processing SINGULARITY_CACHEDIR=/RichardsonLab/processing sudo singularity build /RichardsonLab/processing/singularity_images/mriqc-24.0.0.simg docker://nipreps/mriqc:24.0.0
 #
 ################################################################################
 
-# usage documentation - shown if no text file is provided or if script is run outside EBC directory
+# usage documentation - shown if no text file is provided or if script is run outside RichardsonLab directory
 Usage() {
-    echo
 	echo
-    echo "Usage:"
-    echo "./run_mriqc.sh <list of subjects>"
-    echo
-    echo "Example:"
-    echo "./run_mriqc.sh TEBC-5y_subjs.txt"
-    echo
-    echo "TEBC-5y_subjs.txt is a file containing the participants to run MRIQC on:"
-    echo "001"
-    echo "002"
+	echo
+	echo "Usage:"
+	echo "./run_mriqc.sh <list of subjects>"
+	echo
+	echo "Example:"
+	echo "./run_mriqc.sh KMVPA_subjs.txt"
+	echo
+	echo "KMVPA_subjs.txt is a file containing the participants to run MRIQC on:"
+	echo "001"
+	echo "002"
 	echo "..."
-    echo
 	echo
-	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /data/EBC/ directory."
 	echo
-    echo "Script created by Melissa Thye"
-    echo
-    exit
+	echo "This script must be run within the /RichardsonLab/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /RichardsonLab/ directory."
+	echo
+	echo "Script created by Melissa Thye"
+	echo
+	exit
 }
 [ "$1" = "" ] && Usage
 
-# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
-if [[ ! "$PWD" =~ "/EBC/" ]]
+# if the script is run outside of the RichardsonLab directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
+if [[ ! "$PWD" =~ "/RichardsonLab/" ]]; 
 then Usage
 fi
 
@@ -42,33 +42,15 @@ fi
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 
-# convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
-if [ ! -d ${singularityDir}/mriqc_sandbox ]
-then
-	apptainer build --sandbox ${singularityDir}/mriqc_sandbox ${singularityDir}/mriqc-24.0.0.simg
-fi
-
 # define subjects from text document
 subjs=$(cat $1) 
 
-# extract sample from list of subjects filename (i.e., are these pilot or HV subjs)
-sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
-cohort=` basename $1 | cut -d '_' -f 1 `
+# extract study name from list of subjects filename
+study=` basename $1 | cut -d '_' -f 1 `
 
-# define data directories depending on sample information
-if [[ ${sample} == 'pilot' ]]
-then
-	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
-	qcDir="/data/EBC/preprocessedData/${cohort}/derivatives/pilot/mriqc"
-elif [[ ${sample} == 'HV' ]]
-then
-	bidsDir="/data/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
-	qcDir="/data/EBC/preprocessedData/${cohort}-adultpilot/derivatives/mriqc"
-
-else
-	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data"
-	qcDir="/data/EBC/preprocessedData/${cohort}/derivatives/mriqc"
-fi
+# define data directories depending on study information
+bidsDir="/RichardsonLab/preprocessedData/${study}"
+qcDir="${bidsDir}/derivatives/mriqc"
 
 # create QCdirectory if they don't exist
 if [ ! -d ${qcDir} ]
@@ -76,36 +58,47 @@ then
 	mkdir -p ${qcDir}
 fi
 
-# display subjects
-echo
-echo "Running MRIQC for..."
-echo "${subjs}"
-
 # change the location of the singularity cache ($HOME/.singularity/cache by default, but limited space in this directory)
 export APPTAINER_TMPDIR=${singularityDir}
 export APPTAINER_CACHEDIR=${singularityDir}
 unset PYTHONPATH
 
+# display subjects
+echo
+echo "Running MRIQC for..."
+echo "${subjs}"
+
 # run MRIQC (https://mriqc.readthedocs.io/en/latest/running.html#singularity-containers)
 ## generate subject reports
-apptainer run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
-${singularityDir}/mriqc_sandbox																		\
-${bidsDir} ${qcDir}																					\
-participant																							\
---participant_label ${subjs}																		\
---no-sub 																							\
---fd_thres 1																						\
--m T1w bold 																						\
+singularity run -B /RichardsonLab:/RichardsonLab	\
+${singularityDir}/mriqc-24.0.0.simg					\
+${bidsDir} ${qcDir}									\
+participant											\
+--participant_label ${subjs}						\
+--no-sub 											\
+--fd_thres 1										\
+-m T1w bold 										\
 -w ${singularityDir}
 
-# generate group reports
-apptainer run -B ${bidsDir}:${bidsDir} -B ${qcDir}:${qcDir} -B ${singularityDir}:${singularityDir}	\
-${singularityDir}/mriqc_sandbox																		\
-${bidsDir} ${qcDir} group 																			\
--m T1w bold
+# the way the drive is mounted raises a "database is locked" error so copy files to project directory temporarily to generate group reports
+cp -R ${qcDir} ${projDir}
+
+## generate group reports
+singularity run -B /RichardsonLab:/RichardsonLab	\
+${singularityDir}/mriqc-24.0.0.simg					\
+${bidsDir} ${projDir}/mriqc							\
+group 												\
+-m T1w bold											\
+-w ${singularityDir}
+
+# transfer group reports back to QC directory
+cp ${projDir}/mriqc/group* ${qcDir}
 
 # remove hidden files in singularity directory to avoid space issues
+rm -r ${projDir}/mriqc
 rm ${singularityDir}/config*
 rm -r ${singularityDir}/.bids*
+rm -r ${qcDir}/.bids*
 rm -r ${singularityDir}/mriqc_wf*
 rm -r ${singularityDir}/reportlets
+

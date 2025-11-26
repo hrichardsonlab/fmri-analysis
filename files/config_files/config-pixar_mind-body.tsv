@@ -1,29 +1,29 @@
-sharedDir	/data/EBC/processing
-bidsDir	/data/EBC/preprocessedData/TEBC-5y/BIDs_data
-derivDir	/data/EBC/preprocessedData/TEBC-5y/derivatives
+sharedDir	/RichardsonLab/processing
+bidsDir	/RichardsonLab/preprocessedData/TRAIN/
+derivDir	/RichardsonLab/preprocessedData/TRAIN/derivatives
 resultsDir	
 smoothDir	
 resampleDir	
 space	MNI
 task	pixar
-sessions	01
+sessions	no
 multiecho	no
 FD_thresh	1
 DVARS_thresh	1.5
 art_norm_thresh	1
 art_z_thresh	3
-ntmpts_exclude	.33
+ntmpts_exclude	0.33
 ignore_motion	no
 dropvols	0
-smoothing	5
-hpf	100
+smoothing	0
+hpf	128
 filter	butterworth
-detrend	yes
+detrend	no
 standardize	no
-splithalf	yes
+splithalf	no
 events	mind, body
 modulators	no
-contrast	mind-body
+contrast	mind, body
 timecourses	no
 regressors	art, aCompCor
 convert_surf	
@@ -32,18 +32,18 @@ FS_ROI
 search_spaces	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
 match_events	no
 top_nvox	80
-mask	fROI-LTPJ
+mask	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
 extract	mean
-nonparametric	
-npermutations	
-group_comparison	
-group_variables	
-est_group_variances	
-tfce	
-stat_thresh	
-cluster_size	
-top_nregions	
-hrf_lag	
-rc_ntps	
-rc_thresh	
+nonparametric	yes
+npermutations	5000
+group_comparison	within
+group_variables	no
+est_group_variances	no
+tfce	yes
+stat_thresh	0.95
+cluster_size	10
+top_nregions	6
+hrf_lag	4
+rc_ntps	2
+rc_thresh	0.05
 overwrite	no

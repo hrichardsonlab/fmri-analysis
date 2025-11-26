@@ -12,7 +12,7 @@ import argparse
 import pandas as pd
 import glob
 
-# define compilation function
+# define first level workflow function
 def compile_timecourses(projDir, resultsDir):
     
     print('Searching for timecourse files in {}'.format(resultsDir))
@@ -28,7 +28,7 @@ def compile_timecourses(projDir, resultsDir):
         # extract subject number
         sub = result.split('sub-')[-1]
         
-        print('Compiling timecourses for sub-{}'.format(sub))
+        print('Compiling timecourses for {}'.format(sub))
 
         # define timecourse files in subject folder
         tc_files = glob.glob(op.join(result, 'timecourses', '*.csv'))
@@ -40,7 +40,7 @@ def compile_timecourses(projDir, resultsDir):
                 tc_name = timecourse.replace('whole_brain', 'wholebrain').split('sub-')[-1]
                 tc_name = tc_name.split('_mean_timecourse.csv')[0]
                 tc_name = tc_name.split('_')
-
+                
                 # extract ROI, run, and splithalf info from file name
                 if len(tc_name) == 5: # if splithalf
                     roi_name = tc_name[4]
@@ -63,7 +63,7 @@ def compile_timecourses(projDir, resultsDir):
                 tc_dat.insert(loc=0, column='ROI', value=roi_name)
                 if run != 'no':
                     tc_dat.insert(loc=0, column='run', value=run)
-                tc_dat.insert(loc=0, column='sub', value='sub-{}'.format(sub))
+                tc_dat.insert(loc=0, column='sub', value='{}'.format(sub))
                 tc_dat.insert(loc=0, column='time', value=range(len(tc_dat)))
 
                 # merge with compiled timecourses

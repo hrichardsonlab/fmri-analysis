@@ -1,12 +1,12 @@
-sharedDir	/data/EBC/processing
-bidsDir	/data/EBC/preprocessedData/TEBC-5y/BIDs_data
-derivDir	/data/EBC/preprocessedData/TEBC-5y/derivatives
+sharedDir	/RichardsonLab/processing
+bidsDir	
+derivDir	
 resultsDir	
 smoothDir	
 resampleDir	
 space	MNI
 task	
-sessions	01
+sessions	no
 multiecho	no
 FD_thresh	1
 DVARS_thresh	1.5

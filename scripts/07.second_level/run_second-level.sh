@@ -8,33 +8,33 @@
 # the pipeline. These parameters are likely to vary for each study, so must be specified for each project.
 #
 # The nipype singularity was installed using the following code:
-# 	SINGULARITY_TMPDIR=/data/EBC/processing SINGULARITY_CACHEDIR=/data/EBC/processing singularity build /data/EBC/processing/singularity_images/nipype-1.8.6.simg docker://nipype/nipype:latest
+# 	SINGULARITY_TMPDIR=/RichardsonLab/processing SINGULARITY_CACHEDIR=/RichardsonLab/processing sudo singularity build /RichardsonLab/processing/singularity_images/nipype.simg docker://nipype/nipype:latest
 #
 ################################################################################
 
 # usage documentation - shown if no text file is provided or if script is run outside EBC directory
 Usage() {
+    echo
 	echo
-	echo
-	echo "Usage:"
-	echo "./run_second-level.sh <pipeline script> <configuration file name> <subject-condition list>"
-	echo
-	echo "Example:"
-	echo "./run_second-level.sh secondlevel_pipeline.py config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
-	echo
+    echo "Usage:"
+    echo "./run_second-level.sh <pipeline script> <configuration file name> <subject-condition list>"
+    echo
+    echo "Example:"
+    echo "./run_second-level.sh secondlevel_pipeline.py config-kmvpa_mental-physical.tsv KMVPA_subjs.txt"
+    echo
 	echo "the config file name (not path!) should be provided"
 	echo
-	echo "TEBC-5y_subjs.txt is a subject-condition file containing the participants, run info, group variable, and other covariates to process:"
+	echo "KMVPA_subjs.txt is a subject-condition file containing the participants, run info, group variable, and other covariates to process:"
 	echo "sub  runs group"
-	echo "8010 1,2 A"
-	echo "8011 1,2 B"
-	echo "8012 1,2 B"
-	echo "8013 1,2 A"
+	echo "001 1,2 A"
+	echo "002 1,2 B"
+	echo "003 1,2 B"
+	echo "004 1,2 A"
 	echo "..."
+    echo
 	echo
-	echo
-	echo "This script must be run within the /data/EBC/ directory on the server due to space requirements."
-	echo "The script will terminiate if run outside of the /data/EBC/ directory."
+	echo "This script must be run within the /RichardsonLab/ directory on the server due to space requirements."
+	echo "The script will terminiate if run outside of the /RichardsonLab/ directory."
 	echo
 	echo "Script created by Melissa Thye"
 	echo
@@ -42,8 +42,8 @@ Usage() {
 }
 [ "$1" = "" ] | [ "$2" = "" ] | [ "$3" = "" ] && Usage
 
-# if the script is run outside of the EBC directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
-if [[ ! "$PWD" =~ "/EBC/" ]]
+# if the script is run outside of the RichardsonLab directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
+if [[ ! "$PWD" =~ "/RichardsonLab/" ]]; 
 then Usage
 fi
 
@@ -54,7 +54,7 @@ then
 	echo "The pipeline script was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject-condition list as in the example below."
 	echo
-	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv TEBC-5y_subjs.txt"
+	echo "./run_second-level.sh secondlevel_pipeline.py config-kmvpa_mental-physical.tsv KMVPA_subjs.txt"
 	echo
 	echo "Make sure the subject list has column names and run and group information are included!"
 	
@@ -68,7 +68,7 @@ then
 	echo "The configuration file was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject-condition list as in the example below."
 	echo
-	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv TEBC-5y_subjs.txt"
+	echo "./run_second-level.sh secondlevel_pipeline.py config-kmvpa_mental-physical.tsv KMVPA_subjs.txt"
 	echo
 	echo "Make sure the subject list has column names and run and group information are included!"
 	
@@ -82,7 +82,7 @@ then
 	echo "The list of participants was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject-condition list as in the example below."
 	echo
-	echo "./run_second-level.sh secondlevel_pipeline.py config-events.tsv TEBC-5y_subjs.txt"
+	echo "./run_second-level.sh secondlevel_pipeline.py config-kmvpa_mental-physical.tsv KMVPA_subjs.txt"
 	echo
 	echo "Make sure the subject list has column names and run and group information are included!"
 	
@@ -115,12 +115,6 @@ singularityDir="${projDir}/singularity_images"
 codeDir="${projDir}/scripts/07.second_level"
 outDir="${projDir}/analysis/${proj_name}/${analysis_name}"
 
-# convert the singularity image to a sandbox if it doesn't already exist to avoid having to rebuild on each run
-if [ ! -d ${singularityDir}/nipype_sandbox ]
-then
-	apptainer build --sandbox ${singularityDir}/nipype_sandbox ${singularityDir}/nipype_nilearn.simg
-fi
-
 # define output logfile
 if [[ ${pipeline} == *'pipeline.py'* ]]
 then
@@ -140,8 +134,8 @@ echo "Running" ${pipeline} "for..."
 echo "${subjs}"
 
 # run second-level workflow using script specified in script call
-apptainer exec -C -B /data/EBC:/data/EBC				\
-${singularityDir}/nipype_sandbox						\
+singularity exec -B /RichardsonLab:/RichardsonLab		\
+${singularityDir}/nipype_nilearn.simg					\
 /neurodocker/startup.sh python ${codeDir}/${pipeline}	\
 -p ${projDir}											\
 -s ${subjs}												\

@@ -33,28 +33,28 @@ sample=` basename $1 | cut -d '-' -f 3 | cut -d '.' -f 1 `
 cohort=` basename $1 | cut -d '_' -f 1 `
 
 # define location of shared tools (dcm2bids)
-toolDir="/data/EBC/processing/tools"
+toolDir="/EBC/processing/tools"
 
 # define data directories depending on sample information
 if [[ ${sample} == 'pilot' ]]
 then
 	# define data directories
-	dataDir="/data/EBC/rawData/${cohort}"
-	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
+	dataDir="/EBC/rawData/${cohort}"
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data/pilot"
 	
 	# define config file to use for bids conversion
 	config=${toolDir}/dcm2bids/${cohort}_config_file-pilot.json
 elif [[ ${sample} == 'HV' ]]
 then
 	# define data directories
-	dataDir="/data/EBC/rawData/${cohort}-adultpilot"
-	bidsDir="/data/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
+	dataDir="/EBC/rawData/${cohort}-adultpilot"
+	bidsDir="/EBC/preprocessedData/${cohort}-adultpilot/BIDs_data"
 	# define config file to use for bids conversion
 	config=${toolDir}/dcm2bids/${cohort}_config_file.json
 else
 	# define data directories
-	dataDir="/data/EBC/rawData/${cohort}"
-	bidsDir="/data/EBC/preprocessedData/${cohort}/BIDs_data"
+	dataDir="/EBC/rawData/${cohort}"
+	bidsDir="/EBC/preprocessedData/${cohort}/BIDs_data"
 	# define config file to use for bids conversion
 	config=${toolDir}/dcm2bids/${cohort}_config_file.json
 fi
@@ -150,7 +150,7 @@ do
 		echo "Converting sub-${NAME} to BIDS"
 		echo
 		
-		# # activate conda environment via bash
+		# activate conda environment via bash
 		eval "$(conda shell.bash hook)"
 		conda activate ${toolDir}/dcm2bids
 		
@@ -194,13 +194,13 @@ do
 		rm ${bidsDir}/${subDir}/dwi/*.bv*
 		
 		# generate new diffusion files (more info: https://mrtrix.readthedocs.io/en/dev/reference/commands/dwiextract.html)
-		/data/EBC/local/MRtrix3.0.4/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
+		/EBC/local/MRtrix3_stable/mrtrix3/bin/dwiextract ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
 														 -fslgrad ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${tmpDir}/${subDir}/dwi/${file_prefix}_dwi.bval \
 														 -shells 0,500,1000,2000 ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.nii.gz \
 														 -export_grad_fsl ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bvec ${bidsDir}/${subDir}/dwi/${file_prefix}_dwi.bval
 		
 		# give other users permissions to the generated folder
-		#chmod -R a+rwx ${bidsDir}/sub-${NAME}
+		chmod -R a+rwx ${bidsDir}/sub-${NAME}
 	
 	fi
 	

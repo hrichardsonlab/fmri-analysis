@@ -21,14 +21,14 @@ def process_roi(projDir, derivDir, ses, sub, FS_ROI):
 
     # define directories
     fsDir = op.join(derivDir, 'sourcedata/freesurfer')
-    subDir = op.join(derivDir, 'sourcedata/freesurfer/sub-{}/mri'.format(sub))
+    subDir = op.join(derivDir, 'sourcedata/freesurfer/{}/mri'.format(sub))
     roiDir = op.join(projDir, 'files/ROIs')
     
     # define func directory, depending on whether session information is in directory/file names
     if ses != 'no': # if session was provided
-        funcDir = op.join(derivDir, 'sub-{}'.format(sub), 'ses-{}'.format(ses), 'func')
+        funcDir = op.join(derivDir, '{}'.format(sub), 'ses-{}'.format(ses), 'func')
     else:
-        funcDir = op.join(derivDir, 'sub-{}'.format(sub), 'func')
+        funcDir = op.join(derivDir, '{}'.format(sub), 'func')
     
     # check that fsDir directory exists
     if not op.exists(fsDir):
@@ -38,13 +38,13 @@ def process_roi(projDir, derivDir, ses, sub, FS_ROI):
     os.makedirs(roiDir, exist_ok=True)
 
     # grab functional data file (grabs the first one because all that matters is the dimensions of the data)
-    func_file = glob.glob(op.join(funcDir, 'sub-{}_*_space-T1w_desc-preproc_bold.nii.gz'.format(sub)))[0]
+    func_file = glob.glob(op.join(funcDir, '{}_*_space-T1w_desc-preproc_bold.nii.gz'.format(sub)))[0]
     func_img = image.load_img(func_file)
     print('ROIs will be resampled to match dimensions of functional data: {}'.format(func_file ))
 
     # grab freesurfer file for conversion to nifti
     mgz_file = op.join(subDir, 'aparc+aseg.mgz')
-    nii_file = op.join(roiDir, 'sub-{}_space-T1w_aparc+aseg.nii.gz'.format(sub))
+    nii_file = op.join(roiDir, '{}_space-T1w_aparc+aseg.nii.gz'.format(sub))
     
     # grab look up table to derive index matching specified ROI
     lut_file = op.join(fsDir, 'desc-aparcaseg_dseg.tsv')
@@ -78,7 +78,7 @@ def process_roi(projDir, derivDir, ses, sub, FS_ROI):
         
         # check if an index value was found
         if roi_index > 0:
-            print('Defining {} using {} index from look up table for sub-{}'.format(roi, roi_index, sub))
+            print('Defining {} using {} index from look up table for {}'.format(roi, roi_index, sub))
         else:
             print('No match found in the look up table for {}'.format(roi))
 
@@ -88,7 +88,7 @@ def process_roi(projDir, derivDir, ses, sub, FS_ROI):
         mask_img = image.new_img_like(nii_img, mask_dat)
         
         # define output file
-        roi_file = op.join(fsroiDir, 'sub-{}_space-T1w_{}.nii.gz'.format(sub, roi))
+        roi_file = op.join(fsroiDir, '{}_space-T1w_{}.nii.gz'.format(sub, roi))
 
         # resample mask to match functional data
         roi_img = image.resample_to_img(mask_img, func_img, interpolation='nearest')

@@ -15,11 +15,11 @@ Usage() {
 	echo "./generate_scanfiles.sh <config file> <list of subjects>"
 	echo
 	echo "Example:"
-	echo "./generate_scanfiles.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
+	echo "./generate_scanfiles.sh config-awe_emo-phys.tsv RLABPILOT_subjs.txt"
 	echo
-	echo "TEBC-5y_subjs.txt is a file containing the participants to generate the scans.tsv file for:"
-	echo "001"
-	echo "002"
+	echo "RLABPILOT_subjs.txt is a file containing the participants to generate the scans.tsv file for:"
+	echo "sub-RLABPILOT01"
+	echo "sub-RLABPILOT02"
 	echo "..."
 	echo
 	echo
@@ -36,7 +36,7 @@ then
 	echo "The configuration file was not found."
 	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
 	echo
-	echo "./generate_scanfiles.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
+	echo "./generate_scanfiles.sh config-awe_emo-phys.tsv RLABPILOT_subjs.txt"
 	echo	
 	# end script and show full usage documentation	
 	Usage
@@ -48,7 +48,7 @@ then
 	echo "The list of participants was not found."
 	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
 	echo
-	echo "./generate_scanfiles.sh config-pixar_mind-body.tsv TEBC-5y_subjs.txt"
+	echo "./generate_scanfiles.sh config-awe_emo-phys.tsv RLABPILOT_subjs.txt"
 	echo	
 	# end script and show full usage documentation	
 	Usage
@@ -72,7 +72,7 @@ bidsDir="${bidsDir%$'\r'}"
 derivDir="${derivDir%$'\r'}"
 sessions="${sessions%$'\r'}"
 
-# print confirmation of sample and directory
+# print confirmation of study and directory
 echo 'Generating scans.tsv files for data in' ${derivDir}
 
 # iterate over subjects
@@ -83,19 +83,19 @@ do
 	# define subject derivatives directory depending on whether data are organized in session folders
 	if [[ ${sessions} == 'yes' ]]
 	then
-		subDir_bids="${bidsDir}/sub-${sub}/ses-01/func"
-		subDir_deriv="${derivDir}/sub-${sub}/ses-01/func"
-		scan_file="sub-${sub}_ses-01_scans.tsv"
+		subDir_bids="${bidsDir}/${sub}/ses-01/func"
+		subDir_deriv="${derivDir}/${sub}/ses-01/func"
+		scan_file="${sub}_ses-01_scans.tsv"
 	else
-		subDir_bids="${bidsDir}/sub-${sub}/func"
-		subDir_deriv="${derivDir}/sub-${sub}/func"
-		scan_file="sub-${sub}_scans.tsv"
+		subDir_bids="${bidsDir}/${sub}/func"
+		subDir_deriv="${derivDir}/${sub}/func"
+		scan_file="${sub}_scans.tsv"
 	fi
-	
+
 	# create scan.tsv file for each subject who has functional data
 	if [ -d ${subDir_bids} ] # if the subject has a functional data folder
 	then
-		echo "Generating scans.tsv file for sub-${sub}"
+		echo "Generating scans.tsv file for ${sub}"
 
 		# delete scans.tsv file if it already exists
 		if [ -f ${subDir_bids}/${scan_file} ] || [ -f ${subDir_deriv}/${scan_file} ] 
@@ -120,11 +120,13 @@ do
 			name=""
 			name='\nfunc/'${current}
 			printf ${name} >> ${subDir_bids}/${scan_file}
+		
 		done
+
 	fi
 	
 	# copy scans.tsv to derivDir
 	cp ${subDir_bids}/${scan_file} ${subDir_deriv}/${scan_file}
 	
-done <$1
+done <$2
 
