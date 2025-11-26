@@ -13,14 +13,14 @@ Usage() {
 	echo
 	echo
 	echo "Usage:"
-	echo "./run_mriqc.sh <list of subjects>"
+	echo "./run_mriqc.sh <config file> <list of subjects>"
 	echo
 	echo "Example:"
-	echo "./run_mriqc.sh KMVPA_subjs.txt"
+	echo "./run_mriqc.sh config-pixar_mind-body.tsv open-pixar_subjs.txt"
 	echo
-	echo "KMVPA_subjs.txt is a file containing the participants to run MRIQC on:"
-	echo "001"
-	echo "002"
+	echo "open-pixar_subjs.txt is a file containing the participants to run fMRIPrep on:"
+	echo "sub-pixar001"
+	echo "sub-pixar002"
 	echo "..."
 	echo
 	echo
@@ -31,28 +31,56 @@ Usage() {
 	echo
 	exit
 }
-[ "$1" = "" ] && Usage
+[ "$1" = "" ] | [ "$2" = "" ] && Usage
 
 # if the script is run outside of the RichardsonLab directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/RichardsonLab/" ]]; 
 then Usage
 fi
 
+if [ ! ${1##*.} == "tsv" ]
+then
+	echo
+	echo "The configuration file was not found."
+	echo "The script must be submitted with (1) a configuration file name and (2) a subject-run list as in the example below."
+	echo
+	echo "./run_mriqc.sh config-pixar_mind-body.tsv open-pixar_subjs.txt"
+	echo	
+	# end script and show full usage documentation	
+	Usage
+fi
+
+if [ ! ${2##*.} == "txt" ]
+then
+	echo
+	echo "The list of participants was not found."
+	echo "The script must be submitted with (1) a configuration file name and (2) a subject-run list as in the example below."
+	echo
+	echo "./run_mriqc.sh config-pixar_mind-body.tsv open-pixar_subjs.txt"
+	echo	
+	# end script and show full usage documentation	
+	Usage
+fi
+
+
 # define directories
 projDir=`cat ../../PATHS.txt`
 singularityDir="${projDir}/singularity_images"
 
-# define subjects from text document
-subjs=$(cat $1) 
-
-# extract study name from list of subjects filename
-study=` basename $1 | cut -d '_' -f 1 `
+# define config file and subjects from files passed in script call
+config=${projDir}/$1
+subjs=$(cat $2 | awk '{print $1}')
 
 # define data directories depending on study information
-bidsDir="/RichardsonLab/preprocessedData/${study}"
-qcDir="${bidsDir}/derivatives/mriqc"
+bidsDir=$(awk -F'\t' '$1=="bidsDir"{print $2}' "$config")
+derivDir=$(awk -F'\t' '$1=="derivDir"{print $2}' "$config")
 
-# create QCdirectory if they don't exist
+# strip extra formatting if present
+bidsDir="${bidsDir%$'\r'}"
+derivDir="${derivDir%$'\r'}"
+
+# create QC directory if it doesn't exist
+qcDir="${derivDir}/mriqc"
 if [ ! -d ${qcDir} ]
 then 
 	mkdir -p ${qcDir}
@@ -81,21 +109,21 @@ participant											\
 -w ${singularityDir}
 
 # the way the drive is mounted raises a "database is locked" error so copy files to project directory temporarily to generate group reports
-cp -R ${qcDir} ${projDir}
+#cp -R ${qcDir} ${projDir}
 
 ## generate group reports
 singularity run -B /RichardsonLab:/RichardsonLab	\
 ${singularityDir}/mriqc-24.0.0.simg					\
-${bidsDir} ${projDir}/mriqc							\
+${bidsDir} ${qcDir}									\
 group 												\
 -m T1w bold											\
 -w ${singularityDir}
 
 # transfer group reports back to QC directory
-cp ${projDir}/mriqc/group* ${qcDir}
+#cp ${projDir}/mriqc/group* ${qcDir}
 
 # remove hidden files in singularity directory to avoid space issues
-rm -r ${projDir}/mriqc
+#rm -r ${projDir}/mriqc
 rm ${singularityDir}/config*
 rm -r ${singularityDir}/.bids*
 rm -r ${qcDir}/.bids*
