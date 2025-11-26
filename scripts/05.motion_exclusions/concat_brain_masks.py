@@ -63,6 +63,11 @@ def concat_masks(derivDir, sub, ses, multiecho):
         mni_mask_data[mni_mask_data >= 1] = 1 # for values equal to or greater than 1, make 1 (values less than 1 are already 0)
         mni_mask_img_bin = image.new_img_like(mni_basemask_img, mni_mask_data) # create a new image of the same class as the base mask image
         
+        # for multi-echo mask files, squeeze the statistical map to remove the 4th singleton dimension
+        if multiecho == 'yes':
+            mni_mask_img_bin = image.math_img('np.squeeze(img)', img=mni_mask_img_bin)
+        
+        # save mask file
         mni_mask_img_bin.to_filename(mni_img_fname)
         print('concatenated mask saved to: {}'.format(mni_img_fname))
 

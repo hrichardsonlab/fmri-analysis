@@ -17,8 +17,6 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, multiecho, fd_thresh, dvar
     # print current subject
     print('running motion exclusion script for {}'.format(sub))
     
-    layout = BIDSLayout(derivDir)
-    
     # find the BIDS scans file, depending on whether session information is in BIDS directory/file names
     if ses != 'no':
         funcDir = op.join(derivDir, '{}'.format(sub), 'ses-{}'.format(ses), 'func')
@@ -28,15 +26,14 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, multiecho, fd_thresh, dvar
         prefix = '{}'.format(sub)   
     
     # copy fMRIPrep output images to data checking directory for QC
-    print(glob.glob('{}/{}/figures/*_desc-reconall_T1w.svg'.format(derivDir, sub)))
-    for T1_svg in glob.glob('{}/{}/figures/*_desc-reconall_T1w.svg'.format(derivDir, sub)):
-        shutil.copy(T1_svg, qcDir)
-    for MNI_svg in glob.glob('{}/{}/figures/*_space-MNI152NLin2009cAsym*T1w.svg'.format(derivDir, sub)):
-        shutil.copy(MNI_svg, qcDir)
-    for sdc_svg in glob.glob('{}/{}/figures/*_desc-sdc_bold.svg'.format(derivDir, sub)):
-        shutil.copy(sdc_svg, qcDir)
-    for coreg_svg in glob.glob('{}/{}/figures/*_desc-coreg_bold.svg'.format(derivDir, sub)):
-        shutil.copy(coreg_svg, qcDir)
+    # for T1_svg in glob.glob('{}/{}/figures/*_desc-reconall_T1w.svg'.format(derivDir, sub)):
+        # shutil.copy(T1_svg, qcDir)
+    # for MNI_svg in glob.glob('{}/{}/figures/*_space-MNI152NLin2009cAsym*T1w.svg'.format(derivDir, sub)):
+        # shutil.copy(MNI_svg, qcDir)
+    # for sdc_svg in glob.glob('{}/{}/figures/*_desc-sdc_bold.svg'.format(derivDir, sub)):
+        # shutil.copy(sdc_svg, qcDir)
+    # for coreg_svg in glob.glob('{}/{}/figures/*_desc-coreg_bold.svg'.format(derivDir, sub)):
+        # shutil.copy(coreg_svg, qcDir)
             
     # read the scans.tsv file into a dataframe, then create one useful dataframe
     scansfiles = glob.glob(op.join(funcDir, '*_scans.tsv'))
@@ -131,7 +128,7 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, multiecho, fd_thresh, dvar
             mask_file = mf[0]
             
             print(preproc_file)
-        
+            
             # read in confounds file
             dfConfounds = pd.read_csv(confound_file, sep='\t')
             nVols = len(dfConfounds) # record number of volumes to calculate threshold for excluding data
@@ -151,7 +148,7 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, multiecho, fd_thresh, dvar
             art = Node(rapidart.ArtifactDetect(mask_type = 'file',
                                                mask_file =  mask_file, # specifies a brain mask file (should be an image consisting of 0s and 1s)
                                                realigned_files = preproc_file,
-                                               realignment_parameters = motion_params,
+                                               realignment_parameters = [motion_params],
                                                use_norm = True, # use a composite of the motion parameters in order to determine outliers
                                                norm_threshold = art_norm_thresh, # threshold to use to detect motion-related outliers when composite motion is being used
                                                zintensity_threshold = art_z_thresh, # intensity Z-threshold used to detect images that deviate from the mean
@@ -249,7 +246,7 @@ def main(argv=None):
     
     # make QC directory
     qcDir = op.join(derivDir, 'data_checking', '{}'.format(args.sub))
-    os.makedirs(qcDir, exist_ok=True)
+    # os.makedirs(qcDir, exist_ok=True) # uncommented because reports can be viewed on datastore instead
 
     # run mark_motion_exclusions function with different inputs depending on config options
     mark_motion_exclusions(args.sub, derivDir, qcDir, ses, multiecho, fd_thresh, dvars_thresh, art_norm_thresh, art_z_thresh, ntmpts_exclude)

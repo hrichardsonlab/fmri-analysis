@@ -113,16 +113,23 @@ do
 		# for each file in the func directory, add filename to scans.tsv file
 		for f in ${files[@]}
 		do
-			# extract file name (remove full path)
+			# extract file name (remove full path and echo info, if needed)
 			current=`basename ${f}`
-		
+			current=$(echo "${current}" | sed -E 's/_echo-[0-9]+//')
+			
+			# skip if the run is already in the list (which will happen for multi-echo data)
+			if grep -qx "func/${current}" "${subDir_bids}/${scan_file}"
+			then
+				continue
+			fi
+
 			# add file name (with directory) to scans.tsv file
 			name=""
 			name='\nfunc/'${current}
 			printf ${name} >> ${subDir_bids}/${scan_file}
 		
 		done
-
+		
 	fi
 	
 	# copy scans.tsv to derivDir

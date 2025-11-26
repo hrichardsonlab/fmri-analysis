@@ -102,11 +102,11 @@ do
 	-c ${projDir}/${config}
 	
 	# run singularity to generate files with motion information for run exclusion
-	# singularity exec -B /RichardsonLab:/RichardsonLab					\
-	# ${singularityDir}/nipype_nilearn.simg 								\
-	# /neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py \
-	# -s ${sub} 															\
-	# -c ${projDir}/${config} 											\
-	# -w ${singularityDir}
+	singularity exec -B /RichardsonLab:/RichardsonLab					\
+	${singularityDir}/nipype_nilearn.simg 								\
+	/neurodocker/startup.sh python ${codeDir}/mark_motion_exclusions.py \
+	-s ${sub} 															\
+	-c ${projDir}/${config} 											\
+	-w ${singularityDir}
 
 done <$2
