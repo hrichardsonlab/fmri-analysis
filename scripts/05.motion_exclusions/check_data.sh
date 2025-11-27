@@ -14,7 +14,7 @@
 #
 ################################################################################
 
-# usage documentation - shown if no text file is provided or if script is run outside EBC directory
+# usage documentation
 Usage() {
 	echo
 	echo
@@ -25,8 +25,8 @@ Usage() {
 	echo "./check_data.sh config-pixar_mind-body.tsv KMVPA_subjs.txt"
 	echo
 	echo "KMVPA_subjs.txt is a file containing the participants to check:"
-	echo "001"
-	echo "002"
+	echo "sub-001"
+	echo "sub-002"
 	echo "..."
 	echo
 	echo

@@ -14,19 +14,19 @@
 # This script must be run AFTER the motion exclusions scripts.
 ################################################################################
 
-# usage documentation - shown if no text file is provided or if script is run outside RichardsonLab directory
+# usage documentation
 Usage() {
 	echo
 	echo
 	echo "Usage:"
-	echo "./get_outlier_info.sh <list of subjects>"
+	echo "./get_outlier_info.sh <configuration file name> <list of subjects>"
 	echo
 	echo "Example:"
-	echo "./get_outlier_info.sh KMVPA_subjs.txt"
+	echo "./get_outlier_info.sh config-pixar_mind-body.tsv KMVPA_subjs.txt"
 	echo
 	echo "KMVPA_subjs.txt is a file containing the participants to check:"
-	echo "001"
-	echo "002"
+	echo "sub-001"
+	echo "sub-002"
 	echo "..."
 	echo
 	echo
@@ -37,28 +37,53 @@ Usage() {
 	echo
 	exit
 }
-[ "$1" = "" ] && Usage
+[ "$1" = "" ] | [ "$2" = "" ] && Usage
 
 # if the script is run outside of the RichardsonLab directory (e.g., in home directory where space is limited), terminate the script and show usage documentation
 if [[ ! "$PWD" =~ "/RichardsonLab/" ]]; 
 then Usage
 fi
 
-# indicate whether session folders are used
-sessions='no'
+# check files passed in script call
+if [ ! ${1##*.} == "tsv" ]
+then
+	echo
+	echo "The configuration file was not found."
+	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
+	echo
+	echo "./get_outlier_info.sh config-pixar_mind-body.tsv KMVPA_subjs.txt"
+	echo	
+	# end script and show full usage documentation	
+	Usage
+fi
+
+if [ ! ${2##*.} == "txt" ]
+then
+	echo
+	echo "The list of participants was not found."
+	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
+	echo
+	echo "./get_outlier_info.sh config-pixar_mind-body.tsv KMVPA_subjs.txt"
+	echo	
+	# end script and show full usage documentation	
+	Usage
+fi
 
 # define directories
 projDir=`cat ../../PATHS.txt`
 qcDir="${projDir}/analysis"
 
-# extract study name from list of subjects filename
-study=` basename $1 | cut -d '_' -f 1 `
+# define config file and subjects from files passed in script call
+config=${projDir}/$1
+subjs=$(cat $2 | awk '{print $1}')
 
 # define data directories depending on study information
-derivDir="/RichardsonLab/preprocessedData/${study}/derivatives"
+derivDir=$(awk -F'\t' '$1=="derivDir"{print $2}' "$config")
+sessions=$(awk -F'\t' '$1=="sessions"{print $2}' "$config")
 
-# print confirmation of study and directory
-echo "Getting outlier information for" ${study} "participants..."
+# strip extra formatting if present
+derivDir="${derivDir%$'\r'}"
+sessions="${sessions%$'\r'}"
 
 # create QC directory if they don't exist
 if [ ! -d ${qcDir} ]
@@ -71,6 +96,9 @@ if [ -f ${qcDir}/outlier_info.tsv ]
 then 
 	rm ${qcDir}/outlier_info.tsv
 fi
+
+# print confirmation of study directory
+echo "Getting outlier information for" ${derivDir} "data..."
 
 # iterate over subjects
 while read p
@@ -103,4 +131,4 @@ do
 		echo "No scans.tsv file found for ${sub}..."
 	fi
 
-done <$1
+done <$2
