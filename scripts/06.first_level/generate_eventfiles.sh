@@ -12,18 +12,18 @@
 #
 ################################################################################
 
-# usage documentation - shown if no text file is provided
+# usage documentation
 Usage() {
 	echo
 	echo "Usage:"
-	echo "./generate_eventfiles.sh <subject-run list> <task>"
+	echo "./generate_eventfiles.sh <config file> <subject-run list>"
 	echo
 	echo "Example:"
-	echo "./generate_eventfiles.sh KMVPA_subjs.txt KMVPA"
+	echo "./generate_eventfiles.sh config-awe_emo-phys.tsv RLABPILOT_subjs.txt"
 	echo 
-	echo "KMVPA_subjs.txt is a subject-run file containing the participants and run info to generate the events.tsv files for:"
-	echo "001 1,2"
-	echo "002 2"
+	echo "RLABPILOT_subjs.txt is a file containing the participants to generate the scans.tsv file for:"
+	echo "sub-RLABPILOT01"
+	echo "sub-RLABPILOT02"
 	echo "..."
 	echo
 	echo
@@ -33,24 +33,52 @@ Usage() {
 }
 [ "$1" = "" ] | [ "$2" = "" ] && Usage
 
-# indicate whether session folders are used (always 'yes' for EBC data)
-sessions='no'
+# check files passed in script call
+if [ ! ${1##*.} == "tsv" ]
+then
+	echo
+	echo "The configuration file was not found."
+	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
+	echo
+	echo "./generate_eventfiles.sh config-awe_emo-phys.tsv RLABPILOT_subjs.txt"
+	echo	
+	# end script and show full usage documentation	
+	Usage
+fi
 
-# define task from script call
-task=$2
+if [ ! ${2##*.} == "txt" ]
+then
+	echo
+	echo "The list of participants was not found."
+	echo "The script must be submitted with (1) a configuration file name and (2) a subject list as in the example below."
+	echo
+	echo "./generate_eventfiles.sh config-awe_emo-phys.tsv RLABPILOT_subjs.txt"
+	echo	
+	# end script and show full usage documentation	
+	Usage
+fi
 
-# extract study name from list of subjects filename
-study=` basename $1 | cut -d '_' -f 1 `
+# define directories
+projDir=`cat ../../PATHS.txt`
+
+# define config file and subjects from files passed in script call
+config=${projDir}/$1
+subjs=$(cat $2 | awk '{print $1}')
 
 # define data directories depending on study information
-bidsDir="/RichardsonLab/preprocessedData/${study}"
-derivDir="${bidsDir}/derivatives"
+bidsDir=$(awk -F'\t' '$1=="bidsDir"{print $2}' "$config")
+derivDir=$(awk -F'\t' '$1=="derivDir"{print $2}' "$config")
+task=$(awk -F'\t' '$1=="task"{print $2}' "$config")
+sessions=$(awk -F'\t' '$1=="sessions"{print $2}' "$config")
 
-# print confirmation of sample and directory
-echo 'Generating events.tsv files for' ${study} 'data in' ${derivDir}
+# strip extra formatting if present
+bidsDir="${bidsDir%$'\r'}"
+derivDir="${derivDir%$'\r'}"
+task="${task%$'\r'}"
+sessions="${sessions%$'\r'}"
 
-# define project directory
-projDir=`cat ../../PATHS.txt`
+# print confirmation of study directory
+echo 'Generating events.tsv files for data in' ${derivDir}
 
 # iterate over subjects
 while read p
@@ -90,7 +118,7 @@ do
 				fi	
 				
 				# copy same onsets and durations for pixar or copy subject-specific events files
-				if [ ${study} == 'open-pixar' ]
+				if [ ${task} == 'pixar' ]
 				then
 					# copy the event files saved in the project files directory
 					for e in ${projDir}/files/event_files/*.tsv
@@ -104,7 +132,7 @@ do
 				
 				else
 					# copy the subject-specific event files saved in the project files directory
-					cp ${projDir}/files/event_files/${sub}/*run-00${r}*.tsv ${subDir}
+					cp ${projDir}/files/event_files/${sub}/*task-${task}_run-00${r}*.tsv ${subDir}
 				fi
 
 			done
@@ -120,7 +148,7 @@ do
 			fi	
 
 			# copy same onsets and durations for pixar or copy subject-specific events files
-			if [ ${study} == 'open-pixar' ]
+			if [ ${task} == 'pixar' ]
 			then
 				# copy the event files saved in the project files directory
 				for e in ${projDir}/files/event_files/*.tsv
@@ -134,11 +162,11 @@ do
 			
 			else
 				# copy the subject-specific event files saved in the project files directory
-				cp ${projDir}/files/event_files/${sub}/*run-00${r}*.tsv ${subDir}
+				cp ${projDir}/files/event_files/${sub}/*task-${task}*.tsv ${subDir}
 			fi
 		fi
 	fi
 	
-done <$1
+done <$2
 
 
