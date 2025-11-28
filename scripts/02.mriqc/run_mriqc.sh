@@ -27,6 +27,8 @@ Usage() {
 	echo "This script must be run within the /RichardsonLab/ directory on the server due to space requirements."
 	echo "The script will terminiate if run outside of the /RichardsonLab/ directory."
 	echo
+	echo "Note that MRIQC will error out if run on multi-echo data!"
+	echo
 	echo "Script created by Melissa Thye"
 	echo
 	exit
@@ -61,7 +63,6 @@ then
 	# end script and show full usage documentation	
 	Usage
 fi
-
 
 # define directories
 projDir=`cat ../../PATHS.txt`
