@@ -119,7 +119,6 @@ def denoise_echoes(sub, session, bidsDir, derivDir, cores):
             
             # add TR info to header
             tr = rep_time # the TR that the data should have in seconds
-            #output_image = op.join(sub_prefix, 'func', '{}_echo-{}_desc-preproc_bold-TR.nii.gz'.format(run, echo_num))
             img_dat = nib.load(img[0])
             zooms = img_dat.header.get_zooms()
             new_zooms = (zooms[0], zooms[1], zooms[2], tr)
@@ -189,10 +188,10 @@ def call_tedana(sub, task, EchoFiles, MaskFile, EchoTimes, outDir):
                                   out_dir = outDir,
                                   prefix = '{}_task-{}'.format(sub, task),
                                   fittype = 'curvefit',
-                                  tedpca = 'aic', # default is aic (least aggressive), kic is a moderate option
+                                  tedpca = 'kic', # default is aic (least aggressive), kic is a moderate option
                                   #ica_method = 'robustica',
                                   overwrite = True,
-                                  gscontrol = None) 
+                                  gscontrol = None)
 
 # def normalize_data(denoised_img, reference_img, native_T1w_transform, T1w_MNI_transform):
     # # extract file prefix from img for naming outputs

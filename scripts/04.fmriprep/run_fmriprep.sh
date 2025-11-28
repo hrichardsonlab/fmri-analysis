@@ -8,7 +8,7 @@
 #
 ################################################################################
 
-# usage documentation - shown if no text file is provided or if script is run outside RichardsonLab directory
+# usage documentation
 Usage() {
 	echo
 	echo

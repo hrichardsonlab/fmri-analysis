@@ -178,7 +178,7 @@ do
 			-i ${mask_T1w}																\
 			-r ${T1w_MNI_img}															\
 			-o ${mask_MNI}																\
-			-n NearestNeighbor															\
+			-n Linear																	\
 			-t ${T1w_to_MNI}
 
 	done
