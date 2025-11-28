@@ -188,8 +188,9 @@ def call_tedana(sub, task, EchoFiles, MaskFile, EchoTimes, outDir):
                                   out_dir = outDir,
                                   prefix = '{}_task-{}'.format(sub, task),
                                   fittype = 'curvefit',
-                                  tedpca = 'kic', # default is aic (least aggressive), kic is a moderate option
-                                  #ica_method = 'robustica',
+                                  tedpca = 'aic', # default is aic (least aggressive), kic is a moderate option, mdl is an aggressive option
+                                  ica_method = 'robustica',
+                                  n_robust_runs = 40, # only applicable if robustica method is used; default is 30
                                   overwrite = True,
                                   gscontrol = None)
 
