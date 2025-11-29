@@ -31,7 +31,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 'lLOC':'object', 'rLOC': 'object',
                 'lPPA':'scene', 'lRSC':'scene', 'lTOS':'scene', 'rPPA':'scene', 'rRSC':'scene', 'rTOS':'scene',
                 'DMPFC':'tom', 'LTPJ':'tom', 'MMPFC':'tom', 'rMMPFC':'tom', 'lMMPFC':'tom', 'PC':'tom', 'RSTS':'tom', 'RTPJ':'tom', 'VMPFC':'tom',
-                'lvwfa':'vwfa',
+                'lvwfa':'vwfa','vwfa1':'vwfa','vwfa2':'vwfa',
                 'language':'language', 'LIFGorb':'language', 'LIFG':'language', 'LMFG':'language', 'LAntTemp':'language', 'LPostTemp':'language', 'LAngG':'language', 'RIFGorb':'language', 'RIFG':'language', 'RMFG':'language', 'RAntTemp':'language', 'RPostTemp':'language', 'RAngG':'language',
                 'multiple_demand':'multiple_demand', 'LpostParietal':'multiple_demand', 'LmidParietal':'multiple_demand', 'LantParietal':'multiple_demand', 'LsupFrontal':'multiple_demand', 'LprecG':'multiple_demand', 'LIFGop':'multiple_demand', 'LmidFrontal':'multiple_demand', 'LmidFrontalOrb':'multiple_demand', 'Linsula':'multiple_demand', 'LmedialFrontal':'multiple_demand', 'RpostParietal':'multiple_demand', 'RmidParietal':'multiple_demand', 'RantParietal':'multiple_demand', 'RsupFrontal':'multiple_demand', 'RprecG':'multiple_demand', 'RIFGop':'multiple_demand', 'RmidFrontal':'multiple_demand', 'RmidFrontalOrb':'multiple_demand', 'Rinsula':'multiple_demand', 'RmedialFrontal':'multiple_demand'}
     
@@ -139,7 +139,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         print('Skipping {} search space for the {} contrast'.format(search_spaces[m], c))
                     else: 
                         print('Defining fROI using top {} voxels within {} contrast'.format(top_nvox, c))
-                        z_file = glob.glob(op.join(modelDir, '*{}_zstat.nii.gz'.format(c)))
+                        z_file = glob.glob(op.join(modelDir, '*_{}_zstat.nii.gz'.format(c)))
                         z_img = image.load_img(z_file)
                         
                         # mask contrast image with roi image
