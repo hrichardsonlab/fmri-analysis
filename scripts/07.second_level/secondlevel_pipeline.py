@@ -59,7 +59,7 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
             else: # if session was 'no'
                 mask_file = glob.glob(op.join(derivDir, '{}'.format(sub), 'func', '{}_space-MNI152NLin2009cAsym*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub)))[0]
             
-            if runs[s] != 'NA' and len(runs[s]) > 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1)
+            if runs[s] != 'NA' and len(runs[s]) >= 3: # if more than 1 run (tested by checking length of characters: greater than 2, e.g., NA or 1)
                 # pull outputs from combinedDir
                 modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs')
                 
