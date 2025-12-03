@@ -142,19 +142,30 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         z_file = glob.glob(op.join(modelDir, '*_{}_zstat.nii.gz'.format(c)))
                         z_img = image.load_img(z_file)
                         
+                        # get index of non-zero voxels within search space
+                        #search_space = mask_bin.get_fdata()
+                        #zero_vox_inds = (search_space == 0)
+                                                
                         # mask contrast image with roi image
                         masked_img = image.math_img('img1 * img2', img1 = z_img, img2 = mask_bin)
                         masked_data = masked_img.get_fdata()
                         
-                        # set 0 values to nan before grabbing top voxels
-                        # masked_data[masked_data == 0.00000000] = np.nan
+                        # set all voxels that fall outside the search space to nan
+                        # this is done because the voxels will be ranked in descending order so negative values will be ranked after 0 values meaning that voxels outside the search space 
+                        # would be included in the fROI definition if the number of voxels with positive values is fewer than the requested nvox threshold
+                        # the problem with this approach is that if the search space doesn't overlap with the contrast data/acquired data, then 0s will remain in the search space that should be removed
+                        #masked_data[zero_vox_inds] = np.nan
+                        
+                        # an alternative approach is to set 0 values to nan before grabbing top voxels
+                        # this *could* set voxels in the search space that are within the contrast map to 0 but safer than the prior approach and an unlikely outcome
+                        masked_data[masked_data == 0.00000000] = np.nan
 
                         # save masked file (optional data checking step)
-                        # masked_img_file = op.join(froiDir, '{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
-                        # masked_img.to_filename(masked_img_file)
+                        #masked_img_file = op.join(froiDir, '{}_run-{:02d}_splithalf-{:02d}_{}_{}-masked.nii.gz'.format(sub, r, s, search_spaces[m], c))
+                        #masked_img.to_filename(masked_img_file)
                         
                         # get top voxels
-                        masked_data_inds = (-masked_data).argsort(axis = None) # the negative ensures that values are returned in decending order
+                        masked_data_inds = (-masked_data).argsort(axis = None) # the negative ensures that values are returned in descending order
                         masked_data[np.unravel_index(masked_data_inds[top_nvox:], masked_data.shape)] = np.nan # set voxels not in top_nvox to nan
                         
                         # binarize top voxel mask
