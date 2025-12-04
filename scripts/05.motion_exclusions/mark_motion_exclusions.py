@@ -69,14 +69,17 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, multiecho, fd_thresh, dvar
                 confounds_filestr = '*task-' + task + '_desc-confounds*.tsv'
                 
                 # name of preprocessed bold data
-                if multiecho == 'yes':
-                    print('Data are multi-echo...')
-                    print('Using denoised bold file')
-                    preproc_filestr = '*task-' + task + '_space-MNI152NLin2009cAsym_desc-denoised_bold.nii.gz'
-                else:
-                    print('Data are not multi-echo...')
-                    print('Using standard fMRIPrep bold file')
-                    preproc_filestr = '*task-' + task + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
+                preproc_filestr = '*task-' + task + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
+                
+                # could grab multi-echo denoised data, but this will likely underestimate motion because the data have already been denoised
+                # if multiecho == 'yes':
+                    # print('Data are multi-echo...')
+                    # print('Using denoised bold file')
+                    # preproc_filestr = '*task-' + task + '_space-MNI152NLin2009cAsym_desc-denoised_bold.nii.gz'
+                # else:
+                    # print('Data are not multi-echo...')
+                    # print('Using standard fMRIPrep bold file')
+                    # preproc_filestr = '*task-' + task + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
                 
                 # name of motion parameters file (will be written out in next step)
                 mp_filestr = prefix + '_task-' + task + '_mcparams.tsv'
@@ -93,14 +96,17 @@ def mark_motion_exclusions(sub, derivDir, qcDir, ses, multiecho, fd_thresh, dvar
                 confounds_filestr = '*task-' + task + '_run-' + str(run) + '_desc-confounds*.tsv'
                 
                 # name of preprocessed bold data
-                if multiecho == 'yes':
-                    print('Data are multi-echo...')
-                    print('Using denoised bold file')
-                    preproc_filestr = '*task-' + task + '_run-' + str(run) + '_space-MNI152NLin2009cAsym_desc-denoised_bold.nii.gz'
-                else:
-                    print('Data are not multi-echo...')
-                    print('Using standard fMRIPrep bold file')
-                    preproc_filestr = '*task-' + task + '_run-' + str(run) + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
+                preproc_filestr = '*task-' + task + '_run-' + str(run) + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
+                
+                # could grab multi-echo denoised data, but this will likely underestimate motion because the data have already been denoised
+                # if multiecho == 'yes':
+                    # print('Data are multi-echo...')
+                    # print('Using denoised bold file')
+                    # preproc_filestr = '*task-' + task + '_run-' + str(run) + '_space-MNI152NLin2009cAsym_desc-denoised_bold.nii.gz'
+                # else:
+                    # print('Data are not multi-echo...')
+                    # print('Using standard fMRIPrep bold file')
+                    # preproc_filestr = '*task-' + task + '_run-' + str(run) + '_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold.nii.gz'
                     
                 # name of motion parameters file (will be written out in next step)
                 mp_filestr = prefix + '_task-' + task + '_run-' + str(run) + '_mcparams.tsv'
