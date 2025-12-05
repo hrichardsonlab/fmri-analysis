@@ -74,22 +74,22 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}'.format(r))
                 froiDir = op.join(resultsDir, '{}'.format(sub), 'frois', 'run{}'.format(r))
                 # grab functional file for resampling
-                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}'.format(r), '*preproc_bold*.nii.gz'))[0]
+                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}'.format(r), '*_bold.nii.gz'))[0]
             elif s == 0 and r == 0:
                 modelDir = combinedDir
                 froiDir = op.join(resultsDir, '{}'.format(sub), 'frois', 'combined_runs')
                 # grab functional file for resampling (doesn't matter which one)
-                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1', '*preproc_bold*.nii.gz'))[0]
+                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1', '*_bold.nii.gz'))[0]
             elif s != 0 and r != 0:
                 modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}_splithalf{}'.format(r,s))
                 froiDir = op.join(resultsDir, '{}'.format(sub), 'frois', 'run{}_splithalf{}'.format(r,s))
                 # grab functional file for resampling
-                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*preproc_bold*.nii.gz'))[0]
+                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(r,s), '*_bold.nii.gz'))[0]
             elif s != 0 and r == 0:
                 modelDir = op.join(combinedDir, 'splithalf{}'.format(s))
                 froiDir = op.join(resultsDir, '{}'.format(sub), 'frois', 'combined_runs', 'splithalf{}'.format(s))
                 # grab functional file for resampling (doesn't matter which one)
-                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(s), '*preproc_bold*.nii.gz'))[0]       
+                mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(s), '*_bold.nii.gz'))[0]       
             # make frois directory
             os.makedirs(froiDir, exist_ok=True)
               
