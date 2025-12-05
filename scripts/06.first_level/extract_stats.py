@@ -27,18 +27,18 @@ import shutil
 def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt):
     
     # make output stats directory
-    statsDir = op.join(resultsDir, 'sub-{}'.format(sub), 'stats')
+    statsDir = op.join(resultsDir, '{}'.format(sub), 'stats')
     os.makedirs(statsDir, exist_ok=True)
     
     # create output file name
-    stats_file = op.join(statsDir, 'sub-{}_task-{}_{}_ROI_magnitudes.csv'.format(sub, task, extract_opt))
+    stats_file = op.join(statsDir, '{}_task-{}_{}_ROI_magnitudes.csv'.format(sub, task, extract_opt))
 
     # delete output file if it already exists (to ensure stats aren't appended to pre-existing files)
     if os.path.isfile(stats_file):
         os.remove(stats_file)
         
     # define combined run directory for this subject
-    combinedDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'combined_runs')
+    combinedDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs')
     
     # check if combinedDir exists
     if op.exists(combinedDir):
@@ -57,58 +57,58 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
             roi_masks = list()
             for m in mask_opts:
                 # define aroi prefix
-                aroi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'arois', 'sub-{}_roi-'.format(sub))
+                aroi_prefix = op.join(resultsDir, '{}'.format(sub), 'arois', '{}_roi-'.format(sub))
                 
                 # if a functional ROI was specified
                 if 'fROI' in m:
                     if splithalf_id != 0 and combined == 'no':
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*preproc_bold.nii.gz'))
-                        modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}_splithalf{}'.format(run_id, splithalf_id))
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*_bold.nii.gz'))
+                        modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}_splithalf{}'.format(run_id, splithalf_id))
 
                         # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
                         if splithalf_id == 1:
                             print('Will skip stats extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                            froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id))
+                            froi_prefix = op.join(resultsDir, '{}'.format(sub), 'frois', 'run{}_splithalf2'.format(run_id))
                             
                         if splithalf_id == 2:
                             print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                            froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id))
+                            froi_prefix = op.join(resultsDir, '{}'.format(sub), 'frois', 'run{}_splithalf1'.format(run_id))
                     
                     elif splithalf_id != 0 and combined == 'yes':
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(splithalf_id), '*preproc_bold*.nii.gz'))[0]       
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(splithalf_id), '*_bold.nii.gz'))[0]       
                     
                         modelDir = op.join(combinedDir, 'splithalf{}'.format(splithalf_id))
                         
                         # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
                         if splithalf_id == 1:
                             print('Will skip stats extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                            froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined_runs', 'splithalf2')
+                            froi_prefix = op.join(resultsDir, '{}'.format(sub), 'frois', 'combined_runs', 'splithalf2')
                             
                         if splithalf_id == 2:
                             print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                            froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'combined_runs', 'splithalf1')
+                            froi_prefix = op.join(resultsDir, '{}'.format(sub), 'frois', 'combined_runs', 'splithalf1')
                     
                     elif splithalf_id == 0 and combined == 'no':
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*preproc_bold*.nii.gz'))[0]
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*_bold.nii.gz'))[0]
                    
-                        modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(run_id))
-                        froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub), 'frois', 'run{}'.format(run_id))
+                        modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}'.format(run_id))
+                        froi_prefix = op.join(resultsDir, '{}'.format(sub), 'frois', 'run{}'.format(run_id))
 
                     elif splithalf_id == 0 and combined == 'yes':
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run1', '*preproc_bold*.nii.gz'))[0]
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1', '*_bold.nii.gz'))[0]
                         
                         modelDir = combinedDir
-                        froi_prefix = op.join(resultsDir, 'sub-{}'.format(sub))
+                        froi_prefix = op.join(resultsDir, '{}'.format(sub))
 
                     if not froi_prefix:
                         print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
                     else:
                         roi_name = m.split('fROI-')[1]
-                        roi_file = glob.glob(op.join('{}'.format(froi_prefix),'sub-{}_task-{}*{}*.nii.gz'.format(sub,task, roi_name)))
+                        roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_task-{}*{}*.nii.gz'.format(sub,task, roi_name)))
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
                 
@@ -116,13 +116,13 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 else:
                     if splithalf_id != 0:
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*preproc_bold.nii.gz'))
-                        modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}_splithalf{}'.format(run_id, splithalf_id))
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*_bold.nii.gz'))
+                        modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}_splithalf{}'.format(run_id, splithalf_id))
                     
                     else: # if not splithalves
                         # grab mni file (used only if resampling is required)              
-                        mni_file = glob.glob(op.join(resultsDir, 'sub-{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*preproc_bold.nii.gz'))
-                        modelDir = op.join(resultsDir, 'sub-{}'.format(sub), 'model', 'run{}'.format(run_id))
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*_bold.nii.gz'))
+                        modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}'.format(run_id))
                     
                     if combined == 'yes':
                         modelDir = combinedDir
@@ -130,7 +130,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                     # if a freesurfer ROI was specified
                     if 'FS' in m:
                         roi_name = m.split('FS-')[1]
-                        roi_file = glob.glob(op.join(projDir, 'files', 'ROIs' , '{}'.format(roi_name), 'sub-{}_*_{}.nii.gz'.format(sub, roi_name)))#[0]
+                        roi_file = glob.glob(op.join(projDir, 'files', 'ROIs' , '{}'.format(roi_name), '{}_*_{}.nii.gz'.format(sub, roi_name)))#[0]
                         roi_masks.append(roi_file)
                         print('Using {} FreeSurfer defined file from {}'.format(roi_name, roi_file))  
                     
@@ -301,7 +301,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                                 masked_df.insert(loc=0, column='half', value=splithalf_id)
                             masked_df.insert(loc=0, column='run', value=run_label)
                             masked_df.insert(loc=0, column='task', value=task)
-                            masked_df.insert(loc=0, column='sub', value='sub-{}'.format(sub))
+                            masked_df.insert(loc=0, column='sub', value='{}'.format(sub))
                             
                             if not os.path.isfile(stats_file): # if the stats output file doesn't exist
                                 # save dataframe
@@ -379,7 +379,7 @@ def main(argv=None):
         
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
-        print('Extracting stats for sub-{}'.format(sub))
+        print('Extracting stats for {}'.format(sub))
         
         # check that run info was provided in subject list, otherwise throw an error
         if not args.runs:
