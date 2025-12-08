@@ -339,10 +339,10 @@ def generate_model_files(projDir, derivDir, resultsDir, outDir, workDir, subs, r
     result = subprocess.run(cmd, stdout=subprocess.PIPE, shell = True)
     
     # submit generated files to model function
-    run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, merged_varcope_file, design_mat, grp_cov, design_con, dilated_mask_file)
+    run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, merged_varcope_file, design_mat, grp_cov, design_con, merged_mask_file) # dilated_mask_file
 
 # define function to run model
-def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, merged_varcope_file, design_mat, grp_cov, design_con, dilated_mask_file):
+def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, merged_varcope_file, design_mat, grp_cov, design_con, mask_file): # dilated_mask_file
     # move to contrasts directory so output files are saved correctly
     os.chdir(conDir)
     
@@ -355,7 +355,7 @@ def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, 
                             design_file=design_mat,
                             cov_split_file=grp_cov,
                             t_con_file=design_con,
-                            mask_file=dilated_mask_file,
+                            mask_file=mask_file,
                             run_mode='flame1')
         flameo.run()
     
@@ -370,7 +370,7 @@ def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, 
             rand = fsl.Randomise(in_file=merged_cope_file, 
                                  #demean=True, # demean the data and EVs in the design matrix, providing a warning if they initially had non-zero mean
                                  num_perm=nperm,
-                                 mask=dilated_mask_file, 
+                                 mask=mask_file, 
                                  tcon=design_con,
                                  one_sample_group_mean=one_sample,
                                  design_mat=design_mat,
@@ -381,7 +381,7 @@ def run_model(conDir, nonparametric, tfce, nperm, one_sample, merged_cope_file, 
             rand = fsl.Randomise(in_file=merged_cope_file, 
                                  #demean=True, # demean the data and EVs in the design matrix, providing a warning if they initially had non-zero mean
                                  num_perm=nperm,
-                                 mask=dilated_mask_file, 
+                                 mask=mask_file, 
                                  tcon=design_con, 
                                  one_sample_group_mean=one_sample,
                                  design_mat=design_mat,

@@ -82,7 +82,7 @@ unset PYTHONPATH
 
 # display script
 echo
-echo "Running" ${script} "for..."
+echo "Running" ${script}"..."
 echo
 
 # run first-level workflow using script specified in script call

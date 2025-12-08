@@ -38,7 +38,7 @@ def label_clusters(resultsDir, task, splithalf_id, contrast_id, nonparametric, t
         conDir = op.join(resultsDir, '{}_{}_{}_splithalf{}'.format(method, task, contrast_id, splithalf_id))
     else:
         conDir = op.join(resultsDir, '{}_{}_{}'.format(method, task, contrast_id))
-        
+    
     # redefine prefix to grab correct output file
     if tfce == 'yes':
         prefix = '{}_tfce_corrp'.format(method)
