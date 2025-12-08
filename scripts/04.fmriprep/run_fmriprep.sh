@@ -178,8 +178,12 @@ do
 	mv ${scratchDir}/${sub}.html ${scratchDir}/${sub}
 	
 	# move files from scratch directory to derivatives directory
-	mv ${scratchDir}/${sub} ${derivDir}
-	mv ${scratchDir}/logs ${derivDir}
-	mv ${scratchDir}/sourcedata ${derivDir}
-
+	cp -r ${scratchDir}/* ${derivDir}
+	rm -r ${scratchDir}/${sub}
+	rm -r ${scratchDir}/sourcedata/freesurfer/${sub}
+	
 done <$2
+
+# delete scratch directory once finished running subjects
+rm -r ${scratchDir}
+
