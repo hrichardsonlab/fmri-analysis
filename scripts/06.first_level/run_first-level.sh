@@ -25,8 +25,8 @@ Usage() {
 	echo "The config file name (not path!) should be provided"
 	echo
 	echo "KMVPA_subjs.txt is a subject-run file containing the participants and run info to process:"
-	echo "001 1,2"
-	echo "002 2"
+	echo "sub-001 1,2"
+	echo "sub-002 2"
 	echo "..."
 	echo
 	echo

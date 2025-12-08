@@ -72,37 +72,33 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             # define path to preprocessed functional and mask data (subject derivatives func folder)
             prefix = '{}_ses-{}_task-{}'.format(sub, ses, task)
             funcDir = op.join(derivDir, '{}'.format(sub), 'ses-{}'.format(ses), 'func')
-            mni_mask = op.join(funcDir, '{}_ses-{}_space-{}_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses, space_name))
+            mni_mask = glob.glob(op.join(funcDir, '{}_ses-{}_space-{}*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses, space_name)))[0]
             
         else: # if session was 'no'
             # define path to preprocessed functional and mask data (subject derivatives func folder)
             prefix = '{}_task-{}'.format(sub, task)
             funcDir = op.join(derivDir, '{}'.format(sub), 'func')
-            mni_mask = op.join(funcDir, '{}_space-{}_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, space_name))
+            mni_mask = glob.glob(op.join(funcDir, '{}_space-{}*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, space_name)))[0]
         
         # add run info to file prefix if necessary
         if run_id != 0:
             prefix = '{}_run-{:03d}'.format(prefix, run_id)
         
         # identify mni file based on whether data are multiecho
-        if multiecho == 'yes': # if multiecho sequence, look for outputs in tedana folder
-            if run_id != 0:
-                tedana_folder = 'tedana/{}_run-{:03d}'.format(task, run_id)
-            else:
-                tedana_folder = 'tedana/{}'.format(task)
-                
-            mni_file = glob.glob(op.join(funcDir, '{}'.format(tedana_folder), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name)))[0]
-            mni_mask = glob.glob(op.join(funcDir, '{}'.format(tedana_folder), '{}_space-{}*desc-gmwmbold_mask.nii.gz'.format(prefix, space_name)))[0]
-            print('Will use multiecho outputs from tedana: {}'.format(mni_file))
+        if multiecho == 'yes': # if multiecho sequence, look for tedana outputs
+            mni_file = glob.glob(op.join(funcDir, '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name)))[0]
+            #mni_mask = glob.glob(op.join(funcDir, '{}'.format(tedana_folder), '{}_space-{}*desc-gmwmbold_mask.nii.gz'.format(prefix, space_name)))[0]
+            print('Data were acquired using a multi-echo sequence...')
+            print('Will use denoised multiecho outputs from tedana: {}'.format(mni_file))
         else:            
             mni_file = glob.glob(op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name)))[0]
             
         # grab the confound and rapidart outlier file
         confound_file = op.join(funcDir, '{}_desc-confounds_timeseries.tsv'.format(prefix))
         if run_id != 0: # if run info is in filename
-            art_file = op.join(funcDir, 'art', '{}{:03d}'.format(task, run_id), 'art.{}_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold_outliers.txt'.format(prefix))
+            art_file = glob.glob(op.join(funcDir, 'art', '{}{:03d}'.format(task, run_id), 'art.{}_*bold_outliers.txt'.format(prefix)))[0]
         else: # if no run info is in file name
-            art_file = op.join(funcDir, 'art', '{}'.format(task), 'art.{}_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold_outliers.txt'.format(prefix))
+            art_file = glob.glob(op.join(funcDir, 'art', '{}'.format(task), 'art.{}_*bold_outliers.txt'.format(prefix)))[0]
 
         # get number of volumes in full functional run minus dropped volumes (done here in case splithalf files are requested)
         nVols = (load(mni_file).shape[3] - dropvols)
@@ -789,7 +785,7 @@ def main(argv=None):
     regressor_opts = [r.lower() for r in regressor_opts]
     
     if space == 'MNI':
-        space_name = 'MNI152NLin2009cAsym_res-2'
+        space_name = 'MNI152NLin2009cAsym'
         print('Pipeline will be run using outputs in {} space'.format(space_name))
     if space == 'native':
         space_name = 'T1w'

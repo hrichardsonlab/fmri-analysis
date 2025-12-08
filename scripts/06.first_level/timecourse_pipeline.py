@@ -69,38 +69,32 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
             # define path to preprocessed functional and mask data (subject derivatives func folder)
             prefix = '{}_ses-{}_task-{}'.format(sub, ses, task)
             funcDir = op.join(derivDir, '{}'.format(sub), 'ses-{}'.format(ses), 'func')
-            mni_mask = op.join(funcDir, '{}_ses-{}_space-{}_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses, space_name))
+            mni_mask = glob.glob(op.join(funcDir, '{}_ses-{}_space-{}*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, ses, space_name)))[0]
             
         else: # if session was 'no'
             # define path to preprocessed functional and mask data (subject derivatives func folder)
             prefix = '{}_task-{}'.format(sub, task)
             funcDir = op.join(derivDir, '{}'.format(sub), 'func')
-            mni_mask = op.join(funcDir, '{}_space-{}_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, space_name))
-        
+            mni_mask = glob.glob(op.join(funcDir, '{}_space-{}*_desc-brain_mask_allruns-BOLDmask.nii.gz'.format(sub, space_name)))[0]
+            
         # add run info to file prefix if necessary
         if run_id != 0:
             prefix = '{}_run-{:03d}'.format(prefix, run_id)
         
         # identify mni file based on whether data are multiecho
-        if multiecho == 'yes': # if multiecho sequence, look for outputs in tedana folder
-            if run_id != 0:
-                tedana_folder = 'tedana/{}_run-{:03d}'.format(task, run_id)
-            else:
-                tedana_folder = 'tedana/{}'.format(task)
-                
-            mni_file = glob.glob(op.join(funcDir, '{}'.format(tedana_folder), '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name)))[0]
-            mni_mask = glob.glob(op.join(funcDir, '{}'.format(tedana_folder), '{}_space-{}*desc-gmwmbold_mask.nii.gz'.format(prefix, space_name)))[0]
+        if multiecho == 'yes':
+            mni_file = glob.glob(op.join(funcDir, '{}_space-{}*desc-denoised_bold.nii.gz'.format(prefix, space_name)))[0]
             print('Will use multiecho outputs from tedana: {}'.format(mni_file))
         else:            
             mni_file = glob.glob(op.join(funcDir, '{}_space-{}*desc-preproc_bold.nii.gz'.format(prefix, space_name)))[0]
-            
+        
         # grab the confound, MNI, and rapidart outlier file
         confound_file = op.join(funcDir, '{}_desc-confounds_timeseries.tsv'.format(prefix))
         
         if run_id != 0: # if run info is in filename
-            art_file = op.join(funcDir, 'art', '{}{:03d}'.format(task, run_id), 'art.{}_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold_outliers.txt'.format(prefix))
+            art_file = glob.glob(op.join(funcDir, 'art', '{}{:03d}'.format(task, run_id), 'art.{}_space-MNI152NLin2009cAsym*_desc-preproc_bold_outliers.txt'.format(prefix)))[0]
         else: # if no run info is in file name
-            art_file = op.join(funcDir, 'art', '{}'.format(task), 'art.{}_space-MNI152NLin2009cAsym_res-2_desc-preproc_bold_outliers.txt'.format(prefix))        
+            art_file = glob.glob(op.join(funcDir, 'art', '{}'.format(task), 'art.{}_space-MNI152NLin2009cAsym*_desc-preproc_bold_outliers.txt'.format(prefix)))[0]   
 
         # get number of volumes in full functional run minus dropped volumes (done here in case splithalf files are requested)
         nVols = (load(mni_file).shape[3] - dropvols)
@@ -114,9 +108,9 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         # check to see whether outputs exist in smoothDir (if smoothDir was specified in config file)
         if smoothDir:
             if splithalf_id != 0:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
             else:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*preproc_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
             
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
@@ -190,13 +184,13 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
                 if template is not None:
                     #template_name = template[:6] # take first 6 characters
                     template_name = template.split('_')[0] # take full template name
-                    roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}'.format(template_name), '{}*.nii.gz'.format(m)))[0]
+                    roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}'.format(template_name), '{}_*.nii.gz'.format(m)))[0]
                 else:
                     roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}*.nii.gz'.format(m)))[0]
                 
                 roi_masks.append(roi_file)
                 print('Using {} ROI file from {}'.format(m, roi_file)) 
-        
+                
         return confound_file, art_file, mni_file, mni_mask, roi_masks, nVols
         
     datasource = Node(Function(output_names=['confound_file',
@@ -492,7 +486,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         else:
             kwargs_opts={'clean__sample_mask':vol_indx,
                          'clean__t_r':TR}
-
+                         
         # process signal data with parameters specified in config file
         denoised_data = image.clean_img(imgs, mask_img=mni_mask, confounds=motion_params, detrend=detrend_opt, standardize=standardize_opt, **kwargs_opts)
         
@@ -839,7 +833,7 @@ def main(argv=None):
     regressor_opts = [r.lower() for r in regressor_opts]
     
     if space == 'MNI':
-        space_name = 'MNI152NLin2009cAsym_res-2'
+        space_name = 'MNI152NLin2009cAsym'
         print('Pipeline will be run using outputs in {} space'.format(space_name))
     if space == 'native':
         space_name = 'T1w'
