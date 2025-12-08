@@ -60,7 +60,8 @@ def concat_masks(derivDir, sub, ses, multiecho):
 
         # binarize the concatenated mask file
         mni_mask_data = mni_mask_img.get_fdata() # get image data (as floating point data)
-        mni_mask_data[mni_mask_data >= 1] = 1 # for values equal to or greater than 1, make 1 (values less than 1 are already 0)
+        mni_mask_data[mni_mask_data > 0.1] = 1 # for greater than 0.1, make 1
+        mni_mask_data[mni_mask_data <= 0.1] = 0 # for values equal to or less than 0.1, make 0
         mni_mask_img_bin = image.new_img_like(mni_basemask_img, mni_mask_data) # create a new image of the same class as the base mask image
         
         # for multi-echo mask files, squeeze the statistical map to remove the 4th singleton dimension
@@ -75,7 +76,7 @@ def concat_masks(derivDir, sub, ses, multiecho):
     if len(t1w_maskfiles) == 0: # if no mask files were found
         print('No native space brain masks found for {}'.format(sub))
     
-    else: # if mni mask files were found
+    else: # if T1w mask files were found
         t1w_basemask = t1w_maskfiles[0] # take the first mask file as the base image
         t1w_basemask_img = image.load_img(t1w_basemask) # load the base mask image
         t1w_mask_img = t1w_basemask_img # create the concatenated mask as a copy of the base mask image
@@ -91,9 +92,14 @@ def concat_masks(derivDir, sub, ses, multiecho):
 
         # binarize the concatenated mask file
         t1w_mask_data = t1w_mask_img.get_fdata() # get image data (as floating point data)
-        t1w_mask_data[t1w_mask_data >= 1] = 1 # for values equal to or greater than 1, make 1 (values less than 1 are already 0)
+        t1w_mask_data[t1w_mask_data > 0.1] = 1 # for greater than 0.1, make 1
+        t1w_mask_data[t1w_mask_data <= 0.1] = 0 # for values equal to or less than 0.1, make 0
         t1w_mask_img_bin = image.new_img_like(t1w_basemask_img, t1w_mask_data) # create a new image of the same class as the base mask image
         
+        # for multi-echo mask files, squeeze the statistical map to remove the 4th singleton dimension
+        if multiecho == 'yes':
+            t1w_mask_img_bin = image.math_img('np.squeeze(img)', img=t1w_mask_img_bin)
+            
         t1w_mask_img_bin.to_filename(t1w_img_fname)
         print('concatenated mask saved to: {}'.format(t1w_img_fname))
 
