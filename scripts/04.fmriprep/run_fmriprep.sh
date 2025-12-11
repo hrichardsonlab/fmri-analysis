@@ -74,16 +74,20 @@ subjs=$(cat $2 | awk '{print $1}')
 sharedDir=$(awk -F'\t' '$1=="sharedDir"{print $2}' "$config")
 bidsDir=$(awk -F'\t' '$1=="bidsDir"{print $2}' "$config")
 derivDir=$(awk -F'\t' '$1=="derivDir"{print $2}' "$config")
-scratchDir=/Scratch/RichardsonLab/fmriprep
 
 # extract preprocessing relevant values from config file
 multiecho=$(awk -F'\t' '$1=="multiecho"{print $2}' "$config")
+task=$(awk -F'\t' '$1=="task"{print $2}' "$config")
 
 # strip extra formatting if present
 sharedDir="${sharedDir%$'\r'}"
 bidsDir="${bidsDir%$'\r'}"
 derivDir="${derivDir%$'\r'}"
 multiecho="${multiecho%$'\r'}"
+task="${task%$'\r'}"
+
+# define project specific task directory
+scratchDir=/Scratch/RichardsonLab/fmriprep/${task}
 
 # export freesurfer license file location
 export license=${sharedDir}/tools/license.txt
@@ -92,6 +96,11 @@ export license=${sharedDir}/tools/license.txt
 if [ ! -d ${derivDir} ]
 then 
 	mkdir -p ${derivDir}
+fi
+
+if [ ! -d ${derivDir}/sourcedata ]
+then 
+	mkdir -p ${derivDir}/sourcedata/freesurfer
 fi
 
 if [ ! -d ${scratchDir} ]
@@ -137,7 +146,7 @@ do
 		--participant-label ${sub}																\
 		--skip_bids_validation																	\
 		--nthreads 8																			\
-		--omp-nthreads 4																		\
+		--omp-nthreads 8																		\
 		--ignore slicetiming																	\
 		--fd-spike-threshold 1																	\
 		--dvars-spike-threshold 1.5																\
@@ -161,7 +170,7 @@ do
 		--participant-label ${sub}																\
 		--skip_bids_validation																	\
 		--nthreads 8																			\
-		--omp-nthreads 4																		\
+		--omp-nthreads 8																		\
 		--ignore slicetiming																	\
 		--fd-spike-threshold 1																	\
 		--dvars-spike-threshold 1.5																\
@@ -178,12 +187,15 @@ do
 	mv ${scratchDir}/${sub}.html ${scratchDir}/${sub}
 	
 	# move files from scratch directory to derivatives directory
-	cp -r ${scratchDir}/* ${derivDir}
+	cp -r ${scratchDir}/${sub} ${derivDir}
+	cp -r ${scratchDir}/logs ${derivDir}
+	cp -r ${scratchDir}/sourcedata/freesurfer/fsaverage ${derivDir}/sourcedata/freesurfer
+	cp -r ${scratchDir}/sourcedata/freesurfer/${sub} ${derivDir}/sourcedata/freesurfer
+	
+	# delete subject scratch directories
 	rm -r ${scratchDir}/${sub}
 	rm -r ${scratchDir}/sourcedata/freesurfer/${sub}
 	
 done <$2
 
-# delete scratch directory once finished running subjects
-rm -r ${scratchDir}
 
