@@ -146,7 +146,7 @@ do
 		--participant-label ${sub}																\
 		--skip_bids_validation																	\
 		--nthreads 8																			\
-		--omp-nthreads 8																		\
+		--omp-nthreads 4																		\
 		--ignore slicetiming																	\
 		--fd-spike-threshold 1																	\
 		--dvars-spike-threshold 1.5																\
@@ -170,7 +170,7 @@ do
 		--participant-label ${sub}																\
 		--skip_bids_validation																	\
 		--nthreads 8																			\
-		--omp-nthreads 8																		\
+		--omp-nthreads 4																		\
 		--ignore slicetiming																	\
 		--fd-spike-threshold 1																	\
 		--dvars-spike-threshold 1.5																\
@@ -182,11 +182,11 @@ do
 		--fs-license-file ${license}  > ${scratchDir}/${sub}/log_fmriprep_${sub}.txt
 	fi
 	
-	# move subject report and freesurfer output files to appropriate directories
+	# move freesurfer output files to appropriate directories
 	mv ${scratchDir}/*dseg.tsv ${scratchDir}/sourcedata/freesurfer
-	mv ${scratchDir}/${sub}.html ${scratchDir}/${sub}
 	
 	# move files from scratch directory to derivatives directory
+	mv ${scratchDir}/${sub}.html ${derivDir}
 	cp -r ${scratchDir}/${sub} ${derivDir}
 	cp -r ${scratchDir}/logs ${derivDir}
 	cp -r ${scratchDir}/sourcedata/freesurfer/fsaverage ${derivDir}/sourcedata/freesurfer
@@ -198,4 +198,4 @@ do
 	
 done <$2
 
-
+rm -r ${scratchDir}
