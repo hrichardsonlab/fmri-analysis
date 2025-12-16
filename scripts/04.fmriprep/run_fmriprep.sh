@@ -198,4 +198,4 @@ do
 	
 done <$2
 
-rm -r ${scratchDir}
+#rm -r ${scratchDir}
