@@ -458,7 +458,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
 
         contrasts = []
         
-        if contrast_opts != 'no':
+        if contrast_opts != ['no']:
             print('Setting up contrasts')
             # read in data contrast file
             contrasts_file = op.join(projDir, 'files', 'contrast_files', 'contrasts.tsv')

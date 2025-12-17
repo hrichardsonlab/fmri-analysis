@@ -248,9 +248,16 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             masked_tdata = masked_timg.get_fdata()
                             
                             # take the mean of voxels within mask
-                            mean_zval = np.nanmean(masked_zdata) # z-stats
-                            mean_tval = np.nanmean(masked_tdata) # t-stats
-                        
+                            mean_zval = np.nanmean(masked_zdata[masked_zdata != 0]) # z-stats
+                            mean_tval = np.nanmean(masked_tdata[masked_tdata != 0]) # t-stats
+                            
+                            # save masked file (optional data checking step)
+                            #masked_zdata_file = op.join(modelDir, '{}_{}_masked_zdata.nii.gz'.format(mask_opts[r],c))
+                            #masked_zimg.to_filename(masked_zdata_file)
+                            
+                            print('Mean z-stat within {}: {}'. format(mask_opts[r], mean_zval))
+                            print('Mean t-stat within {}: {}'. format(mask_opts[r], mean_tval))
+                            
                             if splithalf_id != 0:
                                 df_row = pd.DataFrame({'sub': sub,
                                                        'task' : task,
