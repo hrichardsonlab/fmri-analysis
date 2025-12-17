@@ -41,13 +41,14 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
     combinedDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs')
     
     # check if combinedDir exists
-    if op.exists(combinedDir):
-        print('Found combined runs directory. Stats will be extracted from the combined run data.')
-        combined = 'yes'
-        runs = [1]
-    else:
-        combined = 'no'
-        
+    # if op.exists(combinedDir):
+        # print('Found combined runs directory. Stats will be extracted from the combined run data.')
+        # combined = 'yes'
+        # runs = [1]
+    # else:
+        # combined = 'no'
+    combined = 'no'
+    
     # for each run
     for run_id in runs:
         # for each splithalf
@@ -108,7 +109,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
                     else:
                         roi_name = m.split('fROI-')[1]
-                        roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_task-{}*{}*.nii.gz'.format(sub,task, roi_name)))
+                        roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_task-{}*{}_*.nii.gz'.format(sub, task, roi_name)))
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
                 
@@ -160,6 +161,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
             
             # for each ROI search space
             for r, roi in enumerate(roi_masks):
+                
                 # load and binarize mni file
                 mni_img = image.load_img(mni_file)
                 mni_bin = mni_img.get_fdata() # get image data (as floating point data)
