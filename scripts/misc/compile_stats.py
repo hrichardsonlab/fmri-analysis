@@ -11,11 +11,12 @@ import numpy as np
 import argparse
 import pandas as pd
 import glob
+import sys
 
 # define compilation function
-def compile_stats(projDir, resultsDir):
+def compile_stats(projDir, resultsDir, extract_opt):
     
-    print('Searching for stats files in {}'.format(resultsDir))
+    print('Searching for {} stats files in {}'.format(extract_opt, resultsDir))
 
     # define subDirs from folders in directory provided
     subDirs = glob.glob(op.join(resultsDir, 'sub-*'))
@@ -31,22 +32,22 @@ def compile_stats(projDir, resultsDir):
         print('Compiling stats for sub-{}'.format(sub))
 
         # define stats files in subject folder
-        stats_files = glob.glob(op.join(result, 'stats', '*.csv'))
+        stats_files = glob.glob(op.join(result, 'stats', '*{}*.csv'.format(extract_opt)))
         
+        if not stats_files:
+            print('No stats files found! Check that you have the correct extract option specified in your config file.')
+            sys.exit(1)
+            
         # extract stats from each file in directory
         for s, stat in enumerate(stats_files):
-            if 'mean' in stat:
-                # read in csv file
-                stats_dat = pd.read_csv(stat) # header=None
+            # read in csv file
+            stats_dat = pd.read_csv(stat) # header=None
                 
-                # merge with compiled stats
-                compiled_stats.append(stats_dat)
-
-            else:
-                print('WARNING: the extracted stats are voxelwise instead of mean stats, skipping files!')
-                
+            # merge with compiled stats
+            compiled_stats.append(stats_dat)
+            
     # concatenate dataframes
-    compiled_df = pd.concat(compiled_stats, ignore_index=True)
+    compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by='sub').reset_index(drop=True)
     
     # save as csv file in resultsDir
     compiled_file = op.join(resultsDir, 'compiled_stats.csv')
@@ -79,10 +80,11 @@ def main(argv=None):
     
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
+    extract_opt=config_file.loc['extract',1]
     resultsDir=config_file.loc['resultsDir',1]
     
     # pass inputs defined above to main resampling function
-    compile_stats(args.projDir, resultsDir)
+    compile_stats(args.projDir, resultsDir, extract_opt)
    
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
