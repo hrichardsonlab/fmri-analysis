@@ -261,7 +261,8 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
             confounds = confounds.iloc[dropvols:].reset_index(drop=True)
             
             # remove outliers that occur before the first volume
-            outliers = outliers[outliers > dropvols] 
+            outliers = outliers[outliers >= dropvols]
+            outliers = outliers - dropvols
             
         elif dropvols < 0:
             # drop rows from end of confounds file
