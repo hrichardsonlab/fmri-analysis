@@ -43,6 +43,8 @@ for (f in 1:length(files)) { # for each file found in directory
   # read and wrangle data
   dat <- read.csv(files[[f]]) %>% 
     select(-starts_with("timepoint")) %>% # remove pre-existing timepoint column if present
+	# scale data if needed - probably better to interpolate before scaling
+	#mutate(across(where(is.numeric), ~ as.numeric(scale(.x)))) %>% 
     mutate(timepoint=row_number()) %>% # generate new timepoint column based on number of rows
     rename_with(~ gsub("\\.", "-", .)) # replace periods with hyphens in column names
   
@@ -58,7 +60,7 @@ for (f in 1:length(files)) { # for each file found in directory
                 mutate(grp2 = 1 + (row_number() - 2) %/% 2) %>%
                 group_by(grp2) %>%
                 summarise(across(everything(), ~ mean(.x, na.rm = TRUE)), .groups = 'drop') %>%
-                filter(grp2 != 0)) %>%
+                filter(timepoint %% 1 == 0.5)) %>% # remove rounded numbers that are duplicated rows
     
     # add original values
     bind_rows(dat) %>% 
