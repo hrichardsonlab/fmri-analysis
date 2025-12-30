@@ -117,7 +117,7 @@ do
 					rm ${subDir}/${run_file}
 				fi	
 				
-				# copy same onsets and durations for pixar or copy subject-specific events files
+				# copy same onsets and durations for tasks that have same event timings for all participants or copy subject-specific events files
 				if [ ${task} == 'pixar' ]
 				then
 					# copy the event files saved in the project files directory
@@ -129,6 +129,16 @@ do
 					# remove duplicate rows (header info) and tmp file
 					awk '!NF || !seen[$0]++' ${subDir}/tmp.tsv >> ${subDir}/${run_file}
 					rm ${subDir}/tmp.tsv
+				
+				elif [ ${task} == 'tomloc' ]
+				then
+					# copy the event files saved in the project files directory
+					cp ${projDir}/files/event_files/${task}_run-00${r}_events.tsv ${subDir}/${run_file}
+					
+				elif [ ${task} == 'langloc' ]
+				then
+					# copy the event files saved in the project files directory
+					cp ${projDir}/files/event_files/${task}_run-00${r}_events.tsv ${subDir}/${run_file}				
 				
 				else
 					# copy the subject-specific event files saved in the project files directory
