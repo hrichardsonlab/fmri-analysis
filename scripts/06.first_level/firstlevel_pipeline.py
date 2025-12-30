@@ -608,6 +608,34 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     gensubs = Node(Function(function=substitutes), name='substitute_gen')
     wf.connect(contrastgen, 'contrasts', gensubs, 'contrasts')
 
+    # define function to save names of variables
+    def save_parameter_names(fsf_file):
+        import json
+        import os
+        
+        pe_map = {}
+        with open(fsf_file, 'r') as f:
+            for line in f:
+                # find the line in the fsf file that starts with evtitle (there should be one for every variable in the model)
+                if line.startswith('set fmri(evtitle'):
+                    # extract the name and parameter estimate number
+                    idx = int(line.split('evtitle')[1].split(')')[0])
+                    name = line.split('"')[1]
+                    pe_map['pe{}'.format(idx)] = name
+        
+        out_file = os.path.join(os.getcwd(), 'pe_names.json')
+        with open(out_file, 'w') as f:
+            json.dump(pe_map, f, indent=2)
+        
+        return out_file
+
+    parameter_mapping = Node(Function(function=save_parameter_names,
+                            input_names=['fsf_file'],
+                            output_names=['out_file']),
+                   name='parameter_mapping')
+                   
+    wf.connect(level1design, 'fsf_files', parameter_mapping, 'fsf_file')
+    
     # extract components from working directory cache and store it at a different location
     sinker = Node(DataSink(), name='datasink')
     sinker.inputs.base_directory = outDir
@@ -629,6 +657,9 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     wf.connect(modelgen, 'con_file', sinker, 'design.@tcon_file')
     wf.connect(modelgen, 'design_cov', sinker, 'design.@cov')
     wf.connect(modelgen, 'design_image', sinker, 'design.@design')
+    wf.connect(level1design, 'fsf_files', sinker, 'design.@fsf')
+    wf.connect(level1design, 'ev_files', sinker, 'design.@ev')
+    wf.connect(parameter_mapping, 'out_file', sinker, 'model.@pe_names')
     wf.connect(glm, 'copes', sinker, 'model.@copes')
     wf.connect(glm, 'dof_file', sinker, 'model.@dof')
     wf.connect(glm, 'logfile', sinker, 'model.@log')
