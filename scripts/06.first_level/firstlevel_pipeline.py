@@ -225,7 +225,7 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
                 regressor_names.append(element)
  
         # filter confound file according to config file options
-        confounds = tc_reg.join(confounds, how='outer')
+        confounds = confounds.filter(regressor_names)
         
         # read in art file, creating an empty dataframe if no outlier volumes (i.e., empty text file)
         try:
