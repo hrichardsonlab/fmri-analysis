@@ -41,13 +41,12 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
     combinedDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs')
     
     # check if combinedDir exists
-    # if op.exists(combinedDir):
-        # print('Found combined runs directory. Stats will be extracted from the combined run data.')
-        # combined = 'yes'
-        # runs = [1]
-    # else:
-        # combined = 'no'
-    combined = 'no'
+    if op.exists(combinedDir):
+        print('Found combined runs directory. Stats will be extracted from the combined run data.')
+        combined = 'yes'
+        runs = [1]
+    else:
+        combined = 'no'
     
     # for each run
     for run_id in runs:
