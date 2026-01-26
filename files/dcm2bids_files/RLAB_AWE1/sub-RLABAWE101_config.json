@@ -1,0 +1,578 @@
+{
+  "descriptions": [
+    {
+      "datatype": "anat",
+      "suffix": "T1w",
+      "criteria": {
+        "SidecarFilename": "*T1_MPRAGE*"
+      }
+    },
+	{
+	  "id": "task_awe_run-001_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-001_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run1_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-001_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-001_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run1_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },	
+	{
+	  "id": "task_awe_run-001_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-001_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run1_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },		
+	{
+	  "id": "task_awe_run-002_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-002_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run2_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-002_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-002_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run2_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },	
+	{
+	  "id": "task_awe_run-002_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-002_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run2_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-003_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-003_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run3_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-003_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-003_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run3_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },	
+	{
+	  "id": "task_awe_run-003_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-003_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run3_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-004_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-004_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run4_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-004_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-004_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run4_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },	
+	{
+	  "id": "task_awe_run-004_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-004_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run4_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-005_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-005_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run5_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-005_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-005_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run5_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },	
+	{
+	  "id": "task_awe_run-005_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-005_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run5_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },		
+	{
+	  "id": "task_awe_run-006_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-006_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run6_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-006_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-006_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run6_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },	
+	{
+	  "id": "task_awe_run-006_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-006_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run6_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-007_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-007_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run7_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },
+	{
+	  "id": "task_awe_run-007_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-007_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run7_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },	
+	{
+	  "id": "task_awe_run-007_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-awe_run-007_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*awe_Run7_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "awe"
+      }
+    },	
+	{
+	  "id": "task_tomloc_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-tomloc_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*tomloc_Run1_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "tomloc"
+      }
+    },
+	{
+	  "id": "task_tomloc_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-tomloc_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*tomloc_Run1_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "tomloc"
+      }
+    },
+	{
+	  "id": "task_tomloc_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-tomloc_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*tomloc_Run1_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "tomloc"
+      }
+    },
+	{
+	  "id": "task_langloc_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-langloc_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*langloc_Run1_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "langloc"
+      }
+    },
+	{
+	  "id": "task_langloc_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-langloc_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*langloc_Run1_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "langloc"
+      }
+    },
+	{
+	  "id": "task_langloc_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-langloc_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*langloc_Run1_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "langloc"
+      }
+    },
+	{
+	  "id": "task_pixar_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-pixar_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*pixar_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "pixar"
+      }
+    },
+	{
+	  "id": "task_pixar_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-pixar_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*pixar_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "pixar"
+      }
+    },
+	{
+	  "id": "task_pixar_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-pixar_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*pixar_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "pixar"
+      }
+    },
+	{
+	  "id": "task_snackattack_echo-001",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-snackattack_echo-001",
+	  "criteria": {
+        "SidecarFilename": "*snack_*_e1*"
+      },
+      "sidecar_changes": {
+        "TaskName": "snackattack"
+      }
+    },
+	{
+	  "id": "task_snackattack_echo-002",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-snackattack_echo-002",
+	  "criteria": {
+        "SidecarFilename": "*snack_*_e2*"
+      },
+      "sidecar_changes": {
+        "TaskName": "snackattack"
+      }
+    },
+	{
+	  "id": "task_snackattack_echo-003",
+      "datatype": "func",
+      "suffix": "bold",
+      "custom_entities": "task-snackattack_echo-003",
+	  "criteria": {
+        "SidecarFilename": "*snack_*_e3*"
+      },
+      "sidecar_changes": {
+        "TaskName": "snackattack"
+      }
+    },
+	{
+      "datatype": "fmap",
+      "suffix": "magnitude1",
+	  "custom_entities": "run-001",
+      "criteria": {
+        "SidecarFilename": "*_fieldmap1_*_e1.*"
+      },
+      "sidecar_changes": {
+        "IntendedFor": [
+			"task_awe_run-001_echo-001",
+			"task_awe_run-001_echo-002",
+			"task_awe_run-001_echo-003",
+			"task_awe_run-002_echo-001",
+			"task_awe_run-002_echo-002",
+			"task_awe_run-002_echo-003"
+        ] 
+      }
+	},
+	{
+      "datatype": "fmap",
+      "suffix": "magnitude2",
+	  "custom_entities": "run-001",
+      "criteria": {
+        "SidecarFilename": "*_fieldmap1_*_e2.*"
+      },
+      "sidecar_changes": {
+        "IntendedFor": [
+			"task_awe_run-001_echo-001",
+			"task_awe_run-001_echo-002",
+			"task_awe_run-001_echo-003",
+			"task_awe_run-002_echo-001",
+			"task_awe_run-002_echo-002",
+			"task_awe_run-002_echo-003"
+        ] 
+      }
+	},
+	{
+      "datatype": "fmap",
+      "suffix": "phasediff",
+	  "custom_entities": "run-001",
+      "criteria": {
+        "SidecarFilename": "*_fieldmap1_*_ph.*"
+      },
+      "sidecar_changes": {
+        "IntendedFor": [
+			"task_awe_run-001_echo-001",
+			"task_awe_run-001_echo-002",
+			"task_awe_run-001_echo-003",
+			"task_awe_run-002_echo-001",
+			"task_awe_run-002_echo-002",
+			"task_awe_run-002_echo-003"
+        ] 
+      }
+	},
+	{
+      "datatype": "fmap",
+      "suffix": "magnitude1",
+	  "custom_entities": "run-002",
+      "criteria": {
+        "SidecarFilename": "*_fieldmap2_*_e1.*"
+      },
+      "sidecar_changes": {
+        "IntendedFor": [
+			"task_awe_run-003_echo-001",
+			"task_awe_run-003_echo-002",
+			"task_awe_run-003_echo-003",
+			"task_awe_run-004_echo-001",
+			"task_awe_run-004_echo-002",
+			"task_awe_run-004_echo-003",
+			"task_awe_run-005_echo-001",
+			"task_awe_run-005_echo-002",
+			"task_awe_run-005_echo-003",
+			"task_awe_run-006_echo-001",
+			"task_awe_run-006_echo-002",
+			"task_awe_run-006_echo-003",			
+			"task_awe_run-007_echo-001",
+			"task_awe_run-007_echo-002",
+			"task_awe_run-007_echo-003",
+			"task_tomloc_echo-001",
+			"task_tomloc_echo-002",
+			"task_tomloc_echo-003",
+			"task_langloc_echo-001",
+			"task_langloc_echo-002",
+			"task_langloc_echo-003",
+			"task_pixar_echo-001",
+			"task_pixar_echo-002",
+			"task_pixar_echo-003",
+			"task_snackattack_echo-001",
+			"task_snackattack_echo-002",
+			"task_snackattack_echo-003"
+        ] 
+      }
+	},
+	{
+      "datatype": "fmap",
+      "suffix": "magnitude2",
+	  "custom_entities": "run-002",
+      "criteria": {
+        "SidecarFilename": "*_fieldmap2_*_e2.*"
+      },
+      "sidecar_changes": {
+        "IntendedFor": [
+			"task_awe_run-003_echo-001",
+			"task_awe_run-003_echo-002",
+			"task_awe_run-003_echo-003",
+			"task_awe_run-004_echo-001",
+			"task_awe_run-004_echo-002",
+			"task_awe_run-004_echo-003",
+			"task_awe_run-005_echo-001",
+			"task_awe_run-005_echo-002",
+			"task_awe_run-005_echo-003",
+			"task_awe_run-006_echo-001",
+			"task_awe_run-006_echo-002",
+			"task_awe_run-006_echo-003",			
+			"task_awe_run-007_echo-001",
+			"task_awe_run-007_echo-002",
+			"task_awe_run-007_echo-003",
+			"task_tomloc_echo-001",
+			"task_tomloc_echo-002",
+			"task_tomloc_echo-003",
+			"task_langloc_echo-001",
+			"task_langloc_echo-002",
+			"task_langloc_echo-003",
+			"task_pixar_echo-001",
+			"task_pixar_echo-002",
+			"task_pixar_echo-003",
+			"task_snackattack_echo-001",
+			"task_snackattack_echo-002",
+			"task_snackattack_echo-003"
+        ] 
+      }
+	},
+	{
+      "datatype": "fmap",
+      "suffix": "phasediff",
+	  "custom_entities": "run-002",
+      "criteria": {
+        "SidecarFilename": "*_fieldmap2_*_ph.*"
+      },
+      "sidecar_changes": {
+        "IntendedFor": [
+			"task_awe_run-003_echo-001",
+			"task_awe_run-003_echo-002",
+			"task_awe_run-003_echo-003",
+			"task_awe_run-004_echo-001",
+			"task_awe_run-004_echo-002",
+			"task_awe_run-004_echo-003",
+			"task_awe_run-005_echo-001",
+			"task_awe_run-005_echo-002",
+			"task_awe_run-005_echo-003",
+			"task_awe_run-006_echo-001",
+			"task_awe_run-006_echo-002",
+			"task_awe_run-006_echo-003",			
+			"task_awe_run-007_echo-001",
+			"task_awe_run-007_echo-002",
+			"task_awe_run-007_echo-003",
+			"task_tomloc_echo-001",
+			"task_tomloc_echo-002",
+			"task_tomloc_echo-003",
+			"task_langloc_echo-001",
+			"task_langloc_echo-002",
+			"task_langloc_echo-003",
+			"task_pixar_echo-001",
+			"task_pixar_echo-002",
+			"task_pixar_echo-003",
+			"task_snackattack_echo-001",
+			"task_snackattack_echo-002",
+			"task_snackattack_echo-003"
+        ]
+      }
+	}
+  ]
+}
