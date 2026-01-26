@@ -116,11 +116,11 @@ echo "${subjs}"
 echo
 
 # define number of dicoms per functional run for data checking
-awe_dicoms=150 # variable number of volumes in complete runs, so just set this to a reasonable estimate
-tomloc_dicoms=71  # 214 in complete run
-langloc_dicoms=86 # 260 in complete run
-pixar_dicoms=55 # 168 in complete run
-snackattack_dicoms=46 # 140 in complete run
+awe_dicoms=150			# variable number of volumes in complete runs, so just set this to a reasonable estimate
+tomloc_dicoms=141		# 214 in complete run
+langloc_dicoms=172		# 260 in complete run
+pixar_dicoms=111		# 168 in complete run
+snackattack_dicoms=93	# 140 in complete run
 
 # iterate for all subjects in the text file
 while read p
