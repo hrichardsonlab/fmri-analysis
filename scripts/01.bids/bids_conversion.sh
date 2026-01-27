@@ -139,7 +139,7 @@ do
 		cp -r ${rawDir}/${raw_name} ${tmpDir}
 		
 		# remove SBRef files
-		rm -r ${tmpDir}/${tmpDir}/${raw_name}/*/*_SBRef
+		rm -r ${tmpDir}/${raw_name}/*/*_SBRef
 		
 		# identify all functional runs
 		awe_runs=$(ls -d ${tmpDir}/${raw_name}/*/*_awe*/)
@@ -250,7 +250,10 @@ do
 		
 		# copy temporary folder to BIDS folder
 		mv ${tmpDir}/sub-${bids_name} ${bidsDir}
-	
+		
+		# remove BIDS URL from fieldmap json files because these aren't recognized by fMRIPrep
+		grep -l '"IntendedFor"' ${bidsDir}/sub-${bids_name}/fmap/*.json | xargs sed -i 's/bids::sub-[^/]*\///g'
+		
 	fi
 	
 done <$2
