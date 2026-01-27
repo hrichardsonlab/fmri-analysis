@@ -100,7 +100,7 @@ then
 	echo '{' >> ${bidsDir}/dataset_description.json
 	echo ' "Name": "RichardsonLab AWE Study 1",' >> ${bidsDir}/dataset_description.json
 	echo ' "BIDSVersion": "1.9.0",' >> ${bidsDir}/dataset_description.json
-	echo ' "License": ["This dataset is made available under the Public Domain Dedication and License v1.0, whose full text can be found at http://www.opendatacommons.org/licenses/pddl/1.0/. We hope that all users will follow the ODC Attribution/Share-Alike Community Norms (http://www.opendatacommons.org/norms/odc-by-sa/); in particular, while not legally required, we hope that all users of the data will acknowledge the OpenfMRI project and NSF Grant OCI-1131441 (R. Poldrack, PI) in any publications."],' >> ${bidsDir}/dataset_description.json
+	echo ' "License": ["This dataset is made available under the Public Domain Dedication and License v1.0, whose full text can be found at http://www.opendatacommons.org/licenses/pddl/1.0/. We hope that all users will follow the ODC Attribution/Share-Alike Community Norms (http://www.opendatacommons.org/norms/odc-by-sa/); in particular, while not legally required, we hope that all users of the data will acknowledge the OpenfMRI project and NSF Grant OCI-1131441 (R. Poldrack, PI) in any publications."]' >> ${bidsDir}/dataset_description.json
 	echo '}' >> ${bidsDir}/dataset_description.json
 fi
 
