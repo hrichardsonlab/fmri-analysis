@@ -1,4 +1,5 @@
 sharedDir	/RichardsonLab/processing
+rawDir	
 bidsDir	
 derivDir	
 resultsDir	

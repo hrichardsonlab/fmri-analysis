@@ -1,4 +1,5 @@
 sharedDir	/RichardsonLab/processing
+rawDir	
 bidsDir	/RichardsonLab/preprocessedData/EMF/
 derivDir	/RichardsonLab/preprocessedData/EMF/derivatives
 resultsDir	

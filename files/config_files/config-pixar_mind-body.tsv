@@ -1,4 +1,5 @@
 sharedDir	/RichardsonLab/processing
+rawDir	
 bidsDir	/RichardsonLab/preprocessedData/TRAIN/
 derivDir	/RichardsonLab/preprocessedData/TRAIN/derivatives
 resultsDir	
