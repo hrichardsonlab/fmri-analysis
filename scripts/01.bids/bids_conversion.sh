@@ -15,9 +15,10 @@ Usage() {
 	echo "./bids_conversion.sh <config file> <list of subject folders to convert>"
 	echo
 	echo "Example:"
-	echo "./bids_conversion.sh config-AWE1_emo-phys.tsv RLABAWE1_subjs.txt"
+	echo "./bids_conversion.sh config-awe1_emo-phys.tsv RLABAWE1_dcm2bids.txt"
 	echo 
-	echo "RLABAWE1_subjs.txt is a file containing the participants to convert"
+	echo "RLABAWE1_dcm2bids.txt is a file containing the names of the participant folders to convert"
+	echo "Note that this might be the format of the names is not in BIDS format:"
 	echo "RLAB_AWE1_01"
 	echo "RLAB_AWE1_02"
 	echo "..."
@@ -40,7 +41,7 @@ then
 	echo "The configuration file was not found."
 	echo "The script must be submitted with (1) a configuration file name and (2) a subject-run list as in the example below."
 	echo
-	echo "./bids_conversion.sh config-AWE1_emo-phys.tsv RLABAWE1_subjs.txt"
+	echo "./bids_conversion.sh config-awe1_emo-phys.tsv RLABAWE1_subjs.txt"
 	echo	
 	# end script and show full usage documentation	
 	Usage
@@ -52,7 +53,7 @@ then
 	echo "The list of participants was not found."
 	echo "The script must be submitted with (1) a configuration file name and (2) a subject-run list as in the example below."
 	echo
-	echo "./bids_conversion.sh config-AWE1_emo-phys.tsv RLABAWE1_subjs.txt"
+	echo "./bids_conversion.sh config-awe1_emo-phys.tsv RLABAWE1_subjs.txt"
 	echo	
 	# end script and show full usage documentation	
 	Usage
@@ -66,7 +67,7 @@ singularityDir="${projDir}/singularity_images"
 config=${projDir}/$1
 subjs=$(cat $2 | awk '{print $1}')
 
-# define data directories depending on study information
+# define data directories depending on paths provided in config file
 sharedDir=$(awk -F'\t' '$1=="sharedDir"{print $2}' "$config")
 bidsDir=$(awk -F'\t' '$1=="bidsDir"{print $2}' "$config")
 rawDir=$(awk -F'\t' '$1=="rawDir"{print $2}' "$config")
@@ -128,7 +129,7 @@ do
 	raw_name=` basename ${p} | awk -F- '{print $NF}' `	# raw subj name
 	bids_name=$(echo "$raw_name" | tr -d '_ ') # bids formatted subj name
 	
-	# convert data if the subject has a raw data folder, trying different naming conventions to check whether the folder exists
+	# convert data if the subject has a raw data folder
 	if [ -d ${rawDir}/${raw_name} ]
 	then
 	
