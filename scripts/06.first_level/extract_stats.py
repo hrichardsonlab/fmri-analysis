@@ -216,6 +216,10 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         print('Skipping {} search space for the {} contrast'.format(mask_opts[r], c))
                     else: 
                         print('Extracting stats from {} mask within {} contrast'.format(mask_opts[r], c))
+                        # copes file
+                        bcope_file = glob.glob(op.join(modelDir, '*_{}_cope.nii.gz'.format(c)))
+                        bcope_img = image.load_img(bcope_file)
+                        
                         # z-stats copes file
                         zcope_file = glob.glob(op.join(modelDir, '*_{}_zstat.nii.gz'.format(c)))
                         zcope_img = image.load_img(zcope_file)
@@ -228,6 +232,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         # this dimension is not adding any information, so this is fine to do; the 3D map of stats values is preserved.
                         # this step isn't necessary for fROIs because they were defined using the functional data and also have a 4th singleton dimension
                         if not 'fROI' in mask_opts[r] and not 'FS' in mask_opts[r] and not 'aROI' in mask_opts[r]:
+                            bcope_img = image.math_img('np.squeeze(img)', img=bcope_img)
                             zcope_img = image.math_img('np.squeeze(img)', img=zcope_img)
                             tcope_img = image.math_img('np.squeeze(img)', img=tcope_img)
                         
@@ -240,6 +245,10 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         # mask and extract values depending on extract_opt
                         if extract_opt == 'mean': # if mean requested
                             # mask contrast image with roi image
+                            ## copes (beta) file
+                            masked_bimg = image.math_img('img1 * img2', img1 = bcope_img, img2 = mask_bin)
+                            masked_bdata = masked_bimg.get_fdata()                            
+                            
                             ## z-stats
                             masked_zimg = image.math_img('img1 * img2', img1 = zcope_img, img2 = mask_bin)
                             masked_zdata = masked_zimg.get_fdata()
@@ -249,6 +258,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             masked_tdata = masked_timg.get_fdata()
                             
                             # take the mean of voxels within mask
+                            mean_bval = np.nanmean(masked_bdata[masked_bdata != 0]) # cope value
                             mean_zval = np.nanmean(masked_zdata[masked_zdata != 0]) # z-stats
                             mean_tval = np.nanmean(masked_tdata[masked_tdata != 0]) # t-stats
                             
@@ -256,6 +266,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             #masked_zdata_file = op.join(modelDir, '{}_{}_masked_zdata.nii.gz'.format(mask_opts[r],c))
                             #masked_zimg.to_filename(masked_zdata_file)
                             
+                            print('Mean cope value within {}: {}'. format(mask_opts[r], mean_bval))
                             print('Mean z-stat within {}: {}'. format(mask_opts[r], mean_zval))
                             print('Mean t-stat within {}: {}'. format(mask_opts[r], mean_tval))
                             
@@ -267,6 +278,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                                                        'mask': mask_opts[r],
                                                        'roi_file' : roi,
                                                        'contrast' : c,
+                                                       'mean_cope' : mean_bval,
                                                        'mean_tval' : mean_tval,
                                                        'mean_zval' : mean_zval}, index=[0])
                             else:
@@ -276,6 +288,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                                                        'mask': mask_opts[r],
                                                        'roi_file' : roi,
                                                        'contrast' : c,
+                                                       'mean_cope' : mean_bval,
                                                        'mean_tval' : mean_tval,                                                     
                                                        'mean_zval' : mean_zval}, index=[0])
                             
@@ -290,6 +303,8 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         else:
                             # mask contrast image with roi image and return 2D array
                             masker = NiftiMasker(mask_img=mask_bin)
+                            ## cope
+                            masked_bdata = masker.fit_transform(bcope_img)
                             ## z-stats
                             masked_zdata = masker.fit_transform(zcope_img)
                             ## t-stats
@@ -300,8 +315,9 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             masked_df = pd.DataFrame(masked_zdata).transpose()
                             masked_df = masked_df.rename(columns={0: 'z-stat'})
                             
-                            # add columns with t-stats, run, task, split, and mask info
+                            # add columns with cope values, t-stats, run, task, split, and mask info
                             masked_df.insert(loc=0, column='t-stat', value=pd.DataFrame(masked_tdata).transpose())
+                            masked_df.insert(loc=0, column='copes', value=pd.DataFrame(masked_bdata).transpose())
                             masked_df.insert(loc=0, column='voxel_index', value=range(len(masked_df)))
                             masked_df.insert(loc=0, column='mask', value=mask_opts[r])
                             masked_df.insert(loc=0, column='contrast', value=c)
