@@ -158,10 +158,10 @@ do
 			fi	
 
 			# copy same onsets and durations for pixar or copy subject-specific events files
-			if [ ${task} == 'pixar' ]
+			if [ ${task} == 'pixar' ] || [ ${task} == 'tomloc' ] || [ ${task} == 'langloc' ] || [ ${task} == 'snackattack' ]
 			then
 				# copy the event files saved in the project files directory
-				for e in ${projDir}/files/event_files/*.tsv
+				for e in ${projDir}/files/event_files/${task}*.tsv
 				do
 					awk 'NR>0' ${e} >> ${subDir}/tmp.tsv
 				done
