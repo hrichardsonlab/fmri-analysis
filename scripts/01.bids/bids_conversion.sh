@@ -229,8 +229,6 @@ do
 		echo "Converting sub-${bids_name} to BIDS"
 		echo
 		
-		echo "${sharedDir}/dcm2bids_files/${study}_config.json"
-		
 		# convert to BIDS [more options: dcm2bids --help]
 			# -d: directory with dicom data
 			# -p: participant ID
@@ -255,9 +253,8 @@ do
 		# remove BIDS URL from fieldmap json files because these aren't recognized by fMRIPrep
 		grep -l '"IntendedFor"' ${bidsDir}/sub-${bids_name}/fmap/*.json | xargs sed -i 's/bids::sub-[^/]*\///g'
 		
+		# remove temporary data conversion directory
+		rm -r ${tmpDir}
 	fi
 	
 done <$2
-
-# remove temporary data conversion directory
-rm -r ${tmpDir}
