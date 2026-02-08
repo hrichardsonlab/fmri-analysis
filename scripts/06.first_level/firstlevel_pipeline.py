@@ -639,11 +639,11 @@ def create_firstlevel_workflow(projDir, derivDir, workDir, outDir,
     # extract components from working directory cache and store it at a different location
     sinker = Node(DataSink(), name='datasink')
     sinker.inputs.base_directory = outDir
-        
     sinker.inputs.regexp_substitutions = [(r'(.*_run_id_(\d+)_splithalf_id_.*)/run0([^/]*)\.(mat|con|fsf|png)', r'\1/run\2\3.\4'),
                                           ('_event_file.*run_id_', 'run'),
                                           ('_splithalf_id_0', ''),
                                           ('_splithalf_id_', '_splithalf'),
+                                          ('run0', 'run1'),
                                           ('_smooth0/',''),
                                           ('_roi',''),
                                           #('MNI152NLin2009cAsym_res-2_desc','MNI'),
