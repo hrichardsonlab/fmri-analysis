@@ -108,9 +108,9 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         # check to see whether outputs exist in smoothDir (if smoothDir was specified in config file)
         if smoothDir:
             if splithalf_id != 0:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*_smooth.nii.gz'.format(prefix, space_name)))[0]
             else:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*_smooth.nii.gz'.format(prefix, space_name)))[0]
             
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
