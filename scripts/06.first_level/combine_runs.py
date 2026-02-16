@@ -14,6 +14,7 @@ from nipype.interfaces import fsl
 from niflow.nipype1.workflows.fmri.fsl.estimate import create_fixed_effects_flow
 import nipype.interfaces.io as nio
 from nipype import Workflow, Node, MapNode, IdentityInterface, Function, DataSink, JoinNode, SelectFiles
+import nibabel as nib
 import os
 import os.path as op
 import glob
@@ -25,12 +26,50 @@ import shutil
 
 # define average runs workflow function
 def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, runs, events, contrast_opts, splithalf_id, space_name, name='{}_task-{}_combineruns'):
-    """Processing pipeline"""
     
     # initialize workflow
     wf = Workflow(name=name.format(sub, task),
                   base_dir=workDir)
                   
+    # combine percent signal change runs if psc folder exists
+    pscDir = op.join(resultsDir, '{}'.format(sub), 'psc')
+    if os.path.isdir(pscDir):
+        # create psc combined folder
+        os.makedirs(op.join(pscDir, 'combined'), exist_ok=True)
+        
+        # save run names for output file naming
+        run_names = '_'.join(map(str, runs))
+        
+        # loop over contrasts
+        for c in contrast_opts:
+            # loop through psc run folders
+            print('Averaging percent signal change over:')
+            psc_runs = []
+            for psc_run in runs:
+                if splithalf_id != 0:
+                    # grab run file
+                    psc_run_file = os.path.join(pscDir, 'run{}_splithalf{}'.format(psc_run, splithalf_id), '{}_psc.nii.gz'.format(c))
+                    # mean psc output file name
+                    mean_psc_file = op.join(pscDir, 'combined', '{}_psc_runs-{}_splithalf{}_averaged.nii.gz'.format(c, run_names, splithalf_id))
+                
+                if splithalf_id == 0:
+                    # grab run file
+                    psc_run_file = os.path.join(pscDir, 'run{}'.format(psc_run), '{}_psc.nii.gz'.format(c))
+                    # mean psc output file name
+                    mean_psc_file = op.join(pscDir, 'combined', '{}_psc_runs-{}_averaged.nii.gz'.format(c, run_names))
+                
+                psc_runs.append(psc_run_file)
+                print('run {}: {}'.format(psc_run, psc_run_file))
+            
+            # load, stack, and average data
+            psc_data = [nib.load(f).get_fdata() for f in psc_runs]
+            psc_stack = np.stack(psc_data, axis=-1)
+            psc_mean = np.mean(psc_stack, axis=-1)
+            psc_mean_img = nib.Nifti1Image(psc_mean, affine=nib.load(psc_runs[0]).affine)
+            
+            print('Saving averaged percent signal change map: {}'.format(mean_psc_file))
+            nib.save(psc_mean_img, mean_psc_file)
+      
     # create output directory for combined runs
     if splithalf_id == 0:
         combinedDir = op.join(subDir, 'model', 'combined_runs')
