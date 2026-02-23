@@ -219,7 +219,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         print('Extracting stats from {} mask within {} contrast'.format(mask_opts[r], c))
                         
                         # psc file (if requested)
-                        if psc:
+                        if psc == 0:
                             # if not combined results
                             if combined == 'no':
                                 if splithalf_id != 0:                                
@@ -271,7 +271,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             tcope_img = image.math_img('np.squeeze(img)', img=tcope_img)
                             
                         # remove the 4th singleton dimension from all files if extracting PSC (only 3 dimensions)
-                        if psc:
+                        if psc == 0:
                             zcope_img = image.math_img('np.squeeze(img)', img=zcope_img)
                             tcope_img = image.math_img('np.squeeze(img)', img=tcope_img)
                             psc_img = image.math_img('np.squeeze(img)', img=psc_img)
@@ -287,7 +287,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         if extract_opt == 'mean': # if mean requested
                                                 
                             # if mean psc values were requested
-                            if psc:
+                            if psc == 0:
                                 masked_pscimg = image.math_img('img1 * img2', img1 = psc_img, img2 = mask_bin)
                                 masked_pscdata = masked_pscimg.get_fdata()
                                 mean_psc = np.nanmean(masked_pscdata[masked_pscdata != 0]) # psc values                             
@@ -311,7 +311,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             
                             print('Mean z-stat within {}: {}'. format(mask_opts[r], mean_zval))
                             print('Mean t-stat within {}: {}'. format(mask_opts[r], mean_tval))
-                            if psc:
+                            if psc == 0:
                                 print('Mean percent signal change within {}: {}'. format(mask_opts[r], mean_psc))
                             
                             if splithalf_id != 0:
@@ -334,7 +334,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                                                        'mean_tval' : mean_tval,                                                     
                                                        'mean_zval' : mean_zval}, index=[0])
                             
-                            if psc:
+                            if psc == 0:
                                 df_row['mean_psc'] = mean_psc
                                 
                             if not os.path.isfile(stats_file): # if the stats output file doesn't exist
@@ -349,7 +349,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             # mask contrast image with roi image and return 2D array
                             masker = NiftiMasker(mask_img=mask_bin)
                             ## psc
-                            if psc:
+                            if psc == 0:
                                 masked_pscdata = masker.fit_transform(psc_img)
                             ## z-stats
                             masked_zdata = masker.fit_transform(zcope_img)
@@ -363,7 +363,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             
                             # add columns with t-stats, run, task, split, and mask info
                             masked_df.insert(loc=0, column='t-stat', value=pd.DataFrame(masked_tdata).transpose())
-                            if psc:
+                            if psc == 0:
                                 masked_df.insert(loc=0, column='psc', value=pd.DataFrame(masked_pscdata).transpose())
                             masked_df.insert(loc=0, column='voxel_index', value=range(len(masked_df)))
                             masked_df.insert(loc=0, column='mask', value=mask_opts[r])
