@@ -108,9 +108,9 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         # check to see whether outputs exist in smoothDir (if smoothDir was specified in config file)
         if smoothDir:
             if splithalf_id != 0:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
             else:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
             
             if os.path.exists(smooth_file):
                 mni_file = smooth_file
@@ -122,6 +122,9 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         
         # define froi prefix if resultsDir was provided
         if resultsDir:
+            # define aroi prefix
+            aroi_prefix = op.join(resultsDir, '{}'.format(sub), 'arois', '{}_'.format(sub))
+            
             if splithalf_id != 0:                    
                     # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
                     if splithalf_id == 1:
@@ -179,6 +182,15 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
                 roi_masks.append(roi_file)
                 print('Using {} FreeSurfer defined file from {}'.format(roi_name, roi_file))            
             
+            # if an anatomical ROI was specified
+            elif 'aROI' in m:
+                if not aroi_prefix: # resultsDir:
+                    print('ERROR: unable to locate aROI file. Make sure a resultsDir is provided in the config file!')
+                else:
+                    roi_name = m.split('aROI-')[1].split('_')[0]
+                    roi_file = glob.glob(op.join('{}*{}*.nii.gz'.format(aroi_prefix, roi_name)))#[0]
+                    roi_masks.append(roi_file)
+                    print('Using {} aROI file from {}'.format(roi_name, roi_file))                
             # if any other ROI was specified
             else:
                 if template is not None:
