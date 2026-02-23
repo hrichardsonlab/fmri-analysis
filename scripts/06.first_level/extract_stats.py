@@ -58,7 +58,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
             roi_masks = list()
             for m in mask_opts:
                 # define aroi prefix
-                aroi_prefix = op.join(resultsDir, '{}'.format(sub), 'arois', '{}_roi-'.format(sub))
+                aroi_prefix = op.join(resultsDir, '{}'.format(sub), 'arois', '{}_'.format(sub))
                 
                 # if a functional ROI was specified
                 if 'fROI' in m:
@@ -109,7 +109,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
                     else:
                         roi_name = m.split('fROI-')[1]
-                        roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_task-{}*{}_*.nii.gz'.format(sub, task, roi_name)))
+                        roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*.nii.gz'.format(sub, roi_name)))
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
                 
@@ -141,7 +141,6 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             print('ERROR: unable to locate aROI file. Make sure a resultsDir is provided in the config file!')
                         else:
                             roi_name = m.split('aROI-')[1].split('_')[0]
-                            roi_name = roi_name.lower()
                             roi_file = glob.glob(op.join('{}*{}*.nii.gz'.format(aroi_prefix, roi_name)))#[0]
                             roi_masks.append(roi_file)
                             print('Using {} aROI file from {}'.format(roi_name, roi_file))  
