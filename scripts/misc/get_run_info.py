@@ -66,7 +66,7 @@ def run_volumes(bidsDir, qcDir, ses):
             print('No functional data found for {}'.format(sub))
         
         # convert to dataframe
-        run_info = pd.DataFrame(row_list)
+        run_info = pd.DataFrame(row_list).sort_values(by=['sub', 'filename'])
 
         # save as file in qcDir
         run_info.to_csv(run_info_file, index=False, sep ='\t')
