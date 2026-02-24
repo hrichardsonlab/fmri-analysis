@@ -47,15 +47,15 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
         if template != None: # if a template was specified (ie resampled search spaces are requested)
             # extract main part of  template name
             template_name = template.split('_')[0]
-            roi_file = glob.glob(op.join(sharedDir, 'search_spaces', '{}/{}/{}*.nii.gz'.format(network, template_name, m)))
+            roi_file = glob.glob(op.join(sharedDir, 'search_spaces', '{}/{}/{}_*.nii.gz'.format(network, template_name, m)))
             
             if not roi_file: # check projDir directory for search spaces if not in shared directory
-                roi_file = glob.glob(op.join(projDir, 'files', 'search_spaces', '{}/{}/{}*.nii.gz'.format(network, template_name, m)))
+                roi_file = glob.glob(op.join(projDir, 'files', 'search_spaces', '{}/{}/{}_*.nii.gz'.format(network, template_name, m)))
         else:
-            roi_file = glob.glob(op.join(sharedDir, 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
+            roi_file = glob.glob(op.join(sharedDir, 'search_spaces', '{}/{}_*.nii.gz'.format(network, m)))
             
             if not roi_file: # check projDir directory for search spaces if not in shared directory
-                roi_file = glob.glob(op.join(projDir, 'files', 'search_spaces', '{}/{}*.nii.gz'.format(network, m)))
+                roi_file = glob.glob(op.join(projDir, 'files', 'search_spaces', '{}/{}_*.nii.gz'.format(network, m)))
         
         roi_masks.append(roi_file)
         
