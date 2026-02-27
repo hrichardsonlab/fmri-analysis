@@ -46,8 +46,11 @@ def compile_stats(projDir, resultsDir, extract_opt):
             # merge with compiled stats
             compiled_stats.append(stats_dat)
             
-    # concatenate dataframes
-    compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'run', 'contrast', 'mask','voxel_index']).reset_index(drop=True)
+    # concatenate and sort dataframes
+    if extract_opt == 'voxelwise':
+        compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'run', 'contrast', 'mask', 'voxel_index']).reset_index(drop=True)
+    else:
+        compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'run', 'contrast', 'mask']).reset_index(drop=True)
     
     # save as csv file in resultsDir
     compiled_file = op.join(resultsDir, 'compiled_stats.csv')
