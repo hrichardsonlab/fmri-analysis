@@ -124,8 +124,9 @@ do
     # grab normalized anat transform file	
 	T1w_to_MNI=${subDir_deriv}/anat/*from-T1w_to-MNI152NLin2009cAsym*xfm.h5
 	
-	# grab T1w image in T1w native and MNI space
-	T1w_native_img=${subDir_deriv}/anat/*desc-preproc_T1w.nii.gz
+	# grab T1w image in bold reference and MNI space
+	#T1w_native_img=${subDir_deriv}/anat/*desc-preproc_T1w.nii.gz
+	boldref_T1w=${subDir_deriv}/func/*${t}*_space-T1w_boldref.nii.gz
 	T1w_MNI_img=${subDir_deriv}/anat/*space-MNI152NLin2009cAsym*desc-preproc_T1w.nii.gz
 	
 	# for each task
@@ -154,7 +155,7 @@ do
 		${singularityDir}/fmriprep-24.0.0.simg											\
 		antsApplyTransforms -e 3														\
 			-i ${denoised_img}															\
-			-r ${T1w_native_img}														\
+			-r ${boldref_T1w}															\
 			-o ${denoised_T1w}															\
 			-n LanczosWindowedSinc														\
 			-t ${bold_to_T1w}
