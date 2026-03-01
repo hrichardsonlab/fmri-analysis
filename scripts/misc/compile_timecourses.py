@@ -67,7 +67,8 @@ def compile_timecourses(projDir, resultsDir):
                 tc_dat.insert(loc=0, column='time', value=range(len(tc_dat)))
 
                 # merge with compiled timecourses
-                compiled_tc = compiled_tc.merge(tc_dat, 'outer')
+                #compiled_tc = compiled_tc.merge(tc_dat, 'outer')
+                compiled_tc = pd.concat([compiled_tc, tc_dat], ignore_index=True)
 
             else:
                 print('WARNING: the extracted timecourses are voxelwise instead of mean timecourses, skipping files!')
