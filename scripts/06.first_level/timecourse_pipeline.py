@@ -26,7 +26,7 @@ from datetime import datetime
 
 # define first level workflow function
 def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, subDir, 
-                               sub, task, ses, multiecho, runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, TR, detrend,standardize, template, extract_opt, dropvols, splithalves, space_name,
+                               sub, task, ses, multiecho, runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, TR, detrend,standardize, template, extract_opt, dropvols, splithalves, space_name,
                                name='{}_task-{}_timecourses'):
     """Processing pipeline"""
 
@@ -56,7 +56,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         print('Spatial smoothing will not be run.')
         
     # define data grabber function
-    def data_grabber(sub, task, mask_opts, sharedDir, projDir, derivDir, resultsDir, smoothDir, subDir, template, dropvols, ses, multiecho, run_id, splithalf_id, space_name):
+    def data_grabber(sub, task, mask_opts, sharedDir, projDir, derivDir, resultsDir, smoothDir, froiDir, subDir, template, dropvols, ses, multiecho, run_id, splithalf_id, space_name):
         """Quick filegrabber ala SelectFiles/DataGrabber"""
         import os
         import os.path as op
@@ -119,24 +119,50 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
                 print('WARNING: A smoothDir was specified in the config file but no smoothed data files were found.')
         else:
             print('No smoothDir specified in the config file. Using fMRIPrep outputs.')
+       
+        # check if an froiDir was provided, look in the resultsDir if not
+        if froiDir == None:
+            froiDir = resultsDir
         
-        # define froi prefix if resultsDir was provided
+        # define combined froiDir for this subject and check if it exists
+        combinedDir = op.join(froiDir, '{}'.format(sub), 'frois', 'combined_runs')
+        if op.exists(combinedDir):
+            combined = 'yes'
+        else:
+            combined = 'no'
+        
+        # define roi prefixes if resultsDir or froiDir was provided        
         if resultsDir:
             # define aroi prefix
             aroi_prefix = op.join(resultsDir, '{}'.format(sub), 'arois', '{}_'.format(sub))
-            
-            if splithalf_id != 0:                    
-                    # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
-                    if splithalf_id == 1:
-                        print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                        froi_prefix = op.join(resultsDir, '{}'.format(sub), 'frois', '{}_splithalf2'.format(run_name))
+        
+        if froiDir:
+            if splithalf_id != 0 and combined == 'no':                
+                # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
+                if splithalf_id == 1:
+                    print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
+                    froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', '{}_splithalf2'.format(run_name))
                         
-                    if splithalf_id == 2:
-                        print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
-                        froi_prefix = op.join(resultsDir, '{}'.format(sub), 'frois', '{}_splithalf1'.format(run_name))
-            else:
-                froi_prefix = op.join(resultsDir, '{}'.format(sub), 'frois', '{}'.format(run_name))
-
+                if splithalf_id == 2:
+                    print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
+                    froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', '{}_splithalf1'.format(run_name))
+            
+            elif splithalf_id != 0 and combined == 'yes':
+                # ensure that the fROI from the *opposite* splithalf is picked up for timecourse extraction (e.g., timecourse from splithalf1 is extracted from fROI defined in splithalf2)
+                if splithalf_id == 1:
+                    print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
+                    froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', 'combined_runs', 'splithalf2')
+                        
+                if splithalf_id == 2:
+                    print('Will skip signal extraction in splithalf{} for any fROIs defined in splithalf{}'.format(splithalf_id, splithalf_id))
+                    froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', 'combined_runs', 'splithalf1')
+                            
+            elif splithalf_id == 0 and combined == 'no':
+                froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', '{}'.format(run_name))
+            
+            elif splithalf_id == 0 and combined == 'yes':    
+                froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', 'combined_runs')
+                
         # define preproc directory depending on whether splithalf was requested
         if splithalf_id != 0:
             preprocDir = op.join(subDir, 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id))
@@ -160,7 +186,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
             # if a functional ROI was specified
             elif 'fROI' in m:
                 if not froi_prefix: # resultsDir:
-                    print('ERROR: unable to locate fROI file. Make sure a resultsDir is provided in the config file!')
+                    print('ERROR: unable to locate fROI file. Make sure a resultsDir or froiDir is provided in the config file!')
                 else:
                     roi_name = m.split('fROI-')[1].split('_')[0]
                     # roi_name = roi_name.lower() # if roi names are lowercase in define_fROI.py script
@@ -224,6 +250,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
     datasource.inputs.subDir = subDir
     datasource.inputs.resultsDir = resultsDir
     datasource.inputs.smoothDir = smoothDir
+    datasource.inputs.froiDir = froiDir
     datasource.inputs.sharedDir = sharedDir
     datasource.inputs.ses = ses
     datasource.inputs.dropvols = dropvols
@@ -704,7 +731,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
 
 # define function to extract subject-level data for workflow
 def process_subject(TR, sharedDir, projDir, derivDir, outDir, workDir, 
-                    sub, task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size,resultsDir,smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name):    
+                    sub, task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size,resultsDir,smoothDir, froiDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name):    
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
@@ -766,7 +793,7 @@ def process_subject(TR, sharedDir, projDir, derivDir, outDir, workDir,
 
     # call timecourse workflow with extracted subject-level data
     wf = create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, subDir, sub,
-                                    task, ses, multiecho, keepruns, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves, space_name)  
+                                    task, ses, multiecho, keepruns, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves, space_name)  
                                     
                                     
     return wf
@@ -815,6 +842,7 @@ def main(argv=None):
     derivDir=config_file.loc['derivDir',1]
     resultsDir=config_file.loc['resultsDir',1]
     smoothDir=config_file.loc['smoothDir',1]
+    froiDir=config_file.loc['froiDir',1]
     task=config_file.loc['task',1]
     ses=config_file.loc['sessions',1]
     multiecho=config_file.loc['multiecho',1]
@@ -928,7 +956,7 @@ def main(argv=None):
               
         # create a process_subject workflow with the inputs defined above
         wf = process_subject(TR, sharedDir, args.projDir, derivDir, outDir, workDir, sub,
-                             task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name)
+                             task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name)
    
         # configure workflow options
         wf.config['execution'] = {'crashfile_format': 'txt',
