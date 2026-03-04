@@ -4,6 +4,7 @@ bidsDir	/RichardsonLab/preprocessedData/TRAIN/
 derivDir	/RichardsonLab/preprocessedData/TRAIN/derivatives
 resultsDir	
 smoothDir	
+froiDir	
 resampleDir	
 space	MNI
 task	pixar

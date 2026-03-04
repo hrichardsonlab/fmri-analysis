@@ -1,0 +1,51 @@
+sharedDir	/RichardsonLab/processing
+rawDir	/RichardsonLab/rawData/RLAB_AWE1
+bidsDir	/RichardsonLab/preprocessedData/RLAB_AWE1
+derivDir	/RichardsonLab/preprocessedData/RLAB_AWE1/derivatives
+resultsDir	
+smoothDir	
+froiDir	
+resampleDir	
+space	MNI
+task	langloc
+sessions	no
+multiecho	yes
+FD_thresh	.4
+DVARS_thresh	1.5
+art_norm_thresh	.4
+art_z_thresh	3
+ntmpts_exclude	.33
+ignore_motion	no
+dropvols	0
+smoothing	5
+hpf	128
+filter	butterworth
+detrend	yes
+standardize	zscore
+splithalf	no
+events	sentence, nonword
+modulators	no
+contrast	sentence-nonword
+timecourses	no
+regressors	art, aCompCor
+convert_surf	
+template	MNI152NLin2009cAsym_res-02_T1w
+FS_ROI	
+search_spaces	LAngG, LAntTemp, LIFG, LIFGorb, LMidFG, LPostTemp, RAngG, RAntTemp, RIFG, RIFGorb, RMidFG, RPostTemp
+match_events	no
+top_nvox	10-percent
+mask	fROI-LAngG, fROI-LAntTemp, fROI-LIFG, fROI-LIFGorb, fROI-LMidFG, fROI-LPostTemp, fROI-RAngG, fROI-RAntTemp, fROI-RIFG, fROI-RIFGorb, fROI-RMidFG, fROI-RPostTemp
+extract	mean
+nonparametric	yes
+npermutations	5000
+group_comparison	within
+group_variables	no
+est_group_variances	no
+tfce	yes
+stat_thresh	.95
+cluster_size	5
+top_nregions	10
+hrf_lag	4
+rc_ntps	4
+rc_thresh	.05
+overwrite	no

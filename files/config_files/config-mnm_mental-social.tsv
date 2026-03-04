@@ -4,6 +4,7 @@ bidsDir	/RichardsonLab/preprocessedData/EMF/
 derivDir	/RichardsonLab/preprocessedData/EMF/derivatives
 resultsDir	
 smoothDir	
+froiDir	
 resampleDir	
 space	MNI
 task	mnm

@@ -4,6 +4,7 @@ bidsDir
 derivDir	
 resultsDir	
 smoothDir	
+froiDir	
 resampleDir	
 space	MNI
 task	
