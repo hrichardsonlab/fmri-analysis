@@ -25,10 +25,10 @@ import glob
 import shutil
 
 # define average runs workflow function
-def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, runs, events, contrast_opts, splithalf_id, space_name, name='{}_task-{}_combineruns'):
+def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, num_folds, fold_id, runs, events, contrast_opts, splithalf_id, space_name, name='{}_task-{}_combineruns_fold{}'):
     
     # initialize workflow
-    wf = Workflow(name=name.format(sub, task),
+    wf = Workflow(name=name.format(sub, task, fold_id),
                   base_dir=workDir)
                   
     # combine percent signal change runs if psc folder exists
@@ -75,6 +75,12 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
         combinedDir = op.join(subDir, 'model', 'combined_runs')
     else:
         combinedDir = op.join(subDir, 'model', 'combined_runs', 'splithalf{}'.format(splithalf_id))
+    
+    # add fold subfolder in combined_runs directory if runs are being combined in different folds
+    if num_folds > 1:
+        fold_num = fold_id + 1
+        combinedDir = op.join(combinedDir, 'fold{}'.format(fold_num))
+        print('Combining data within fold {} and saving outputs to: {}'.format(fold_num, combinedDir))
     
     # identify each run
     def get_runs(subDir, derivDir, sub, ses, task, space_name):
@@ -201,6 +207,9 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
     if splithalf_id == 2:
         sub_runs.run = [path for path in sub_runs.run if not path.endswith('1')]
     
+    # remove runs not included in current run list
+    sub_runs.run = [r for r in sub_runs.run if any('run{}'.format(x) in r for x in runs)]
+    
     print('Combining the following runs: {}'.format(sub_runs.run))
     
     # initialize stats files
@@ -229,13 +238,18 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
         dofs.append(newrun.dof)
         mask.append(newrun.mask)
     
+    # print out files to confirm files for the correct runs are being used
+    print('Using the following copes files: {}'.format(copes))
+    print('Using the following varcopes files: {}'.format(varcopes))
+    print('Using the following degrees of freedom files: {}'.format(dofs))
+    
     fixed_fx.get_node('l2model').inputs.num_copes = len(included_runs)
     fixed_fx.get_node('flameo').inputs.mask_file = mask[0] # use the first mask since they should all be in same space
     
     # pass dof, copes, and varcopes files to fixed effects function
     zcopes = [list(cope) for cope in zip(*copes)]
     zvarcopes = [list(varcope) for varcope in zip(*varcopes)]
-    fixed_fx.inputs.inputspec.dof_files = dofs
+    fixed_fx.inputs.inputspec.dof_files=dofs
     fixed_fx.inputs.inputspec.copes=zcopes
     fixed_fx.inputs.inputspec.varcopes=zvarcopes
     
@@ -252,7 +266,7 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
                             name='substitute-gen')
     wf.connect(contrastgen, 'contrasts', gensubs, 'contrasts')
     
-    # stats should equal number of conditions...
+    # stats should equal number of conditions
     sinker = Node(DataSink(), name='datasink')
     sinker.inputs.base_directory = combinedDir
     sinker.inputs.regexp_substitutions = [('_event_file.*run_id_', 'run')]
@@ -277,13 +291,13 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
     return wf
     
 # define function to process subject level data 
-def process_subject(projDir, derivDir, resultsDir, workDir, sub, ses, task, sub_runs, events, contrast_opts, splithalf_id, space_name):
+def process_subject(projDir, derivDir, resultsDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, events, contrast_opts, splithalf_id, space_name):
 
     # define subject output directory
     subDir = op.join(resultsDir, '{}'.format(sub))
 
     # raise an error if the firstlevel output directory doesn't exist
-    if not subDir:
+    if not os.path.exists(subDir):
         raise FileNotFoundError('No firstlevel outputs found for {}'.format(sub))
     
     # delete prior processing directories because cache files can interfere with workflow
@@ -292,7 +306,7 @@ def process_subject(projDir, derivDir, resultsDir, workDir, sub, ses, task, sub_
         shutil.rmtree(subworkDir)
         
     # call timecourse workflow with extracted subject-level data
-    wf = combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, sub_runs, events, contrast_opts, splithalf_id, space_name)  
+    wf = combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, events, contrast_opts, splithalf_id, space_name)  
                         
     return wf
 
@@ -379,21 +393,33 @@ def main(argv=None):
                 raise IOError('Run information missing. Make sure you are passing a subject-run list to the pipeline!')
             
             # pass runs for this sub
-            sub_runs=args.runs[index]
-            sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
-            sub_runs=list(map(int, sub_runs)) # convert to integers
-                  
-            # create a process_subject workflow with the inputs defined above
-            wf = process_subject(args.projDir, derivDir, resultsDir, workDir, sub, ses, task, sub_runs, events, contrast_opts, splithalf_id, space_name)
-       
-            # configure workflow options
-            wf.config['execution'] = {'crashfile_format': 'txt',
-                                      'remove_unnecessary_outputs': False,
-                                      'keep_inputs': True}
+            fold_runs=args.runs[index].replace(' ','')
+            
+            # split folds first
+            folds = fold_runs.split(';')
 
-            # run multiproc
-            args_dict = {'n_procs' : 4}
-            wf.run(plugin='MultiProc', plugin_args = args_dict)
+            # convert each fold into list of run integers
+            folds = [list(map(int, f.split(','))) for f in folds]
+            
+            # save number of folds
+            num_folds = len(folds)
+            print('Runs will be combined in {} fold(s)'.format(num_folds))
+            
+            for fold_id, fold_runs in enumerate(folds):
+                print('Combining runs: {}'.format(fold_runs))
+                fold_runs = list(map(int, fold_runs)) # convert to integers
+                
+                # create a process_subject workflow with the inputs defined above
+                wf = process_subject(args.projDir, derivDir, resultsDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, events, contrast_opts, splithalf_id, space_name)
+           
+                # configure workflow options
+                wf.config['execution'] = {'crashfile_format': 'txt',
+                                          'remove_unnecessary_outputs': False,
+                                          'keep_inputs': True}
+
+                # run multiproc
+                args_dict = {'n_procs' : 4}
+                wf.run(plugin='MultiProc', plugin_args = args_dict)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
