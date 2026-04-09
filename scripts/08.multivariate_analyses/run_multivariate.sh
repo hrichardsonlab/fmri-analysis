@@ -20,7 +20,7 @@ Usage() {
 	echo "./run_multivariate.sh <pipeline script> <configuration file name> <subject-fold list>"
 	echo
 	echo "Example:"
-	echo "./run_multivariate.sh compute_neural_rdm.py config-awe_rsa.tsv RLABAWE1_subjs.txt"
+	echo "./run_multivariate.sh compute_neural_rdm.py config-awe_rsa.tsv RLABAWE1_subjs-awe.txt"
 	echo
 	echo "The config file name (not path!) should be provided"
 	echo
@@ -51,7 +51,7 @@ then
 	echo "The pipeline script was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject-run list as in the example below."
 	echo
-	echo "./run_multivariate.sh compute_neural_rdm.py config-awe_rsa.tsv RLABAWE1_subjs.txt"
+	echo "./run_multivariate.sh compute_neural_rdm.py config-awe_rsa.tsv RLABAWE1_subjs-awe.txt"
 	echo
 	echo "Make sure the run information is included in the subject list!"
 	
@@ -65,7 +65,7 @@ then
 	echo "The configuration file was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject-run list as in the example below."
 	echo
-	echo "./run_multivariate.sh compute_neural_rdm.py config-awe_rsa.tsv RLABAWE1_subjs.txt"
+	echo "./run_multivariate.sh compute_neural_rdm.py config-awe_rsa.tsv RLABAWE1_subjs-awe.txt"
 	echo
 	echo "Make sure the run information is included in the subject list!"
 	
@@ -79,7 +79,7 @@ then
 	echo "The list of participants was not found."
 	echo "The script must be submitted with (1) a pipeline script, (2) a configuration file name, and (3) a subject-run list as in the example below."
 	echo
-	echo "./run_multivariate.sh compute_neural_rdm.py config-awe_rsa.tsv RLABAWE1_subjs.txt"
+	echo "./run_multivariate.sh compute_neural_rdm.py config-awe_rsa.tsv RLABAWE1_subjs-awe.txt"
 	echo
 	echo "Make sure the run information is included in the subject list!"
 	

@@ -29,7 +29,7 @@ from nilearn.maskers import NiftiMasker
 import nilearn
 import shutil
 
-def generate_rdm(projDir, sharedDir, resultsDir, sub, task, runs, folds, splithalves, conditions, mask_opts, template):
+def generate_rdm(projDir, sharedDir, resultsDir, sub, task, runs, folds, splithalves, conditions, mask_opts, template, normalise):
     
     # make output rsa directory
     rsaDir = op.join(resultsDir, '{}'.format(sub), 'rsa')
@@ -263,7 +263,7 @@ def generate_rdm(projDir, sharedDir, resultsDir, sub, task, runs, folds, splitha
                 patterns[(mask_name, run_id, splithalf_id)] = np.array(roi_patterns)
                 
     # calculate dissimilarity across runs/folds (or within a run/fold)
-    calc_dissimilarity(sub, task, patterns, conditions, rsaDir)
+    calc_dissimilarity(sub, task, patterns, conditions, rsaDir, normalise)
             
 # define function to wrangle and save run/fold RDM data into a useable csv format
 def save_patterns(sub, task, patterns, mask_name, run_id, splithalf_id, conditions, rsaDir):
@@ -298,7 +298,7 @@ def save_patterns(sub, task, patterns, mask_name, run_id, splithalf_id, conditio
     print('Patterns saved to {}'.format(rsaDir))  
     
 # define function to calculate dissimilarity metrics
-def calc_dissimilarity(sub, task, patterns, conditions, rsaDir):
+def calc_dissimilarity(sub, task, patterns, conditions, rsaDir, normalise):
     
     # extract info saved in patterns
     rois = sorted(set(r[0] for r in patterns))
@@ -362,30 +362,33 @@ def calc_dissimilarity(sub, task, patterns, conditions, rsaDir):
             rdms[roi][('within_run', run)] = {'correlation': squareform(pdist(A, metric='correlation')),
                                               'euclidean': squareform(pdist(A, metric='euclidean'))}
     
-    # STEP 2: normalise RDMs
+    # STEP 2: normalise RDMs if requested
     # initalise output
     norm_rdms = {}
-    
-    # loop over ROIs
-    for roi in rdms:
-        # initalise output for this ROI
-        norm_rdms[roi] = {}
-        
-        # for each comparison (e.g., fold: 1,2)
-        for comp in rdms[roi]:
-            norm_rdms[roi][comp] = {}
+    if normalise == 'yes':
+        # loop over ROIs
+        for roi in rdms:
+            # initalise output for this ROI
+            norm_rdms[roi] = {}
             
-            # for each metric (correlation, euclidean)
-            for metric in rdms[roi][comp]:
-                rdm = rdms[roi][comp][metric]
-                rdm_norm = normalise_rdm(rdm, roi, comp, metric)
-                norm_rdms[roi][comp][metric] = rdm_norm
+            # for each comparison (e.g., fold: 1,2)
+            for comp in rdms[roi]:
+                norm_rdms[roi][comp] = {}
                 
-    # STEP 3: average normalise RDMs
-    avg_rdms = average_rdms(norm_rdms)
+                # for each metric (correlation, euclidean)
+                for metric in rdms[roi][comp]:
+                    rdm = rdms[roi][comp][metric]
+                    rdm_norm = normalise_rdm(rdm, roi, comp, metric)
+                    norm_rdms[roi][comp][metric] = rdm_norm
+                    
+        # overwrite rdms with normalised rdms
+        rdms = norm_rdms
+        
+    # STEP 3: average RDMs
+    avg_rdms = average_rdms(rdms)
     
     # STEP 4: save RDMs
-    save_rdms(sub, task, conditions, rsaDir, norm_rdms, avg_rdms)
+    save_rdms(sub, task, conditions, rsaDir, rdms, avg_rdms, normalise)
 
 #define function to normalise RDMs
 def normalise_rdm(rdm, roi, comp, metric):
@@ -403,26 +406,26 @@ def normalise_rdm(rdm, roi, comp, metric):
     return norm_rdm
 
 #define function to average RDMs  
-def average_rdms(norm_rdms):
+def average_rdms(rdms):
     
     # initalise output
     avg_rdms = {}
 
      # loop over ROIs
-    for roi in norm_rdms:
+    for roi in rdms:
         # initalise output for this ROI
         avg_rdms[roi] = {}
         
         # get metrics for this ROI (should be 'correlation', 'euclidean')
-        metrics = list(next(iter(norm_rdms[roi].values())).keys())
+        metrics = list(next(iter(rdms[roi].values())).keys())
         
         for metric in metrics:
-            print('Averaging {} normalised RDMs for {}'.format(metric, roi))
+            print('Averaging {} RDMs for {}'.format(metric, roi))
             
             # collect all RDMs for this metric
             all_rdms = []
-            for comp in norm_rdms[roi]:
-                all_rdms.append(norm_rdms[roi][comp][metric])
+            for comp in rdms[roi]:
+                all_rdms.append(rdms[roi][comp][metric])
             
             # average elementwise
             avg_rdms[roi][metric] = np.mean(all_rdms, axis=0)
@@ -430,14 +433,14 @@ def average_rdms(norm_rdms):
     return avg_rdms
 
 # define function to save RDMs
-def save_rdms(sub, task, conditions, rsaDir, norm_rdms, avg_rdms):
-    
-    # loop over ROIs
-    for roi in norm_rdms:
+def save_rdms(sub, task, conditions, rsaDir, rdms, avg_rdms, normalise):
 
-        # save normalised RDMs for each run/fold/splithalf
-        for comp in norm_rdms[roi]:
-            
+    # loop over ROIs
+    for roi in rdms:
+
+        # save RDMs for each run/fold/splithalf
+        for comp in rdms[roi]:
+        
             # determine label
             if comp[0] == 'within_run':
                 label = 'within_run-{}'.format(comp[1])
@@ -446,13 +449,17 @@ def save_rdms(sub, task, conditions, rsaDir, norm_rdms, avg_rdms):
             elif comp[0] == 'split':
                 label = 'split-{}vs{}'.format(comp[1], comp[2])
 
-            for metric in norm_rdms[roi][comp]:
-                rdm = norm_rdms[roi][comp][metric]
+            for metric in rdms[roi][comp]:
+                rdm = rdms[roi][comp][metric]
                 df = pd.DataFrame(rdm, index=conditions, columns=conditions)
-                rdm_norm_file = op.join(rsaDir, '{}_{}_{}_{}_normalised_rdm.csv'.format(sub, roi, label, metric))
-                df.to_csv(rdm_norm_file, index=False)
-                print('Saved normalized RDM: {}'.format(rdm_norm_file))
-
+                if normalise == 'yes':
+                    rdm_file = op.join(rsaDir, '{}_{}_{}_{}_normalised_rdm.csv'.format(sub, roi, label, metric))
+                    print('Saved normalized RDM: {}'.format(rdm_file))
+                else:
+                    rdm_file = op.join(rsaDir, '{}_{}_{}_{}_rdm.csv'.format(sub, roi, label, metric))
+                    print('Saved RDM: {}'.format(rdm_file))
+                df.to_csv(rdm_file, index=False)
+                
         # save averaged RDMs across runs/folds/splithalves
         for metric in avg_rdms[roi]:
             rdm_avg = avg_rdms[roi][metric]
@@ -504,11 +511,12 @@ def main(argv=None):
     task=config_file.loc['task',1]
     folds=config_file.loc['folds',1]
     splithalf=config_file.loc['splithalf',1]
-    conditions=config_file.loc['contrast',1].replace(' ','').split(',')
+    conditions=config_file.loc['events',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     template=config_file.loc['template',1]
+    normalise=config_file.loc['normalise_rdm',1]
     
-    # lowercase conditions to avoid case errors - allows flexibility in how users specify contrasts in config and contrasts files
+    # lowercase conditions to avoid case errors - allows flexibility in how users specify events in config and contrasts files
     conditions = [c.lower() for c in conditions]
     
     if splithalf == 'yes':
@@ -543,7 +551,7 @@ def main(argv=None):
             print('Multiple runs or folds were specified, so neural RDMs will be combined across runs/folds.')
             
         # create a process_subject workflow with the inputs defined above
-        generate_rdm(args.projDir, sharedDir, resultsDir, sub, task, sub_runs, folds, splithalves, conditions, mask_opts, template)
+        generate_rdm(args.projDir, sharedDir, resultsDir, sub, task, sub_runs, folds, splithalves, conditions, mask_opts, template, normalise)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
