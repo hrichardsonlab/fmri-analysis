@@ -36,6 +36,8 @@ match_events	no
 top_nvox	10-percent
 mask	fROI-LAngG, fROI-LAntTemp, fROI-LIFG, fROI-LIFGorb, fROI-LMidFG, fROI-LPostTemp, fROI-RAngG, fROI-RAntTemp, fROI-RIFG, fROI-RIFGorb, fROI-RMidFG, fROI-RPostTemp
 extract	mean
+folds	
+normalise_rdm	
 nonparametric	yes
 npermutations	5000
 group_comparison	within

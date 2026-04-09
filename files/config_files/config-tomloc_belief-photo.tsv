@@ -36,6 +36,8 @@ match_events	no
 top_nvox	80
 mask	fROI-DMPFC, fROI-LTPJ, fROI-MMPFC, fROI-PC, fROI-RSTS, fROI-RTPJ, fROI-VMPFC
 extract	mean
+folds	
+normalise_rdm	
 nonparametric	yes
 npermutations	5000
 group_comparison	within

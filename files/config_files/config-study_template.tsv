@@ -35,7 +35,9 @@ search_spaces
 match_events	
 top_nvox	
 mask	
-extract	
+extract	mean
+folds	
+normalise_rdm	
 nonparametric	
 npermutations	
 group_comparison	
