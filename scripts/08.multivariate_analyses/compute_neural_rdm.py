@@ -2,7 +2,7 @@
 Representational Similarity Analysis (RSA) Script
 
 This script computes the neural representational dissimilarity matrices (RDMs) for a set of ROIs. 
-The RDMs could be computed over trial, conditions, or subjects depending on config file options.
+The RDMs could be computed over runs, folds, or splithalves depending on the options provided in the subject-run file passed to the script.
 
 More information on what this script is doing - beyond the commented code - is provided on the lab's github wiki page
 
@@ -15,25 +15,25 @@ import scipy.stats
 from scipy.spatial import distance
 from scipy.spatial.distance import cdist, pdist, squareform
 from scipy.spatial.distance import correlation
-import matplotlib.pyplot as plt
 import os.path as op
 import os
 import glob
 import shutil
 import datetime
 import math
-from nilearn import plotting
 from nilearn import image
-from nilearn import masking
 from nilearn.maskers import NiftiMasker
 import nilearn
-import shutil
 
-def generate_rdm(projDir, sharedDir, resultsDir, sub, task, runs, folds, splithalves, conditions, mask_opts, template, normalise):
+def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds, splithalves, conditions, mask_opts, template, normalise):
     
-    # make output rsa directory
+    # make output rsa directories
     rsaDir = op.join(resultsDir, '{}'.format(sub), 'rsa')
+    vectorsDir = op.join(rsaDir, 'condition_vectors')
+    rdmDir = op.join(rsaDir, 'neural_rdms')
     os.makedirs(rsaDir, exist_ok=True)
+    os.makedirs(vectorsDir, exist_ok=True)
+    os.makedirs(rdmDir, exist_ok=True)
     
     # initalise list of condition vectors to calculate RDMs across runs/folds
     patterns = {}
@@ -80,6 +80,7 @@ def generate_rdm(projDir, sharedDir, resultsDir, sub, task, runs, folds, splitha
                 
                 # if a functional ROI was specified
                 if 'fROI' in m:
+                
                     # check if an froiDir was provided, look in the resultsDir if not
                     if froiDir == None:
                         print('No froiDir was specified in config file. Will look for fROIs in resultsDir.')
@@ -257,16 +258,16 @@ def generate_rdm(projDir, sharedDir, resultsDir, sub, task, runs, folds, splitha
                     roi_patterns.append(tvec)
                 
                 # save condition vectors for this ROI
-                save_patterns(sub, task, roi_patterns, mask_name, run_id, splithalf_id, conditions, rsaDir)
+                save_patterns(sub, task, roi_patterns, mask_name, run_id, splithalf_id, conditions, vectorsDir)
                 
                 # store the condition vectors for this ROI and run/fold for RDM calculation
                 patterns[(mask_name, run_id, splithalf_id)] = np.array(roi_patterns)
                 
     # calculate dissimilarity across runs/folds (or within a run/fold)
-    calc_dissimilarity(sub, task, patterns, conditions, rsaDir, normalise)
+    calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise)
             
 # define function to wrangle and save run/fold RDM data into a useable csv format
-def save_patterns(sub, task, patterns, mask_name, run_id, splithalf_id, conditions, rsaDir):
+def save_patterns(sub, task, patterns, mask_name, run_id, splithalf_id, conditions, vectorsDir):
     patterns = np.array(patterns)
     print('Shape of extracted vector data (conditions x voxels): {}'.format(patterns.shape))
     
@@ -278,13 +279,13 @@ def save_patterns(sub, task, patterns, mask_name, run_id, splithalf_id, conditio
                    'splithalf': splithalf_id,
                    'condition': cond,
                    'ROI': mask_name}
-            vector_file = op.join(rsaDir, '{}_task-{}_fold-{}_splithalf-{}_{}_condition_vectors.csv'.format(sub, task, run_id, splithalf_id, mask_name))
+            vector_file = op.join(vectorsDir, '{}_task-{}_fold-{}_splithalf-{}_{}_condition_vectors.csv'.format(sub, task, run_id, splithalf_id, mask_name))
         else:
             row = {'sub': sub,
                    'fold': run_id,
                    'condition': cond,
                    'ROI': mask_name}
-            vector_file = op.join(rsaDir, '{}_task-{}_fold-{}_{}_condition_vectors.csv'.format(sub, task, run_id, mask_name))
+            vector_file = op.join(vectorsDir, '{}_task-{}_fold-{}_{}_condition_vectors.csv'.format(sub, task, run_id, mask_name))
             
         # add voxel values
         voxels = patterns[c]
@@ -295,10 +296,10 @@ def save_patterns(sub, task, patterns, mask_name, run_id, splithalf_id, conditio
                 
     df = pd.DataFrame(rows)
     df.to_csv(vector_file, sep=',', index=False)        
-    print('Patterns saved to {}'.format(rsaDir))  
+    print('Patterns saved to {}'.format(vectorsDir))  
     
 # define function to calculate dissimilarity metrics
-def calc_dissimilarity(sub, task, patterns, conditions, rsaDir, normalise):
+def calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise):
     
     # extract info saved in patterns
     rois = sorted(set(r[0] for r in patterns))
@@ -388,7 +389,7 @@ def calc_dissimilarity(sub, task, patterns, conditions, rsaDir, normalise):
     avg_rdms = average_rdms(rdms)
     
     # STEP 4: save RDMs
-    save_rdms(sub, task, conditions, rsaDir, rdms, avg_rdms, normalise)
+    save_rdms(sub, task, conditions, rdmDir, rdms, avg_rdms, normalise)
 
 #define function to normalise RDMs
 def normalise_rdm(rdm, roi, comp, metric):
@@ -433,7 +434,7 @@ def average_rdms(rdms):
     return avg_rdms
 
 # define function to save RDMs
-def save_rdms(sub, task, conditions, rsaDir, rdms, avg_rdms, normalise):
+def save_rdms(sub, task, conditions, rdmDir, rdms, avg_rdms, normalise):
 
     # loop over ROIs
     for roi in rdms:
@@ -453,10 +454,10 @@ def save_rdms(sub, task, conditions, rsaDir, rdms, avg_rdms, normalise):
                 rdm = rdms[roi][comp][metric]
                 df = pd.DataFrame(rdm, index=conditions, columns=conditions)
                 if normalise == 'yes':
-                    rdm_file = op.join(rsaDir, '{}_{}_{}_{}_normalised_rdm.csv'.format(sub, roi, label, metric))
+                    rdm_file = op.join(rdmDir, '{}_{}_{}_{}_normalised_rdm.csv'.format(sub, roi, label, metric))
                     print('Saved normalized RDM: {}'.format(rdm_file))
                 else:
-                    rdm_file = op.join(rsaDir, '{}_{}_{}_{}_rdm.csv'.format(sub, roi, label, metric))
+                    rdm_file = op.join(rdmDir, '{}_{}_{}_{}_rdm.csv'.format(sub, roi, label, metric))
                     print('Saved RDM: {}'.format(rdm_file))
                 df.to_csv(rdm_file, index=False)
                 
@@ -464,7 +465,7 @@ def save_rdms(sub, task, conditions, rsaDir, rdms, avg_rdms, normalise):
         for metric in avg_rdms[roi]:
             rdm_avg = avg_rdms[roi][metric]
             df_avg = pd.DataFrame(rdm_avg, index=conditions, columns=conditions)
-            rdm_avg_file = op.join(rsaDir, '{}_{}_{}_averaged_rdm.csv'.format(sub, roi, metric))
+            rdm_avg_file = op.join(rdmDir, '{}_{}_{}_averaged_rdm.csv'.format(sub, roi, metric))
             df_avg.to_csv(rdm_avg_file, index=False)
             print('Saved averaged RDM: {}'.format(rdm_avg_file))
 
@@ -507,6 +508,7 @@ def main(argv=None):
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     sharedDir=config_file.loc['sharedDir',1]
+    froiDir=config_file.loc['froiDir',1]
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
     folds=config_file.loc['folds',1]
@@ -551,7 +553,7 @@ def main(argv=None):
             print('Multiple runs or folds were specified, so neural RDMs will be combined across runs/folds.')
             
         # create a process_subject workflow with the inputs defined above
-        generate_rdm(args.projDir, sharedDir, resultsDir, sub, task, sub_runs, folds, splithalves, conditions, mask_opts, template, normalise)
+        generate_rdm(args.projDir, sharedDir, resultsDir, froiDir, sub, task, sub_runs, folds, splithalves, conditions, mask_opts, template, normalise)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
