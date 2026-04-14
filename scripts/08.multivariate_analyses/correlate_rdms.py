@@ -65,6 +65,9 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
         # read in model data
         rdm = pd.read_csv(m, index_col=0)
         
+        # force the model RDM to be symmetric (this might already be true)
+        rdm = rdm.loc[rdm.index, rdm.index]
+        
         # vectorise and store column and run order
         models[m] = {'model': model_rdms[index],
                      'vector': vectorise_rdm(rdm),
@@ -88,9 +91,10 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
                 
         # loop over models      
         for m in models:
-            # force neural RDMs to have the same column and row order as the model
-            correl_aligned = correl_rdm.loc[models[m]['row_order'], models[m]['column_order']]
-            euclid_aligned = euclid_rdm.loc[models[m]['row_order'], models[m]['column_order']]
+            # force neural RDMs to have the same column and row order as the model (which has been forced to be symmetric)
+            order = models[m]['row_order']
+            correl_aligned = correl_rdm.loc[order, order]
+            euclid_aligned = euclid_rdm.loc[order, order]
             
             # vectorise neural RDMs
             correl_vec = vectorise_rdm(correl_aligned)
@@ -100,24 +104,29 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
             model_vec = models[m]['vector']
             
             # Kendall's tau
-            tau_correl, p_correl = scipy.stats.kendalltau(correl_vec, model_vec)
-            tau_euclid, p_euclid = scipy.stats.kendalltau(euclid_vec, model_vec)
+            # the scipy stats function defaults to tau-b and does not have a tau-a implementation
+            tau_b_correl, p_correl = scipy.stats.kendalltau(correl_vec, model_vec)
+            tau_b_euclid, p_euclid = scipy.stats.kendalltau(euclid_vec, model_vec)
+            
+            # tau-a using custom function (should return the same values as tau-b in most cases)
+            tau_a_correl = kendall_tau_a(correl_vec, model_vec)
+            tau_a_euclid = kendall_tau_a(euclid_vec, model_vec)
             
             # save correlation results
             results.append({'sub': sub,
                             'roi': roi,
                             'model': models[m]['model'],
                             'metric': 'correlation',
-                            'tau': tau_correl,
-                            'p_val': p_correl})
+                            'tau_a': tau_a_correl,
+                            'tau_b': tau_b_correl})
         
             # save euclidean results
             results.append({'sub': sub,
                             'roi': roi,
                             'model': models[m]['model'],
                             'metric': 'euclidean',
-                            'tau': tau_euclid,
-                            'p_val': p_euclid})
+                            'tau_a': tau_a_euclid,
+                            'tau_b': tau_b_euclid})
 
     # save outputs
     results_df = pd.DataFrame(results)
@@ -130,7 +139,30 @@ def vectorise_rdm(dat):
     # returns the upper triangle (excluding diagonal) as vector
     # k=0  will include diagonal
     return dat.values[np.triu_indices_from(dat, k=1)]
+
+# define function to calculate Kendall's tau-a
+def kendall_tau_a(neural_vec, model_vec):
+    n = len(neural_vec)
     
+    # pairwise differences
+    neural_diff = neural_vec[:, None] - neural_vec
+    model_diff = model_vec[:, None] - model_vec
+    
+    # calculate concordance/discordance
+    discord = neural_diff * model_diff
+    
+    # take the upper triangle only (excluding diagonal)
+    tri_indx = np.triu_indices(n, k=1)
+    
+    # extract concordant and discordant values
+    C = np.sum(discord[tri_indx] > 0)
+    D = np.sum(discord[tri_indx] < 0)
+    
+    # use values in kendall's tau-a formula
+    tau_a = (C - D) / (n * (n - 1) / 2)
+    
+    return tau_a
+
 # define command line parser function
 def argparser():
     # create an instance of ArgumentParser
