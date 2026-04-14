@@ -129,8 +129,7 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                         else: # if there is no combined_runs folder in the froiDir
                             # this presumes that if fROIs were not combined, then there was only 1 run of the localiser/task acquired
                             # this could be modified to track an fROI specific run_id variable but it can't use the current run_id variable because this is based off of runs of a separate task
-                            #froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', 'run1')
-                            froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', 'run2')
+                            froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', 'run1')
                         
                     # grab the mni file (used only if resampling is required)
                     mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', '*', '*_bold.nii.gz'))[0]
