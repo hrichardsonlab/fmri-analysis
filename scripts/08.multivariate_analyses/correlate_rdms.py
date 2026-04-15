@@ -70,7 +70,8 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
         
         # vectorise and store column and run order
         models[m] = {'model': model_rdms[index],
-                     'vector': vectorise_rdm(rdm),
+                     'vector_diag': vectorise_rdm(rdm, diag=0),
+                     'vector_nodiag': vectorise_rdm(rdm, diag=1),
                      'column_order': rdm.columns.tolist(),
                      'row_order': rdm.index.tolist()}
     
@@ -80,53 +81,70 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
     # loop over ROIs 
     for roi in mask_opts:
         # read in averaged neural RDMs for this ROI
-        correl_rdm_file = op.join(rdmDir, '{}_{}_correlation_averaged_rdm.csv'.format(sub, roi))
-        euclid_rdm_file = op.join(rdmDir, '{}_{}_euclidean_averaged_rdm.csv'.format(sub, roi))
-        correl_rdm = pd.read_csv(correl_rdm_file, sep=',')
-        euclid_rdm = pd.read_csv(euclid_rdm_file, sep=',')
+        cor_rdm_file = op.join(rdmDir, '{}_{}_correlation_averaged_rdm.csv'.format(sub, roi))
+        euc_rdm_file = op.join(rdmDir, '{}_{}_euclidean_averaged_rdm.csv'.format(sub, roi))
+        cor_rdm = pd.read_csv(cor_rdm_file, sep=',')
+        euc_rdm = pd.read_csv(euc_rdm_file, sep=',')
         
         # add row names to ensure the same order as model RDMs
-        correl_rdm.index = correl_rdm.columns
-        euclid_rdm.index = euclid_rdm.columns
+        cor_rdm.index = cor_rdm.columns
+        euc_rdm.index = euc_rdm.columns
                 
         # loop over models      
         for m in models:
             # force neural RDMs to have the same column and row order as the model (which has been forced to be symmetric)
             order = models[m]['row_order']
-            correl_aligned = correl_rdm.loc[order, order]
-            euclid_aligned = euclid_rdm.loc[order, order]
+            cor_aligned = cor_rdm.loc[order, order]
+            euc_aligned = euc_rdm.loc[order, order]
             
             # vectorise neural RDMs
-            correl_vec = vectorise_rdm(correl_aligned)
-            euclid_vec = vectorise_rdm(euclid_aligned)
+            cor_vec_diag = vectorise_rdm(cor_aligned, diag=0)
+            cor_vec_nodiag = vectorise_rdm(cor_aligned, diag=1)
+            euc_vec_diag = vectorise_rdm(euc_aligned, diag=0)        
+            euc_vec_nodiag = vectorise_rdm(euc_aligned, diag=1)
             
             # extract model vector
-            model_vec = models[m]['vector']
+            model_vec_diag = models[m]['vector_diag']
+            model_vec_nodiag = models[m]['vector_nodiag']
             
             # Kendall's tau
             # the scipy stats function defaults to tau-b and does not have a tau-a implementation
-            tau_b_correl, p_correl = scipy.stats.kendalltau(correl_vec, model_vec)
-            tau_b_euclid, p_euclid = scipy.stats.kendalltau(euclid_vec, model_vec)
+            ## including diagonal in calculation
+            tau_b_cor_diag, p_cor_diag = scipy.stats.kendalltau(cor_vec_diag, model_vec_diag)
+            tau_b_euc_diag, p_euc_diag = scipy.stats.kendalltau(euc_vec_diag, model_vec_diag)
+            
+            ## excluding diagonal in calculation
+            tau_b_cor_nodiag, p_cor_nodiag = scipy.stats.kendalltau(cor_vec_nodiag, model_vec_nodiag)
+            tau_b_euc_nodiag, p_euc_nodiag = scipy.stats.kendalltau(euc_vec_nodiag, model_vec_nodiag)
             
             # tau-a using custom function (should return the same values as tau-b in most cases)
-            tau_a_correl = kendall_tau_a(correl_vec, model_vec)
-            tau_a_euclid = kendall_tau_a(euclid_vec, model_vec)
+            ## including diagonal in calculation
+            tau_a_cor_diag = kendall_tau_a(cor_vec_diag, model_vec_diag)
+            tau_a_euc_diag = kendall_tau_a(euc_vec_diag, model_vec_diag)
+            
+            ## excluding diagonal in calculation
+            tau_a_cor_nodiag = kendall_tau_a(cor_vec_nodiag , model_vec_nodiag)
+            tau_a_euc_nodiag = kendall_tau_a(euc_vec_nodiag , model_vec_nodiag)
             
             # save correlation results
             results.append({'sub': sub,
                             'roi': roi,
                             'model': models[m]['model'],
                             'metric': 'correlation',
-                            'tau_a': tau_a_correl,
-                            'tau_b': tau_b_correl})
+                            'tau_a_diag': tau_a_cor_diag,
+                            'tau_a_nodiag': tau_a_cor_nodiag,
+                            'tau_b_diag': tau_b_cor_diag,
+                            'tau_b_nodiag': tau_b_cor_nodiag})
         
             # save euclidean results
             results.append({'sub': sub,
                             'roi': roi,
                             'model': models[m]['model'],
                             'metric': 'euclidean',
-                            'tau_a': tau_a_euclid,
-                            'tau_b': tau_b_euclid})
+                            'tau_a_diag': tau_a_euc_diag,
+                            'tau_a_nodiag': tau_a_euc_nodiag,
+                            'tau_b_diag': tau_b_euc_diag,
+                            'tau_b_nodiag': tau_b_euc_nodiag})
 
     # save outputs
     results_df = pd.DataFrame(results)
@@ -135,10 +153,10 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
     print('Saved RSA results to: {}'.format(results_file))
     
 # define function to vectorise the RDMs
-def vectorise_rdm(dat):
-    # returns the upper triangle (excluding diagonal) as vector
-    # k=0  will include diagonal
-    return dat.values[np.triu_indices_from(dat, k=1)]
+def vectorise_rdm(dat, diag):
+    # returns the upper triangle as vector
+    # k=0  will include diagonal; k=1 will exclude diagonal
+    return dat.values[np.triu_indices_from(dat, k=diag)]
 
 # define function to calculate Kendall's tau-a
 def kendall_tau_a(neural_vec, model_vec):
