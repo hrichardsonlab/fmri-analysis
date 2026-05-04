@@ -108,12 +108,13 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         # check to see whether outputs exist in smoothDir (if smoothDir was specified in config file)
         if smoothDir:
             if splithalf_id != 0:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}_splithalf{}'.format(run_name, splithalf_id), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))
             else:
-                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))[0]
+                smooth_file = glob.glob(op.join(smoothDir, '{}'.format(sub), 'preproc', '{}'.format(run_name), '{}_space-{}*_bold_smooth.nii.gz'.format(prefix, space_name)))
             
-            if os.path.exists(smooth_file):
-                mni_file = smooth_file
+            # check if a file was found, use it if so; move on if not
+            if smooth_file:
+                mni_file = smooth_file[0]
                 print('Previously smoothed data file has been found and will be used: {}'.format(mni_file))
             else:
                 print('WARNING: A smoothDir was specified in the config file but no smoothed data files were found.')
