@@ -33,30 +33,50 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
         # loop over models provided in config file
         for m in model_rdms:
             # look for model file in project directory
-            model_file = glob.glob(op.join(projDir, 'files', 'model_rdms', '{}*RDM-{}.csv'.format(sub, m)))[0]
+            model_file = glob.glob(op.join(projDir, 'files', 'model_rdms', '{}*RDM-{}.csv'.format(sub, m)))
             
             # if model file not found in project directory, look for it in the shared directory
             if not model_file:
-                model_file = glob.glob(op.join(sharedDir, 'processing', 'model_rdms', '{}'.format(dataset), '{}*RDM-{}.csv'.format(sub, m)))[0]
+                model_file = glob.glob(op.join(sharedDir,  'model_rdms', '{}'.format(dataset), '{}*RDM-{}.csv'.format(sub, m)))
             
-            print('Using {} model RDM file from: {}'.format(m, model_file))
+            # if the subject file is found
+            else:
+                print('Using {} model RDM file from: {}'.format(m, model_file[0]))
             
-            model_files.append(model_file)
+            # if subject RDM file is still not found, raise error
+            if not model_file:
+                raise IOError('Subject specific model RDM file not found!')
+            
+            # if the subject file is found
+            else:
+                print('Using {} model RDM file from: {}'.format(m, model_file[0]))
+            
+            model_files.append(model_file[0])
     else:
         print('Will use the same group model RDMs for all subjects')
         
         # loop over models provided in config file
         for m in model_rdms:
             # look for model file in project directory
-            model_file = glob.glob(op.join(projDir, 'files', 'model_rdms', '*RDM-{}.csv'.format(m)))[0]
+            model_file = glob.glob(op.join(projDir, 'files', 'model_rdms', 'model_RDM-{}.csv'.format(m)))
             
             # if model file not found in project directory, look for it in the shared directory
             if not model_file:
-                model_file = glob.glob(op.join(sharedDir, 'processing', 'model_rdms', '{}'.format(dataset), '*RDM-{}.csv'.format(m)))[0]
+                model_file = glob.glob(op.join(sharedDir, 'model_rdms', '{}'.format(dataset), 'model_RDM-{}.csv'.format(m)))
+                
+            # if the group file is found
+            else:
+                print('Using {} model RDM file from: {}'.format(m, model_file[0]))
             
-            print('Using {} model RDM file from: {}'.format(m, model_file))
+            # if group RDM file is still not found, raise error
+            if not model_file:
+                raise IOError('Group model RDM file not found!')
             
-            model_files.append(model_file)
+            # if the group file is found
+            else:
+                print('Using {} model RDM file from: {}'.format(m, model_file[0]))
+            
+            model_files.append(model_file[0])
             
     # vectorise model files
     models = {}
