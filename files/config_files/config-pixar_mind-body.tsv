@@ -18,7 +18,7 @@ ntmpts_exclude	0.33
 ignore_motion	no
 dropvols	0
 smoothing	0
-hpf	128
+hpf	100
 filter	butterworth
 detrend	no
 standardize	no
@@ -38,6 +38,8 @@ mask	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
 extract	mean
 folds	
 normalise_rdm	
+subject_rdms	
+model_rdms	
 nonparametric	yes
 npermutations	5000
 group_comparison	within

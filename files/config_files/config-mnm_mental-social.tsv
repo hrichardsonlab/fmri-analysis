@@ -38,6 +38,8 @@ mask	RTPJ, LTPJ, PC, DMPFC, MMPFC, VMPFC
 extract	mean
 folds	
 normalise_rdm	
+subject_rdms	
+model_rdms	
 nonparametric	yes
 npermutations	5000
 group_comparison	within

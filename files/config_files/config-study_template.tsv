@@ -38,6 +38,8 @@ mask
 extract	mean
 folds	
 normalise_rdm	
+subject_rdms	
+model_rdms	
 nonparametric	
 npermutations	
 group_comparison	
