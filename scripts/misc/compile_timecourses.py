@@ -75,13 +75,13 @@ def compile_timecourses(projDir, resultsDir):
 
     # pivot data so ROIs are separated into columns, convert to dataframe, and sort data
     if split != 'no':
-        compiled_tc = compiled_tc.pivot_table(index=['time', 'sub', 'run', 'half'], columns='ROI', values=0, dropna=False)
+        compiled_tc = compiled_tc.pivot(index=['time', 'sub', 'run', 'half'], columns='ROI', values=0)
         compiled_tc = pd.DataFrame(compiled_tc.to_records()).sort_values(by=['sub', 'run', 'half', 'time'])
     elif run != 'no':
-        compiled_tc = compiled_tc.pivot_table(index=['time', 'sub', 'run'], columns='ROI', values=0, dropna=False)
+        compiled_tc = compiled_tc.pivot(index=['time', 'sub', 'run'], columns='ROI', values=0)
         compiled_tc = pd.DataFrame(compiled_tc.to_records()).sort_values(by=['sub', 'run', 'time'])
     else:
-        compiled_tc = compiled_tc.pivot_table(index=['time', 'sub'], columns='ROI', values=0, dropna=False)
+        compiled_tc = compiled_tc.pivot(index=['time', 'sub'], columns='ROI', values=0)
         compiled_tc = pd.DataFrame(compiled_tc.to_records()).sort_values(by=['sub', 'time'])
 
     # save as csv file in resultsDir
