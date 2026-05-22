@@ -8,22 +8,16 @@ import sys
 import pandas as pd
 import numpy as np
 import argparse
-import scipy.stats
-from scipy.spatial import distance
-import matplotlib.pyplot as plt
 import os.path as op
 import os
 import glob
 import shutil
-import datetime
-import math
-from nilearn import plotting
+import nilearn
 from nilearn import image
 from nilearn import masking
 from nilearn.maskers import NiftiMasker
-import nilearn
-import shutil
 
+# define function to extract stats for each subject
 def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc):
     
     # make output stats directory
@@ -31,8 +25,15 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
     os.makedirs(statsDir, exist_ok=True)
     
     # create output file name
-    stats_file = op.join(statsDir, '{}_task-{}_{}_ROI_magnitudes.csv'.format(sub, task, extract_opt))
-
+    if froiDir == None:
+        stats_file = op.join(statsDir, '{}_task-{}_{}_ROI_magnitudes.csv'.format(sub, task, extract_opt))
+    else:
+        # take the second to last element because this *should* be the localiser name (e.g., tomloc/belief-photo; langloc/sentence-nonword)
+        localiser_name = op.basename(op.dirname(froiDir.rstrip('/'))) # froiDir.split('/')[-2] 
+        
+        # add localiser task name from froiDir to stats file name
+        stats_file = op.join(statsDir, '{}_task-{}_{}_{}_ROI_magnitudes.csv'.format(sub, task, localiser_name, extract_opt))
+        
     # delete output file if it already exists (to ensure stats aren't appended to pre-existing files)
     if os.path.isfile(stats_file):
         os.remove(stats_file)
@@ -44,7 +45,7 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
     if op.exists(combinedDir):
         print('Found combined runs directory. Stats will be extracted from the combined run data.')
         combined = 'yes'
-        runs_inter = [1] # don't iterate over runs
+        runs_inter = [runs[0]] # don't iterate over all runs, create iterable run defined as the first run in the list to find MNI files
     else:
         combined = 'no'
         runs_inter = runs # iterate over all provided runs
@@ -116,12 +117,12 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                     # grab the mni file and define the correct modelDir depending on whether model data were splithalf and/or combined
                     if splithalf_id != 0 and combined == 'no':
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*_bold.nii.gz'))
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*_bold.nii.gz'))[0]
                         modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}_splithalf{}'.format(run_id, splithalf_id))
                         
                     elif splithalf_id != 0 and combined == 'yes':
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1_splithalf{}'.format(splithalf_id), '*_bold.nii.gz'))[0]
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*_bold.nii.gz'))[0]
                         modelDir = op.join(combinedDir, 'splithalf{}'.format(splithalf_id))
                     
                     elif splithalf_id == 0 and combined == 'no':
@@ -131,10 +132,10 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
 
                     elif splithalf_id == 0 and combined == 'yes':
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run1', '*_bold.nii.gz'))[0]
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*_bold.nii.gz'))[0]
                         modelDir = combinedDir
                         
-                    if not froi_prefix:
+                    if not op.exists(froi_prefix):
                         print('ERROR: unable to locate fROI file. Make sure a resultsDir or froiDir is provided in the config file!')
                     else:
                         roi_name = m.split('fROI-')[1]
@@ -146,12 +147,12 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                 else:
                     if splithalf_id != 0:
                         # grab mni file (used only if resampling is required)
-                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*_bold.nii.gz'))
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*_bold.nii.gz'))[0]
                         modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}_splithalf{}'.format(run_id, splithalf_id))
                     
                     else: # if not splithalves
                         # grab mni file (used only if resampling is required)              
-                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*_bold.nii.gz'))
+                        mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}'.format(run_id), '*_bold.nii.gz'))[0]
                         modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}'.format(run_id))
                     
                     if combined == 'yes':
@@ -165,8 +166,8 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                         print('Using {} FreeSurfer defined file from {}'.format(roi_name, roi_file))  
                     
                     # if an anatomical ROI was specified
-                    if 'aROI' in m:
-                        if not aroi_prefix: # resultsDir:
+                    elif 'aROI' in m:
+                        if not op.exists(aroi_prefix):
                             print('ERROR: unable to locate aROI file. Make sure a resultsDir is provided in the config file!')
                         else:
                             roi_name = m.split('aROI-')[1].split('_')[0]
@@ -183,8 +184,8 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                             roi_file = glob.glob(op.join(sharedDir, 'ROIs', '{}_*.nii.gz'.format(m)))[0]
                         
                         roi_masks.append(roi_file)
-                        print('Using {} ROI file from {}'.format(m, roi_file)) 
-            
+                        print('Using {} ROI file from {}'.format(m, roi_file))
+                        
             print('Model directory: {}'.format(modelDir))
             
             # for each ROI search space
@@ -220,11 +221,11 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                     
                     # check if file already exists
                     if os.path.isfile(resampled_file):
-                        print('Found previously resampled {} ROI in output directory'.format(roi_name[r]))
+                        print('Found previously resampled {} ROI in output directory'.format(roi_name))
                         mask_bin = image.load_img(resampled_file)
                     else:
                         # resample image
-                        print('Resampling {} search space to match functional data'.format(roi_name[r]))
+                        print('Resampling {} search space to match functional data'.format(roi_name))
                         mask_bin = image.resample_to_img(mask_bin, mni_img, interpolation='nearest')
                         mask_bin.to_filename(resampled_file)
                 
@@ -233,11 +234,10 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                     # extract mask name in a format that will match contrast naming
                     if 'fROI' in mask_opts[r]:
                         mask_name = mask_opts[r].split('-')[1].lower()
-                    else:
-                        mask_name = mask_opts[r]
-                    
-                    if 'aROI' in mask_opts[r]:
+                        
+                    elif 'aROI' in mask_opts[r]:
                         mask_name = mask_opts[r].split('-')[1].lower()
+                    
                     else:
                         mask_name = mask_opts[r]
                     
@@ -273,7 +273,7 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                                 # load PSC file depending on whether run was splithalved
                                 if splithalf_id != 0:
                                     # mean psc output file name
-                                    file = op.join(pscDir, '{}_psc_runs-{}_splithalf{}_averaged.nii.gz'.format(c, run_names, splithalf_id))
+                                    psc_file = op.join(pscDir, '{}_psc_runs-{}_splithalf{}_averaged.nii.gz'.format(c, run_names, splithalf_id))
                                     
                                 if splithalf_id == 0:
                                     # mean psc output file name
