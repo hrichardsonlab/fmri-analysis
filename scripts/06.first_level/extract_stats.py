@@ -113,6 +113,10 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                             # this presumes that if fROIs were not combined, then there was only 1 run of the localiser/task acquired
                             # this could be modified to track an fROI specific run_id variable but it can't use the current run_id variable because this is based off of runs of a separate task
                             froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', 'run1')
+                            
+                            # check for the fROIs in run2 folder if run1 does not exist
+                            if not op.exists(froi_prefix):
+                                froi_prefix = op.join(froiDir, '{}'.format(sub), 'frois', 'run2')
                         
                     # grab the mni file and define the correct modelDir depending on whether model data were splithalf and/or combined
                     if splithalf_id != 0 and combined == 'no':
