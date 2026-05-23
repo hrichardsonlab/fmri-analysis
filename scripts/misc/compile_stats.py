@@ -29,14 +29,14 @@ def compile_stats(projDir, resultsDir, extract_opt):
         # extract subject number
         sub = result.split('sub-')[-1]
         
-        print('Compiling stats for sub-{}'.format(sub))
+        print('Compiling stats for {}'.format(sub))
 
         # define stats files in subject folder
         stats_files = glob.glob(op.join(result, 'stats', '*{}*.csv'.format(extract_opt)))
         
         if not stats_files:
-            print('No stats files found! Check that you have the correct extract option specified in your config file.')
-            sys.exit(1)
+            print('No stats files found for {}'.format(sub))
+            #sys.exit(1) # optionally end script if stats file is missing
             
         # extract stats from each file in directory
         for s, stat in enumerate(stats_files):
@@ -85,6 +85,9 @@ def main(argv=None):
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     extract_opt=config_file.loc['extract',1]
     resultsDir=config_file.loc['resultsDir',1]
+    
+    # remove percent signal change flag if in config file
+    extract_opt = extract_opt.replace('-psc', '')
     
     # pass inputs defined above to main resampling function
     compile_stats(args.projDir, resultsDir, extract_opt)
