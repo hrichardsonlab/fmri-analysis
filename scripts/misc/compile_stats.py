@@ -29,13 +29,13 @@ def compile_stats(projDir, resultsDir, extract_opt):
         # extract subject number
         sub = result.split('sub-')[-1]
         
-        print('Compiling stats for {}'.format(sub))
+        print('Compiling stats for sub-{}'.format(sub))
 
         # define stats files in subject folder
         stats_files = glob.glob(op.join(result, 'stats', '*{}*.csv'.format(extract_opt)))
         
         if not stats_files:
-            print('No stats files found for {}'.format(sub))
+            print('No stats files found for sub-{}'.format(sub))
             #sys.exit(1) # optionally end script if stats file is missing
             
         # extract stats from each file in directory
