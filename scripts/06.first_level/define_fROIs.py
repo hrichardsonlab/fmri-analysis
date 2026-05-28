@@ -154,13 +154,14 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                             # calculate nvox as percent of mask size
                             nvox = int(np.ceil(nvox_mask * top_nvox / 100))
                             
-                            print('Defining fROI using top {} percent of voxels within {} contrast. Number of voxels in fROI: {}'.format(top_nvox, c, nvox))
+                            print('Defining {} fROI using top {} percent of voxels within {} contrast using file: {}'.format(search_spaces[m], top_nvox, c, z_file[0]))
+                            print('Number of voxels in {} fROI : {}'.format(search_spaces[m], nvox))
                             
                         else:
                             # nvox is set as the provided top_nvox value
                             nvox = top_nvox
-                            print('Defining fROI using top {} voxels within {} contrast'.format(nvox, c))
-                        
+                            print('Defining {} fROI using top {} voxels within {} contrast using file: {}'.format(search_spaces[m], nvox, c, z_file[0]))
+                            
                         # get index of non-zero voxels within search space
                         #zero_vox_inds = (search_space == 0)
                         
