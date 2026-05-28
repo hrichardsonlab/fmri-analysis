@@ -193,8 +193,11 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                         # save froi file
                         # could use roi_name_lower instead of search_spaces[m] to get all lowercase names
                         sub_froi = image.new_img_like(mask_bin, sub_froi) # create a new image of the same class as the initial image
-                        # sub_roi_file = op.join(froiDir, '{}_run-{:02d}_splithalf-{:02d}_{}-{}_{}_top{}.nii.gz'.format(sub, r, s, network, search_spaces[m], c, nvox)) # include network in file output name
-                        sub_roi_file = op.join(froiDir, '{}_task-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, task, r, s, search_spaces[m], c, nvox))
+                        # define output file name
+                        if percent == 'yes': # include percent in the name if top n% was requested
+                            sub_roi_file = op.join(froiDir, '{}_task-{}_run-{:02d}_splithalf-{:02d}_{}_{}_{}pc_top{}.nii.gz'.format(sub, task, r, s, search_spaces[m], c, top_nvox, nvox))
+                        else:
+                            sub_roi_file = op.join(froiDir, '{}_task-{}_run-{:02d}_splithalf-{:02d}_{}_{}_top{}.nii.gz'.format(sub, task, r, s, search_spaces[m], c, nvox))
                         sub_froi.to_filename(sub_roi_file)
 
 # define command line parser function
