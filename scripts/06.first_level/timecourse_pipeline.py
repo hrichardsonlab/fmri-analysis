@@ -26,7 +26,7 @@ from datetime import datetime
 
 # define first level workflow function
 def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, subDir, 
-                               sub, task, ses, multiecho, runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, TR, detrend,standardize, template, extract_opt, dropvols, splithalves, space_name,
+                               sub, task, ses, multiecho, runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, TR, detrend,standardize, template, extract_opt, dropvols, splithalves, space_name, top_nvox, percent,
                                name='{}_task-{}_timecourses'):
     """Processing pipeline"""
 
@@ -56,7 +56,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
         print('Spatial smoothing will not be run.')
         
     # define data grabber function
-    def data_grabber(sub, task, mask_opts, sharedDir, projDir, derivDir, resultsDir, smoothDir, froiDir, subDir, template, dropvols, ses, multiecho, run_id, splithalf_id, space_name):
+    def data_grabber(sub, task, mask_opts, sharedDir, projDir, derivDir, resultsDir, smoothDir, froiDir, subDir, template, dropvols, ses, multiecho, run_id, splithalf_id, space_name, top_nvox, percent):
         """Quick filegrabber ala SelectFiles/DataGrabber"""
         import os
         import os.path as op
@@ -214,9 +214,21 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
                     roi_name = m.split('fROI-')[1].split('_')[0]
                     # roi_name = roi_name.lower() # if roi names are lowercase in define_fROI.py script
                     roi_file = glob.glob(op.join(froi_prefix, '{}_*{}_*.nii.gz'.format(sub, roi_name)))
+                    
+                    # if there are multiple roi_files that match criteria, use stricter criteria
+                    if len(roi_file) > 1:
+                        # if top x% indicated in config file, look for the file that matches the specified percentage
+                        if percent == 'yes':
+                            print('Multiple {} fROIs found. Using the file with top {}% voxels.'.format(roi_name, top_nvox))
+                            roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*{}pc_*.nii.gz'.format(sub, roi_name, top_nvox)))                            
+                        # if x% not indicated in config file, look for the file that matches the number of voxels specified in config file
+                        else:
+                            print('Multiple {} fROIs found. Using the file with {} top voxels.'.format(roi_name, top_nvox))
+                            roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*top{}.nii.gz'.format(sub, roi_name, top_nvox)))
+                            
                     roi_masks.append(roi_file)
                     print('Using {} fROI file from {}'.format(roi_name, roi_file))
-            
+
             # if group ROI was specified
             elif 'group' in m:
                 roi_name = m.split('group-')[1]
@@ -279,6 +291,8 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
     datasource.inputs.dropvols = dropvols
     datasource.inputs.multiecho = multiecho
     datasource.inputs.space_name = space_name
+    datasource.inputs.top_nvox = top_nvox
+    datasource.inputs.percent = percent
 
     # if drop volumes requested
     if dropvols != 0:
@@ -754,7 +768,7 @@ def create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, su
 
 # define function to extract subject-level data for workflow
 def process_subject(TR, sharedDir, projDir, derivDir, outDir, workDir, 
-                    sub, task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size,resultsDir,smoothDir, froiDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name):    
+                    sub, task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size,resultsDir,smoothDir, froiDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name, top_nvox, percent):    
     """Grab information and start nipype workflow
     We want to parallelize runs for greater efficiency
     """
@@ -816,7 +830,7 @@ def process_subject(TR, sharedDir, projDir, derivDir, outDir, workDir,
 
     # call timecourse workflow with extracted subject-level data
     wf = create_timecourse_workflow(sharedDir, projDir, derivDir, workDir, outDir, subDir, sub,
-                                    task, ses, multiecho, keepruns, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves, space_name)  
+                                    task, ses, multiecho, keepruns, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, TR, detrend, standardize, template, extract_opt, dropvols, splithalves, space_name, top_nvox, percent)  
                                     
                                     
     return wf
@@ -880,6 +894,7 @@ def main(argv=None):
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     splithalf=config_file.loc['splithalf',1]
     template=config_file.loc['template',1]
+    top_nvox=config_file.loc['top_nvox',1]
     extract_opt=config_file.loc['extract',1]
     space=config_file.loc['space',1]
     overwrite=config_file.loc['overwrite',1]
@@ -894,6 +909,14 @@ def main(argv=None):
     
     # lowercase regressor options - allows flexibility in how users specify in config file
     regressor_opts = [r.lower() for r in regressor_opts]
+    
+    # flag whether top n or top n % of voxels should be extracted and set value to integer
+    if top_nvox.endswith('-percent'):
+        percent = 'yes'
+        top_nvox = int(top_nvox.replace('-percent', ''))
+    else:
+        percent = 'no'
+        top_nvox = int(top_nvox)
     
     if space == 'MNI':
         space_name = 'MNI152NLin2009cAsym'
@@ -979,7 +1002,7 @@ def main(argv=None):
               
         # create a process_subject workflow with the inputs defined above
         wf = process_subject(TR, sharedDir, args.projDir, derivDir, outDir, workDir, sub,
-                             task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name)
+                             task, ses, ignore_motion, multiecho, sub_runs, regressor_opts, mask_opts, smoothing_kernel_size, resultsDir, smoothDir, froiDir, hpf, filter_opt, detrend, standardize, template, extract_opt, dropvols, splithalf, space_name, top_nvox, percent)
    
         # configure workflow options
         wf.config['execution'] = {'crashfile_format': 'txt',
