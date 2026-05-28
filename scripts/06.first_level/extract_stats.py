@@ -18,7 +18,7 @@ from nilearn import masking
 from nilearn.maskers import NiftiMasker
 
 # define function to extract stats for each subject
-def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc):
+def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc, top_nvox, percent):
     
     # make output stats directory
     statsDir = op.join(resultsDir, '{}'.format(sub), 'stats')
@@ -144,6 +144,18 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                     else:
                         roi_name = m.split('fROI-')[1]
                         roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*.nii.gz'.format(sub, roi_name)))
+                        
+                        # if there are multiple roi_files that match criteria, use stricter criteria
+                        if len(roi_file) > 1:
+                            # if top x% indicated in config file, look for the file that matches the specified percentage
+                            if percent == 'yes':
+                                print('Multiple {} fROIs found. Using the file with {}% top voxels.'.format(roi_name, top_nvox))
+                                roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*{}pc_*.nii.gz'.format(sub, roi_name, top_nvox)))                            
+                            # if x% not indicated in config file, look for the file that matches the number of voxels specified in config file
+                            else:
+                                print('Multiple {} fROIs found. Using the file with {} top voxels.'.format(roi_name, top_nvox))
+                                roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*top{}.nii.gz'.format(sub, roi_name, top_nvox)))
+                        
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
                 
@@ -464,6 +476,7 @@ def main(argv=None):
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     match_events=config_file.loc['match_events',1]
     template=config_file.loc['template',1]
+    top_nvox=config_file.loc['top_nvox',1]
     extract_opt=config_file.loc['extract',1]
     
     # lowercase contrast_opts to avoid case errors - allows flexibility in how users specify contrasts in config and contrasts files
@@ -480,7 +493,15 @@ def main(argv=None):
         extract_opt = extract_opt.replace('-psc', '')
     else:
         psc = 'no'
-
+        
+    # flag whether top n or top n % of voxels should be extracted and set value to integer
+    if top_nvox.endswith('-percent'):
+        percent = 'yes'
+        top_nvox = int(top_nvox.replace('-percent', ''))
+    else:
+        percent = 'no'
+        top_nvox = int(top_nvox)
+        
     # print if results directory is not specified or found
     if resultsDir == None:
         raise IOError('No resultsDir was specified in config file, but is required to extract stats!')
@@ -505,7 +526,7 @@ def main(argv=None):
             sub_runs=list(map(int, sub_runs)) # convert to integers
         
         # create a process_subject workflow with the inputs defined above
-        process_subject(args.projDir, sharedDir, resultsDir, froiDir, sub, sub_runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc)
+        process_subject(args.projDir, sharedDir, resultsDir, froiDir, sub, sub_runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc, top_nvox, percent)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
