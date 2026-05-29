@@ -25,7 +25,7 @@ from nilearn import image
 from nilearn.maskers import NiftiMasker
 import nilearn
 
-def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds, splithalves, conditions, mask_opts, template, normalise):
+def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds, splithalves, conditions, mask_opts, template, normalise, top_nvox, percent):
     
     # make output rsa directories
     rsaDir = op.join(resultsDir, '{}'.format(sub), 'rsa')
@@ -139,6 +139,18 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                     else:
                         roi_name = m.split('fROI-')[1]
                         roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*.nii.gz'.format(sub, roi_name)))
+                        
+                        # if there are multiple roi_files that match criteria, use stricter criteria
+                        if len(roi_file) > 1:
+                            # if top x% indicated in config file, look for the file that matches the specified percentage
+                            if percent == 'yes':
+                                print('Multiple {} fROIs found. Using the file with {}% top voxels.'.format(roi_name, top_nvox))
+                                roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*{}pc_*.nii.gz'.format(sub, roi_name, top_nvox)))                            
+                            # if x% not indicated in config file, look for the file that matches the number of voxels specified in config file
+                            else:
+                                print('Multiple {} fROIs found. Using the file with {} top voxels.'.format(roi_name, top_nvox))
+                                roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*top{}.nii.gz'.format(sub, roi_name, top_nvox)))
+                                
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
                 
@@ -198,10 +210,8 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                 mask_bin = image.new_img_like(mask_img, mask_bin) # create a new image of the same class as the initial image
                 
                 # extract file name
-                roi_name = str(roi).replace('/','-').split('-')[-1]                    
-                roi_name = roi_name.split('.nii')[0]
-                
-                print('Extracting stats from {}'.format(roi_name))
+                roi_name = mask_opts[r].split('-')[-1]
+                print('Extracting stats from {} using {}'.format(roi_name, roi[0]))
                 
                 # the masks should already be resampled, but check if this is true and resample if not
                 if mni_img.shape[0:3] != mask_bin.shape[0:3]:
@@ -516,6 +526,7 @@ def main(argv=None):
     conditions=config_file.loc['events',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     template=config_file.loc['template',1]
+    top_nvox=config_file.loc['top_nvox',1]
     normalise=config_file.loc['normalise_rdm',1]
     
     # lowercase conditions to avoid case errors - allows flexibility in how users specify events in config and contrasts files
@@ -525,7 +536,15 @@ def main(argv=None):
         splithalves = [1,2]
     else:
         splithalves = [0]
-
+    
+    # flag whether top n or top n % of voxels should be extracted and set value to integer
+    if top_nvox.endswith('-percent'):
+        percent = 'yes'
+        top_nvox = int(top_nvox.replace('-percent', ''))
+    else:
+        percent = 'no'
+        top_nvox = int(top_nvox)
+        
     # print if results directory is not specified or found
     if resultsDir == None:
         raise IOError('No resultsDir was specified in config file, but is required to compute neural RDMs!')
@@ -553,7 +572,7 @@ def main(argv=None):
             print('Multiple runs or folds were specified, so neural RDMs will be combined across runs/folds.')
             
         # create a process_subject workflow with the inputs defined above
-        generate_rdm(args.projDir, sharedDir, resultsDir, froiDir, sub, task, sub_runs, folds, splithalves, conditions, mask_opts, template, normalise)
+        generate_rdm(args.projDir, sharedDir, resultsDir, froiDir, sub, task, sub_runs, folds, splithalves, conditions, mask_opts, template, normalise, top_nvox, percent)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
