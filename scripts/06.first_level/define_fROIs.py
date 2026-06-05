@@ -30,7 +30,7 @@ def process_subject(projDir, sharedDir, resultsDir, sub, runs, task, contrast_op
                 'lFFA':'face', 'lOFA':'face', 'lSTS':'face', 'rFFA':'face', 'rOFA':'face', 'rSTS':'face',
                 'lLOC':'object', 'rLOC': 'object',
                 'lPPA':'scene', 'lRSC':'scene', 'lTOS':'scene', 'rPPA':'scene', 'rRSC':'scene', 'rTOS':'scene',
-                'DMPFC':'tom', 'LTPJ':'tom', 'MMPFC':'tom', 'rMMPFC':'tom', 'lMMPFC':'tom', 'PC':'tom', 'RSTS':'tom', 'RTPJ':'tom', 'VMPFC':'tom',
+                'DMPFC':'tom', 'lDMPFC':'tom','rDMPFC':'tom','LTPJ':'tom', 'MMPFC':'tom', 'lMMPFC':'tom', 'rMMPFC':'tom', 'PC':'tom', 'lPC':'tom', 'rPC':'tom','RSTS':'tom', 'RTPJ':'tom', 'VMPFC':'tom', 'lVMPFC':'tom', 'rVMPFC':'tom',
                 'DMPFC_9mm':'kmvpa_adults_tomloc', 'LASTS_9mm':'kmvpa_adults_tomloc', 'LTPJ_9mm':'kmvpa_adults_tomloc', 'MMPFC_9mm':'kmvpa_adults_tomloc', 'PC_9mm':'kmvpa_adults_tomloc', 'RASTS_9mm':'kmvpa_adults_tomloc', 'RMSTS_9mm':'kmvpa_adults_tomloc', 'RTPJ_9mm':'kmvpa_adults_tomloc', 'VMPFC_9mm':'kmvpa_adults_tomloc',
                 'lvwfa':'vwfa','vwfa1':'vwfa','vwfa2':'vwfa',
                 'language':'language', 'LIFGorb':'language', 'LIFG':'language', 'LMidFG':'language', 'LAntTemp':'language', 'LPostTemp':'language', 'LAngG':'language', 'RIFGorb':'language', 'RIFG':'language', 'RMidFG':'language', 'RAntTemp':'language', 'RPostTemp':'language', 'RAngG':'language',
