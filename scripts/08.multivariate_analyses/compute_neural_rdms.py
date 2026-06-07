@@ -149,11 +149,11 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                             # if top x% indicated in config file, look for the file that matches the specified percentage
                             if percent == 'yes':
                                 print('Multiple {} fROIs found. Using the file with {}% top voxels.'.format(roi_name, top_nvox))
-                                roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*{}pc_*.nii.gz'.format(sub, roi_name, top_nvox)))                            
+                                roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*_{}pc_*.nii.gz'.format(sub, roi_name, top_nvox)))                            
                             # if x% not indicated in config file, look for the file that matches the number of voxels specified in config file
                             else:
                                 print('Multiple {} fROIs found. Using the file with {} top voxels.'.format(roi_name, top_nvox))
-                                roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*top{}.nii.gz'.format(sub, roi_name, top_nvox)))
+                                roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*_{}_*top{}.nii.gz'.format(sub, roi_name, top_nvox)))
                                 
                         roi_masks.append(roi_file)
                         print('Using {} fROI file from {}'.format(roi_name, roi_file))
