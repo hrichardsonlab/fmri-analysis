@@ -123,6 +123,8 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
                              .agg(['mean']).reset_index()
                              .rename(columns={'mean': 'discrim_index'}))
         
+        print('{}'.format(discrim_df[['metric', 'discrim_index']]))
+        
         # permutation test
         print('Running permutation test using {} permutations'.format(int(nperm)))
         
