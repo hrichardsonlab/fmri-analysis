@@ -16,7 +16,7 @@ import os
 import glob
 import shutil
 
-def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mask_opts, subject_rdms, model_rdms):
+def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subject_rdms, model_rdms):
     
     # define rsa directory and check that it exists
     rsaDir = op.join(resultsDir, '{}'.format(sub), 'rsa')
@@ -39,10 +39,6 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
             if not model_file:
                 model_file = glob.glob(op.join(sharedDir,  'model_rdms', '{}'.format(dataset), '{}*RDM-{}.csv'.format(sub, m)))
             
-            # if the subject file is found
-            else:
-                print('Using {} model RDM file from: {}'.format(m, model_file[0]))
-            
             # if subject RDM file is still not found, raise error
             if not model_file:
                 raise IOError('Subject specific model RDM file not found!')
@@ -64,10 +60,6 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
             if not model_file:
                 model_file = glob.glob(op.join(sharedDir, 'model_rdms', '{}'.format(dataset), 'model_RDM-{}.csv'.format(m)))
                 
-            # if the group file is found
-            else:
-                print('Using {} model RDM file from: {}'.format(m, model_file[0]))
-            
             # if group RDM file is still not found, raise error
             if not model_file:
                 raise IOError('Group model RDM file not found!')
@@ -109,7 +101,7 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, conditions, mas
         # add row names to ensure the same order as model RDMs
         cor_rdm.index = cor_rdm.columns
         euc_rdm.index = euc_rdm.columns
-                
+        
         # loop over models      
         for m in models:
             # force neural RDMs to have the same column and row order as the model (which has been forced to be symmetric)
@@ -187,17 +179,21 @@ def kendall_tau_a(neural_vec, model_vec):
     model_diff = model_vec[:, None] - model_vec
     
     # calculate concordance/discordance
-    discord = neural_diff * model_diff
+    #discord = neural_diff * model_diff
+    discord = np.sign(neural_diff) * np.sign(model_diff)
     
     # take the upper triangle only (excluding diagonal)
     tri_indx = np.triu_indices(n, k=1)
     
     # extract concordant and discordant values
-    C = np.sum(discord[tri_indx] > 0)
-    D = np.sum(discord[tri_indx] < 0)
+    # C = np.sum(discord[tri_indx] > 0)
+    # D = np.sum(discord[tri_indx] < 0)
+    # numerator (ties naturally become 0 because sign(0)=0)
+    numerator = np.sum(discord[tri_indx])
     
     # use values in kendall's tau-a formula
-    tau_a = (C - D) / (n * (n - 1) / 2)
+    # tau_a = (C - D) / (n * (n - 1) / 2)
+    tau_a = numerator / (n * (n - 1) / 2)
     
     return tau_a
 
@@ -242,16 +238,12 @@ def main(argv=None):
     sharedDir=config_file.loc['sharedDir',1]
     bidsDir=config_file.loc['bidsDir',1]
     resultsDir=config_file.loc['resultsDir',1]
-    conditions=config_file.loc['events',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     subject_rdms=config_file.loc['subject_rdms',1]
     model_rdms=config_file.loc['model_rdms',1].replace(' ','').split(',')
     
     # extract dataset name from the bidsDir provided in the config file
     dataset = os.path.basename(bidsDir)
-    
-    # lowercase conditions to avoid case errors - allows flexibility in how users specify events in config and contrasts files
-    conditions = [c.lower() for c in conditions]
     
     # print if results directory is not specified or found
     if resultsDir == None:
@@ -265,7 +257,7 @@ def main(argv=None):
         print('Correlating neural and model RDMs for {}'.format(sub))
         
         # create a process_subject workflow with the inputs defined above
-        correlate_rdms(args.projDir, sharedDir, dataset, resultsDir, sub, conditions, mask_opts, subject_rdms, model_rdms)
+        correlate_rdms(args.projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subject_rdms, model_rdms)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
