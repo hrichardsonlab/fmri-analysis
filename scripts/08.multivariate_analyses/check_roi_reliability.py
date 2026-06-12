@@ -56,7 +56,7 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
         # stack ROI RDMs into dictionary with ROI label
         roi_data_cor[roi] = np.vstack(cor_rdms)
         roi_data_euc[roi] = np.vstack(euc_rdms)
-        
+    
     # define all possible ROI pairs
     roi_pairs = list(combinations(mask_opts, 2))
     
@@ -71,9 +71,6 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
         iter_results = []
         
         print('Calculating split half RDM reliability for ROI pair: {} - {}'.format(roi1, roi2))
-        
-        # define subject indices
-        #subject_idx = np.arange(len(subjects))
             
         # start iteration loop
         for i in range(int(niter)):
@@ -88,11 +85,11 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
             group1 = subject_idx[:half]
             group2 = subject_idx[half:]
             
-            # print out subjects as an optional data checking step
+            # print out subject indices as an optional data checking step
             #print('Subject indices for group 1 {}'.format(group1))
             #print('Subject indices for group 2 {}'.format(group2))
             
-            # calculate difference scores (and return within and across variables for data checking if needed)  
+            # calculate difference scores (and return within and across variables for data checking)  
             within_cor, across_cor, diff_cor = calc_diff_score(roi_data_cor, roi1, roi2, group1, group2)
             within_euc, across_euc, diff_euc = calc_diff_score(roi_data_euc, roi1, roi2, group1, group2)
             
@@ -134,7 +131,7 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
         # extract difference scores
         diff_cor_vec = iter_df.query("metric == 'correlation'")['difference'].values
         diff_euc_vec = iter_df.query("metric == 'euclidean'")['difference'].values
-    
+        
         for p in range(int(nperm)):
             # generate a random vector the same length as the difference score vector (i.e., number of iterations) of 1s and -1s
             signs = np.random.choice([-1, 1], size=int(niter))
@@ -160,7 +157,8 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
         # merge perm_df with discrim_df
         p_values = (perm_df.merge(discrim_df, on=['roi1', 'roi2', 'metric']))
         
-        # compute a p-value based on the proportion of permuted values that are larger than the observed disrim_index
+        # compute a p-value based on the proportion of permuted values that are larger than the observed discrim_index 
+        # (i.e., proportion of permuted statistics that are at least as extreme as the observed statistic)
         p_values = (p_values.groupby(['roi1', 'roi2', 'metric'])
                             .apply(lambda x: (x['perm_mean'] >= x['discrim_index'].iloc[0]).mean()).reset_index(name='p_value'))
         
