@@ -97,7 +97,7 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
             # correlation
             iter_results.append({'roi1': roi1,
                                  'roi2': roi2,
-                                 'iteration': i,
+                                 'iteration_num': i,
                                  'metric': 'correlation',
                                  'within': within_cor,
                                  'across': across_cor,
@@ -106,7 +106,7 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
             # euclidean
             iter_results.append({'roi1': roi1,
                                  'roi2': roi2,
-                                 'iteration': i,
+                                 'iteration_num': i,
                                  'metric': 'euclidean',
                                  'within': within_euc,
                                  'across': across_euc,
@@ -140,16 +140,16 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
             # correlation
             perm_results.append({'roi1': roi1,
                                  'roi2': roi2,
-                                 'metric': 'correlation',
                                  'perm_num': p,
-                                 'perm_mean': np.mean(diff_cor_vec * signs)})
+                                 'metric': 'correlation',
+                                 'perm_discrim_index': np.mean(diff_cor_vec * signs)})
             
             # euclidean
             perm_results.append({'roi1': roi1,
                                  'roi2': roi2,
-                                 'metric': 'euclidean',
                                  'perm_num': p,
-                                 'perm_mean': np.mean(diff_euc_vec * signs)})
+                                 'metric': 'euclidean',
+                                 'perm_discrim_index': np.mean(diff_euc_vec * signs)})
         
         # convert permutation results to dataframe
         perm_df = pd.DataFrame(perm_results)
@@ -160,7 +160,7 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
         # compute a p-value based on the proportion of permuted values that are larger than the observed discrim_index 
         # (i.e., proportion of permuted statistics that are at least as extreme as the observed statistic)
         p_values = (p_values.groupby(['roi1', 'roi2', 'metric'])
-                            .apply(lambda x: (x['perm_mean'] >= x['discrim_index'].iloc[0]).mean()).reset_index(name='p_value'))
+                            .apply(lambda x: (x['perm_discrim_index'] >= x['discrim_index'].iloc[0]).mean()).reset_index(name='p_value'))
         
         # merge into results dataframe
         results_df = discrim_df.merge(p_values, on=['roi1', 'roi2', 'metric'])
@@ -176,9 +176,9 @@ def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, n
     results_df = pd.concat(all_results, ignore_index=True)
     
     # save results
-    iter_df.to_csv(op.join(relDir, 'split_half-iterations.csv'), index=False)
-    perm_df.to_csv(op.join(relDir, 'split_half-permutations.csv'), index=False)
-    results_df.to_csv(op.join(relDir, 'split_half-results.csv'), index=False)
+    iter_df.to_csv(op.join(relDir, 'splithalf-iterations.csv'), index=False)
+    perm_df.to_csv(op.join(relDir, 'splithalf-permutations.csv'), index=False)
+    results_df.to_csv(op.join(relDir, 'splithalf-results.csv'), index=False)
 
 # define function to vectorise the RDMs
 def vectorise_rdm(rdm_file, diag):
