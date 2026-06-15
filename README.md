@@ -3,7 +3,7 @@ These folders have the scripts for running the fMRI analysis pipeline, written i
 
 * Converting from raw DICOMS to run-separated data in BIDS specification
 * Data quality inspection using MRIQC
-* Preprocessing using fMRIPrep and, optionally, tedana
+* Preprocessing using fMRIPrep and, optionally, tedana for multi-echo data
   * The data are optionally first run through the anatomical-only workflow using freesurfer within fMRIPrep because some participants only have structural data
   * The data are then run through the rest of the fMRIPrep workflow including:
 	* Separating brain from skull, calculating brain tissue segmentation, spatial normalization
@@ -18,6 +18,7 @@ These folders have the scripts for running the fMRI analysis pipeline, written i
    * Percent signal change calculation
    * Timecourse extraction
    * Combine runs
+   * Define functional regions of interest
    * Extract stats
 * Second-level modeling
   * Parametric and non-parametric group analysis

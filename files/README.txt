@@ -9,6 +9,9 @@ These files are used to specify processing options for the pipeline scripts. Exa
 contrast_files/ :
 These files list all condition contrasts for a dataset. Multiple tasks can (and should!) be included in the same contrasts file.
 
+dcm2bids_files/ :
+These files are used to convert raw dicom data to BIDS format and are study specific.
+
 event_files/ :
 These files are tab-delimited files containing stimulus presentation and optionally response information. Where relevant, individual events files are provided per participant if stimulus presentation differed across participants and/or runs.
 
