@@ -14,7 +14,7 @@ import os.path as op
 import os
 from itertools import combinations
 
-def calc_roi_reliability(projDir, resultsDir, subjects, conditions, mask_opts, niter, nperm):
+def calc_roi_reliability(projDir, resultsDir, subjects, mask_opts, niter, nperm):
     
     # check that subject list includes at least 2 subjects
     if len(subjects) < 2:
@@ -288,13 +288,9 @@ def main(argv=None):
     # read in configuration file and parse inputs
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     resultsDir=config_file.loc['resultsDir',1]
-    conditions=config_file.loc['events',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     niter=config_file.loc['splithalf_iterations',1]
     nperm=int(config_file.loc['npermutations',1])
-    
-    # lowercase conditions to avoid case errors - allows flexibility in how users specify events in config and contrasts files
-    conditions = [c.lower() for c in conditions]
     
     # print if results directory is not specified or found
     if resultsDir == None:
@@ -304,7 +300,7 @@ def main(argv=None):
         raise IOError('Results directory {} not found.'.format(resultsDir))
     
     # create a calc roi workflow with the inputs defined above
-    calc_roi_reliability(args.projDir, resultsDir, args.subjects, conditions, mask_opts, niter, nperm)
+    calc_roi_reliability(args.projDir, resultsDir, args.subjects, mask_opts, niter, nperm)
     
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
