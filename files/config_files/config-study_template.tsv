@@ -35,21 +35,22 @@ search_spaces
 match_events	
 top_nvox	
 mask	
-extract	mean
+extract	
 folds	
 normalise_rdm	
 subject_rdms	
 model_rdms	
-nonparametric	
-npermutations	
+splithalf_iterations	
+nonparametric	yes
+npermutations	5000
 group_comparison	
-group_variables	
-est_group_variances	
-tfce	
-stat_thresh	
-cluster_size	
-top_nregions	
-hrf_lag	
-rc_ntps	
-rc_thresh	
+group_variables	no
+est_group_variances	no
+tfce	yes
+stat_thresh	0.95
+cluster_size	10
+top_nregions	6
+hrf_lag	4
+rc_ntps	2
+rc_thresh	0.05
 overwrite	no

@@ -40,6 +40,7 @@ folds
 normalise_rdm	
 subject_rdms	
 model_rdms	
+splithalf_iterations	
 nonparametric	yes
 npermutations	5000
 group_comparison	within

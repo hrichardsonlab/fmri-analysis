@@ -1,0 +1,56 @@
+sharedDir	/RichardsonLab/processing
+rawDir	/RichardsonLab/rawData/RLAB_AWE1
+bidsDir	/RichardsonLab/preprocessedData/RLAB_AWE1
+derivDir	/RichardsonLab/preprocessedData/RLAB_AWE1T/derivatives
+resultsDir	
+smoothDir	
+froiDir	
+resampleDir	
+space	MNI
+task	awe
+sessions	no
+multiecho	yes
+FD_thresh	.4
+DVARS_thresh	1.5
+art_norm_thresh	.4
+art_z_thresh	3
+ntmpts_exclude	.33
+ignore_motion	no
+dropvols	0
+smoothing	5
+hpf	128
+filter	butterworth
+detrend	yes
+standardize	zscore
+splithalf	no
+events	Jealous, Disappointed, Saddevastated, Embarrassed, Disgusted, Guilty, Annoyed, Worriedapprehensive, Afraidterrified, Angryfurious, Lonely, Surprised, Nostalgia, Calmcontent, Impressed, Proud, Excited, Hopeful, Happyjoyful, Grateful, Dizzy, Full, Warm
+modulators	no
+contrast	emo-phys, phys-emo, pos-neg, Jealous, Disappointed, Saddevastated, Embarrassed, Disgusted, Guilty, Annoyed, Worriedapprehensive, Afraidterrified, Angryfurious, Lonely, Surprised, Nostalgia, Calmcontent, Impressed, Proud, Excited, Hopeful, Happyjoyful, Grateful, Dizzy, Full, Warm
+timecourses	no
+regressors	art, aCompCor
+convert_surf	
+template	MNI152NLin2009cAsym_res-02_T1w
+FS_ROI	
+search_spaces	DMPFC, MMPFC, VMPFC, PC, LTPJ, RTPJ, RSTS
+match_events	no
+top_nvox	80
+mask	fROI-DMPFC, fROI-MMPFC, fROI-VMPFC, fROI-PC, fROI-LTPJ, fROI-RTPJ, fROI-RSTS
+extract	mean
+folds	yes
+normalise_rdm	no
+subject_rdms	no
+model_rdms	Appraisal, BasicEmotion, ValenceArousal, ReadingEase, SyntacticComplexity
+splithalf_iterations	100
+nonparametric	yes
+npermutations	5000
+group_comparison	within
+group_variables	no
+est_group_variances	no
+tfce	yes
+stat_thresh	.95
+cluster_size	5
+top_nregions	10
+hrf_lag	4
+rc_ntps	4
+rc_thresh	.05
+overwrite	no
