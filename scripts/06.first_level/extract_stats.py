@@ -18,7 +18,7 @@ from nilearn import masking
 from nilearn.maskers import NiftiMasker
 
 # define function to extract stats for each subject
-def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc, top_nvox, percent):
+def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, folds, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc, top_nvox, percent):
     
     # make output stats directory
     statsDir = op.join(resultsDir, '{}'.format(sub), 'stats')
@@ -35,7 +35,7 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
         stats_file = op.join(statsDir, '{}_task-{}_{}_{}_ROI_magnitudes.csv'.format(sub, task, localiser_name, extract_opt))
         
     # delete output file if it already exists (to ensure stats aren't appended to pre-existing files)
-    if os.path.isfile(stats_file):
+    if op.isfile(stats_file):
         os.remove(stats_file)
         
     # define combined run directory for this subject
@@ -45,13 +45,23 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
     if op.exists(combinedDir):
         print('Found combined runs directory. Stats will be extracted from the combined run data.')
         combined = 'yes'
-        runs_inter = [runs[0]] # don't iterate over all runs, create iterable run defined as the first run in the list to find MNI files
+        if folds == 'yes': # runs combined into run folds
+            print('Will extract stats from run folds folders.')
+            # iterate over run folds
+            runs_inter = runs
+        else: # all runs combined together
+            # don't iterate over all runs, create iterable run defined as the first run in the list to find MNI files
+            runs_inter = [runs[0]]
     else:
         combined = 'no'
         runs_inter = runs # iterate over all provided runs
     
     # for each run
     for run_id in runs_inter:
+        # redefine combinedDir if folds were requested in config file
+        if folds == 'yes':
+            combinedDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs', 'fold{}'.format(run_id))
+        
         # for each splithalf
         for splithalf_id in splithalves:
 
@@ -127,7 +137,10 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                     elif splithalf_id != 0 and combined == 'yes':
                         # grab mni file (used only if resampling is required)
                         mni_file = glob.glob(op.join(resultsDir, '{}'.format(sub), 'preproc', 'run{}_splithalf{}'.format(run_id, splithalf_id), '*_bold.nii.gz'))[0]
-                        modelDir = op.join(combinedDir, 'splithalf{}'.format(splithalf_id))
+                        if folds == 'yes':
+                            modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs', 'splithalf{}'.format(splithalf_id), 'fold{}'.format(run_id))
+                        else:
+                            modelDir = op.join(combinedDir, 'splithalf{}'.format(splithalf_id))
                     
                     elif splithalf_id == 0 and combined == 'no':
                         # grab mni file (used only if resampling is required)
@@ -236,7 +249,7 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                     resampled_file = op.join(roiDir, '{}_resampled.nii.gz'.format(roi_name))
                     
                     # check if file already exists
-                    if os.path.isfile(resampled_file):
+                    if op.isfile(resampled_file):
                         print('Found previously resampled {} ROI in output directory'.format(roi_name))
                         mask_bin = image.load_img(resampled_file)
                     else:
@@ -280,11 +293,23 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                                 pscDir = op.join(resultsDir, '{}'.format(sub), 'psc', 'combined')
                                 
                                 # throw an error if combined psc directory isn't found
-                                if not os.path.isdir(pscDir):
+                                if not op.isdir(pscDir):
                                     raise FileNotFoundError('No combined percent signal change outputs found for {}'.format(sub))
-                                    
+                                
+                                if folds == 'yes':
+                                   # read in subject fold info file to get list of runs in each fold
+                                   fold_info_file = op.join(resultsDir, '{}'.format(sub), 'fold_info.tsv')
+                                   print('Looking up runs in fold{} using: {}'.format(run_id, fold_info_file))
+                                   
+                                   fold_info = pd.read_csv(fold_info_file, sep='\t')
+                                   runs_str = fold_info.loc[fold_info['fold'] == 'fold{}'.format(run_id), 'runs'].values[0]
+                                   psc_runs = list(map(int, runs_str.split(',')))
+                                
+                                else:
+                                    psc_runs = runs
+                                
                                 # save run names for finding correct file
-                                run_names = '_'.join(map(str, runs))
+                                run_names = '_'.join(map(str, psc_runs))
                                 
                                 # load PSC file depending on whether run was splithalved
                                 if splithalf_id != 0:
@@ -296,9 +321,9 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                                     psc_file = op.join(pscDir, '{}_psc_runs-{}_averaged.nii.gz'.format(c, run_names))
                                 
                             # load psc file
-                            print('Calculating average percent signal change for {} contrast using: {}'.format(c, psc_file))
+                            print('Extracting percent signal change for {} contrast using: {}'.format(c, psc_file))
                             psc_img = image.load_img(psc_file)
-                                
+                            
                         # z-stats copes file
                         zcope_file = glob.glob(op.join(modelDir, '*_{}_zstat.nii.gz'.format(c)))
                         zcope_img = image.load_img(zcope_file)
@@ -323,10 +348,16 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                         
                         # use more transparent run label for cases when stats are extracted from combined data
                         if combined == 'yes':
-                            run_label = 0
+                            if folds == 'yes':
+                                run_label = run_id
+                            else:
+                                run_label = 0
                         else:
                             run_label = run_id
                             
+                        # decide whether to label column 'run' or 'fold' depending on whether folds is 'yes'
+                        label_type = 'fold' if folds == 'yes' else 'run'
+                        
                         # mask and extract values depending on extract_opt
                         if extract_opt == 'mean': # if mean requested
                                                 
@@ -357,31 +388,32 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                             print('Mean t-stat within {}: {}'. format(mask_opts[r], mean_tval))
                             if psc == 'yes':
                                 print('Mean percent signal change within {}: {}'. format(mask_opts[r], mean_psc))
-                            
+                                
                             if splithalf_id != 0:
                                 df_row = pd.DataFrame({'sub': sub,
-                                                       'task' : task,
-                                                       'run' : run_label,
-                                                       'half' : splithalf_id,
+                                                       'task': task,
+                                                       label_type: run_label,
+                                                       'half': splithalf_id,
                                                        'mask': mask_opts[r],
-                                                       'roi_file' : roi,
-                                                       'contrast' : c,
-                                                       'mean_tval' : mean_tval,
-                                                       'mean_zval' : mean_zval}, index=[0])
+                                                       'roi_file': roi,
+                                                       'contrast': c,
+                                                       'mean_tval': mean_tval,
+                                                       'mean_zval': mean_zval}, index=[0])
+                            
                             else:
                                 df_row = pd.DataFrame({'sub': sub,
-                                                       'task' : task,
-                                                       'run' : run_label,
+                                                       'task': task,
+                                                       label_type: run_label,
                                                        'mask': mask_opts[r],
-                                                       'roi_file' : roi,
-                                                       'contrast' : c,
-                                                       'mean_tval' : mean_tval,                                                     
-                                                       'mean_zval' : mean_zval}, index=[0])
+                                                       'roi_file': roi,
+                                                       'contrast': c,
+                                                       'mean_tval': mean_tval,                                                     
+                                                       'mean_zval': mean_zval}, index=[0])
                             
                             if psc == 'yes':
                                 df_row['mean_psc'] = mean_psc
                                 
-                            if not os.path.isfile(stats_file): # if the stats output file doesn't exist
+                            if not op.isfile(stats_file): # if the stats output file doesn't exist
                                 # save current row as file
                                 df_row.to_csv(stats_file, index=False, header='column_names')
                             else: # if the stats output file exists
@@ -414,11 +446,11 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, task, co
                             masked_df.insert(loc=0, column='contrast', value=c)
                             if splithalf_id != 0:
                                 masked_df.insert(loc=0, column='half', value=splithalf_id)
-                            masked_df.insert(loc=0, column='run', value=run_label)
+                            masked_df.insert(loc=0, column=label_type, value=run_label)
                             masked_df.insert(loc=0, column='task', value=task)
                             masked_df.insert(loc=0, column='sub', value='{}'.format(sub))
                             
-                            if not os.path.isfile(stats_file): # if the stats output file doesn't exist
+                            if not op.isfile(stats_file): # if the stats output file doesn't exist
                                 # save dataframe
                                 masked_df.to_csv(stats_file, index=False, header='column_names')
                             else:
@@ -475,6 +507,7 @@ def main(argv=None):
     contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     match_events=config_file.loc['match_events',1]
+    folds=config_file.loc['folds',1]
     template=config_file.loc['template',1]
     top_nvox=config_file.loc['top_nvox',1]
     extract_opt=config_file.loc['extract',1]
@@ -518,7 +551,7 @@ def main(argv=None):
             raise IOError('Run information missing. Make sure you are passing a subject-run list to the pipeline!')
             
         # pass runs for this sub
-        sub_runs=args.runs[index]
+        sub_runs = args.runs[index].replace(' ','')
         sub_runs=sub_runs.replace(' ','').split(',') # split runs by separators
         if sub_runs == ['NA']: # if run info isn't used in file names
             sub_runs = [1] # make this '1' instead of '0' because results were output with 'run1' label
@@ -526,7 +559,7 @@ def main(argv=None):
             sub_runs=list(map(int, sub_runs)) # convert to integers
         
         # create a process_subject workflow with the inputs defined above
-        process_subject(args.projDir, sharedDir, resultsDir, froiDir, sub, sub_runs, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc, top_nvox, percent)
+        process_subject(args.projDir, sharedDir, resultsDir, froiDir, sub, sub_runs, folds, task, contrast_opts, splithalves, mask_opts, match_events, template, extract_opt, psc, top_nvox, percent)
 
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
