@@ -12,10 +12,13 @@ import numpy as np
 import argparse
 import os.path as op
 import os
+import glob
+import json
 from itertools import combinations
 from itertools import chain
+from scipy.stats import pearsonr, spearmanr
 
-def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_stats):
+def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_stats, rdm_stats):
     
     # define subject RDM directory and check that it exists
     rdmDir = op.join(resultsDir, '{}'.format(sub), 'rsa', 'neural_rdms')
@@ -39,12 +42,12 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
 
             # read in averaged neural RDMs for this ROI
             ## fold 1 vs fold 2
-            fold1vs2_cor_file = op.join(rdmDir, '{}_{}_fold-{}vs{}_correlation_rdm.csv'.format(sub, roi, fold1, fold2))
-            fold1vs2_euc_file = op.join(rdmDir, '{}_{}_fold-{}vs{}_euclidean_rdm.csv'.format(sub, roi, fold1, fold2))
+            fold1vs2_cor_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_correlation_*rdm.csv'.format(sub, roi, fold1, fold2)))
+            fold1vs2_euc_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_euclidean_*rdm.csv'.format(sub, roi, fold1, fold2)))
             
             ## fold 2 vs fold 1
-            fold2vs1_cor_file = op.join(rdmDir, '{}_{}_fold-{}vs{}_correlation_rdm.csv'.format(sub, roi, fold2, fold1))
-            fold2vs1_euc_file = op.join(rdmDir, '{}_{}_fold-{}vs{}_euclidean_rdm.csv'.format(sub, roi, fold2, fold1))
+            fold2vs1_cor_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_correlation_*rdm.csv'.format(sub, roi, fold2, fold1)))
+            fold2vs1_euc_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_euclidean_*rdm.csv'.format(sub, roi, fold2, fold1)))
             
             # check that files are found and give informative error if not
             if not op.exists(fold1vs2_cor_file):
@@ -59,14 +62,57 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             if not op.exists(fold2vs1_euc_file):
                 raise IOError('Fold file not found: {}'.format(fold2vs1_euc_file))                
             
+            # load RDM files
+            ## correlation
+            cor_rdm = pd.read_csv(fold1vs2_cor_file[0], sep=',').values
+            
+            ## euclidean
+            euc_rdm = pd.read_csv(fold1vs2_euc_file[0], sep=',').values
+            
+            # get descriptive stats
+            # it doesn't matter which direction (fold1 vs fold2; fold2 vs fold1) these stats are calculated on because the matrix contains all comparisons
+            cor_stats = get_descriptives(cor_rdm)
+            euc_stats = get_descriptives(euc_rdm)
+            
+            # append fold 1 stats
+            # correlation
+            rdm_stats.append({'sub': sub,
+                              'roi': roi,
+                              'folds': '{}_vs_{}'.format(fold1, fold2),
+                              'metric': 'correlation',
+                              'diagonal': json.dumps(cor_stats['diag_vals'].tolist()),
+                              'diagonal_mean': cor_stats['diag_mean'],
+                              'upper_mean': cor_stats['upper_mean'],
+                              'lower_mean': cor_stats['lower_mean'],
+                              'rdm_mean': cor_stats['rdm_mean']})
+                              
+            # euclidean
+            rdm_stats.append({'sub': sub,
+                              'roi': roi,
+                              'folds': '{}_vs_{}'.format(fold1, fold2),
+                              'metric': 'euclidean',
+                              'diagonal': json.dumps(euc_stats['diag_vals'].tolist()),
+                              'diagonal_mean': euc_stats['diag_mean'],
+                              'upper_mean': euc_stats['upper_mean'],
+                              'lower_mean': euc_stats['lower_mean'],
+                              'rdm_mean': euc_stats['rdm_mean']})
+                    
             # vectorise the RDMs (this excludes the diagonal)
             ## correlation
-            fold1vs2_cor = vectorise_rdm(fold1vs2_cor_file, diag=1)
-            fold2vs1_cor = vectorise_rdm(fold2vs1_cor_file, diag=1)
+            fold1vs2_cor = vectorise_rdm(fold1vs2_cor_file[0], diag=1)
+            fold2vs1_cor = vectorise_rdm(fold2vs1_cor_file[0], diag=1)
 
             ## euclidean
-            fold1vs2_euc = vectorise_rdm(fold1vs2_euc_file, diag=1)
-            fold2vs1_euc = vectorise_rdm(fold2vs1_euc_file, diag=1)
+            fold1vs2_euc = vectorise_rdm(fold1vs2_euc_file[0], diag=1)
+            fold2vs1_euc = vectorise_rdm(fold2vs1_euc_file[0], diag=1)
+            
+            # pearson correlation
+            pearson_cor, _ = pearsonr(fold1vs2_cor, fold2vs1_cor)
+            pearson_euc, _ = pearsonr(fold1vs2_euc, fold2vs1_euc)
+            
+            # spearman correlation
+            spearman_cor, _ = spearmanr(fold1vs2_cor, fold2vs1_cor)
+            spearman_euc, _ = spearmanr(fold1vs2_euc, fold2vs1_euc)
             
             # tau-a using custom function (should return the same values as tau-b in most cases)
             tau_cor = kendall_tau_a(fold1vs2_cor, fold2vs1_cor)
@@ -79,15 +125,19 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             # correlation
             fold_stats.append({'sub': sub,
                                'roi': roi,
-                               'folds': '{}'.format(list(chain.from_iterable(fold_pairs))),
+                               'folds': '{}_vs_{}'.format(fold1, fold2),
                                'metric': 'correlation',
+                               'pearson': pearson_cor,
+                               'spearman': spearman_cor,
                                'tau_a': tau_cor})
             
             # euclidean
             fold_stats.append({'sub': sub,
                                'roi': roi,
-                               'folds': '{}'.format(list(chain.from_iterable(fold_pairs))),
+                               'folds': '{}_vs_{}'.format(fold1, fold2),
                                'metric': 'euclidean',
+                               'pearson': pearson_euc,
+                               'spearman': spearman_euc,
                                'tau_a': tau_euc})
 
 # define function to vectorise the RDMs
@@ -98,6 +148,34 @@ def vectorise_rdm(rdm_file, diag):
     # returns the upper triangle as vector
     # k=0 will include diagonal; k=1 will exclude diagonal
     return rdm_mat.values[np.triu_indices_from(rdm_mat, k=diag)]
+    
+# define function to extract stats from RDM
+def get_descriptives(rdm_mat):
+    
+    # make array
+    mat = np.array(rdm_mat)
+
+    # extract diagonal vector and calculate mean
+    diag_vals = np.diag(mat)
+    diag_mean = np.mean(diag_vals)
+
+    # extract upper and lower triangle (excluding diagonal)
+    upper = mat[np.triu_indices_from(mat, k=1)]
+    lower = mat[np.tril_indices_from(mat, k=1)]
+    
+    # calculate upper and lower triangle mean
+    upper_mean = np.mean(upper)
+    lower_mean = np.mean(lower)
+
+    # calculate combined mean of upper and lower triangles (still excluding diagonal)
+    mat_nodiag = np.concatenate([upper, lower])
+    mat_nodiag_mean = np.mean(mat_nodiag)
+
+    return {'diag_mean': diag_mean,
+            'diag_vals': diag_vals,
+            'upper_mean': upper_mean,
+            'lower_mean': lower_mean,
+            'rdm_mean': mat_nodiag_mean}
     
 # define function to calculate Kendall's tau-a
 def kendall_tau_a(x_vec, y_vec):
@@ -176,6 +254,7 @@ def main(argv=None):
     
     # initialise outputs
     fold_stats = []
+    rdm_stats = []
         
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
@@ -191,17 +270,19 @@ def main(argv=None):
         sub_runs=list(map(int, sub_runs)) # convert to integers
     
         # create a calc fold workflow with the inputs defined above
-        calc_fold_reliability(args.projDir, resultsDir, sub, sub_runs, mask_opts, fold_stats)
+        calc_fold_reliability(args.projDir, resultsDir, sub, sub_runs, mask_opts, fold_stats, rdm_stats)
     
     # define group rsa directory to save outputs
     groupDir = op.join(resultsDir, 'group_rdms')
     os.makedirs(groupDir, exist_ok=True)
     
-    # convert fold stats results to dataframe
+    # convert fold and rdm stats results to dataframes
     fold_df = pd.DataFrame(fold_stats)
+    rdm_df = pd.DataFrame(rdm_stats)
     
     # save results
     fold_df.to_csv(op.join(groupDir, 'fold_reliabilities.csv'), index=False)
+    rdm_df.to_csv(op.join(groupDir, 'rdm_descriptives.csv'), index=False)
     
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
