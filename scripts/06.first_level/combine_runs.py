@@ -14,6 +14,7 @@ from nipype.interfaces import fsl
 from niflow.nipype1.workflows.fmri.fsl.estimate import create_fixed_effects_flow
 import nipype.interfaces.io as nio
 from nipype import Workflow, Node, MapNode, IdentityInterface, Function, DataSink, JoinNode, SelectFiles
+from itertools import combinations
 import nibabel as nib
 import os
 import os.path as op
@@ -21,7 +22,6 @@ import glob
 import numpy as np
 import pandas as pd
 import argparse
-import glob
 import shutil
 
 # define average runs workflow function
@@ -33,7 +33,7 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
                   
     # combine percent signal change runs if psc folder exists
     pscDir = op.join(resultsDir, '{}'.format(sub), 'psc')
-    if os.path.isdir(pscDir):
+    if op.isdir(pscDir):
         # create psc combined folder
         os.makedirs(op.join(pscDir, 'combined'), exist_ok=True)
         
@@ -48,13 +48,13 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
             for psc_run in runs:
                 if splithalf_id != 0:
                     # grab run file
-                    psc_run_file = os.path.join(pscDir, 'run{}_splithalf{}'.format(psc_run, splithalf_id), '{}_psc.nii.gz'.format(c))
+                    psc_run_file = op.join(pscDir, 'run{}_splithalf{}'.format(psc_run, splithalf_id), '{}_psc.nii.gz'.format(c))
                     # mean psc output file name
                     mean_psc_file = op.join(pscDir, 'combined', '{}_psc_runs-{}_splithalf{}_averaged.nii.gz'.format(c, run_names, splithalf_id))
                 
                 if splithalf_id == 0:
                     # grab run file
-                    psc_run_file = os.path.join(pscDir, 'run{}'.format(psc_run), '{}_psc.nii.gz'.format(c))
+                    psc_run_file = op.join(pscDir, 'run{}'.format(psc_run), '{}_psc.nii.gz'.format(c))
                     # mean psc output file name
                     mean_psc_file = op.join(pscDir, 'combined', '{}_psc_runs-{}_averaged.nii.gz'.format(c, run_names))
                 
@@ -297,12 +297,12 @@ def process_subject(projDir, derivDir, resultsDir, workDir, sub, ses, task, num_
     subDir = op.join(resultsDir, '{}'.format(sub))
 
     # raise an error if the firstlevel output directory doesn't exist
-    if not os.path.exists(subDir):
+    if not op.exists(subDir):
         raise FileNotFoundError('No firstlevel outputs found for {}'.format(sub))
     
     # delete prior processing directories because cache files can interfere with workflow
     subworkDir = op.join(workDir, '{}_task-{}_combineruns'.format(sub, task))
-    if os.path.exists(subworkDir):
+    if op.exists(subworkDir):
         shutil.rmtree(subworkDir)
         
     # call timecourse workflow with extracted subject-level data
@@ -357,6 +357,7 @@ def main(argv=None):
     events=list(set(config_file.loc['events',1].replace(' ','').replace(',','-').split('-')))
     splithalf=config_file.loc['splithalf',1]
     space=config_file.loc['space',1]
+    loocv=config_file.loc['leave_one_out',1]
     
     # define working directory
     workDir = op.join(resultsDir, 'processing')
@@ -393,21 +394,52 @@ def main(argv=None):
                 raise IOError('Run information missing. Make sure you are passing a subject-run list to the pipeline!')
             
             # pass runs for this sub
-            fold_runs=args.runs[index].replace(' ','')
+            fold_runs = args.runs[index].replace(' ','')
             
-            # split folds first
-            folds = fold_runs.split(';')
+            # give a warning if the user requested run folds and leave one out
+            if not loocv == 'no' and ';' in fold_runs:
+                print('Manual folds (;) and leave-one-{}-out requested'.format(loocv))
+                print('Manuel folds will be ignored and leave-one-{}-out will be used across all runs provided in the subject-run file: {}'.format(loocv, runs))         
+            
+            # convert input string to list of runs
+            runs = list(map(int, fold_runs.replace(';', ',').split(',')))
+                
+            # process run/fold list depending on leave-one-out config option
+            if loocv == 'run': # leave-one-run-out
+                print('Combining runs using leave-one-run-out approach')
+                # generate leave-one-run-out folds
+                folds = [[r for r in runs if r != left_out] for left_out in runs]
+                
+                # sort folds by the single run they contain
+                folds = sorted(folds, key=lambda x: x[0])
+            
+            elif loocv == 'pair': # combine all run pairs
+                print('Combining runs using all-run-pairs approach')
+                # generate leave-one-pair-out folds
+                folds = [list(pair) for pair in combinations(runs, 2)]
+                
+                # sort folds by the single run they contain
+                folds = sorted(folds, key=lambda x: x[0])
+                
+            else:
+                # split folds first
+                folds = fold_runs.split(';')
 
-            # convert each fold into list of run integers
-            folds = [list(map(int, f.split(','))) for f in folds]
+                # convert each fold into list of run integers
+                folds = [list(map(int, f.split(','))) for f in folds]
+            
+            # save file with run/fold information
+            fold_df = pd.DataFrame({'fold': ['fold{}'.format(i+1) for i in range(len(folds))],
+                                    'runs': [','.join(map(str, r)) for r in folds]})
+            fold_df.to_csv(op.join(resultsDir, sub, 'fold_info.tsv'), sep='\t', index=False)
             
             # save number of folds
             num_folds = len(folds)
             print('Runs will be combined in {} fold(s)'.format(num_folds))
             
-            for fold_id, fold_runs in enumerate(folds):
-                print('Combining runs: {}'.format(fold_runs))
-                fold_runs = list(map(int, fold_runs)) # convert to integers
+            for fold_id, fold in enumerate(folds):
+                print('Combining runs: {}'.format(fold))
+                fold_runs = list(map(int, fold)) # convert to integers
                 
                 # create a process_subject workflow with the inputs defined above
                 wf = process_subject(args.projDir, derivDir, resultsDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, events, contrast_opts, splithalf_id, space_name)
