@@ -50,24 +50,24 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             fold2vs1_euc_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_euclidean_*rdm.csv'.format(sub, roi, fold2, fold1)))
             
             # check that files are found and give informative error if not
-            if not op.exists(fold1vs2_cor_file):
+            if not op.exists(fold1vs2_cor_file[0]):
                 raise IOError('Fold file not found: {}'.format(fold1vs2_cor_file))
             
-            if not op.exists(fold1vs2_euc_file):
+            if not op.exists(fold1vs2_euc_file[0]):
                 raise IOError('Fold file not found: {}'.format(fold1vs2_euc_file))
             
-            if not op.exists(fold2vs1_cor_file):
+            if not op.exists(fold2vs1_cor_file[0]):
                 raise IOError('Fold file not found: {}'.format(fold2vs1_cor_file))
             
-            if not op.exists(fold2vs1_euc_file):
-                raise IOError('Fold file not found: {}'.format(fold2vs1_euc_file))                
+            if not op.exists(fold2vs1_euc_file[0]):
+                raise IOError('Fold file not found: {}'.format(fold2vs1_euc_file))              
             
             # load RDM files
             ## correlation
-            cor_rdm = pd.read_csv(fold1vs2_cor_file[0], sep=',').values
+            cor_rdm = pd.read_csv(fold1vs2_cor_file[0], sep=',')
             
             ## euclidean
-            euc_rdm = pd.read_csv(fold1vs2_euc_file[0], sep=',').values
+            euc_rdm = pd.read_csv(fold1vs2_euc_file[0], sep=',')
             
             # get descriptive stats
             # it doesn't matter which direction (fold1 vs fold2; fold2 vs fold1) these stats are calculated on because the matrix contains all comparisons
@@ -76,27 +76,39 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             
             # append fold 1 stats
             # correlation
-            rdm_stats.append({'sub': sub,
-                              'roi': roi,
-                              'folds': '{}_vs_{}'.format(fold1, fold2),
-                              'metric': 'correlation',
-                              'diagonal': json.dumps(cor_stats['diag_vals'].tolist()),
-                              'diagonal_mean': cor_stats['diag_mean'],
-                              'upper_mean': cor_stats['upper_mean'],
-                              'lower_mean': cor_stats['lower_mean'],
-                              'rdm_mean': cor_stats['rdm_mean']})
+            cor_row = {'sub': sub,
+                       'roi': roi,
+                       'folds': '{}_vs_{}'.format(fold1, fold2),
+                       'metric': 'correlation',
+                       'diagonal_mean': cor_stats['diag_mean'],
+                       'upper_mean': cor_stats['upper_mean'],
+                       'lower_mean': cor_stats['lower_mean'],
+                       'rdm_mean': cor_stats['rdm_mean']}
+            
+            # add diagonal values as separate columns with condition labels
+            for label, value in zip(cor_stats['diag_labels'],
+                                    cor_stats['diag_vals']): cor_row[label] = value
+            
+            # append to rdm stats output
+            rdm_stats.append(cor_row)
                               
             # euclidean
-            rdm_stats.append({'sub': sub,
-                              'roi': roi,
-                              'folds': '{}_vs_{}'.format(fold1, fold2),
-                              'metric': 'euclidean',
-                              'diagonal': json.dumps(euc_stats['diag_vals'].tolist()),
-                              'diagonal_mean': euc_stats['diag_mean'],
-                              'upper_mean': euc_stats['upper_mean'],
-                              'lower_mean': euc_stats['lower_mean'],
-                              'rdm_mean': euc_stats['rdm_mean']})
-                    
+            euc_row = {'sub': sub,
+                       'roi': roi,
+                       'folds': '{}_vs_{}'.format(fold1, fold2),
+                       'metric': 'euclidean',
+                       'diagonal_mean': euc_stats['diag_mean'],
+                       'upper_mean': euc_stats['upper_mean'],
+                       'lower_mean': euc_stats['lower_mean'],
+                       'rdm_mean': euc_stats['rdm_mean']}
+                       
+            # add diagonal values as separate columns with condition labels
+            for label, value in zip(euc_stats['diag_labels'],
+                                    euc_stats['diag_vals']): euc_row[label] = value
+                
+            # append to rdm stats output
+            rdm_stats.append(euc_row)
+            
             # vectorise the RDMs (this excludes the diagonal)
             ## correlation
             fold1vs2_cor = vectorise_rdm(fold1vs2_cor_file[0], diag=1)
@@ -150,10 +162,13 @@ def vectorise_rdm(rdm_file, diag):
     return rdm_mat.values[np.triu_indices_from(rdm_mat, k=diag)]
     
 # define function to extract stats from RDM
-def get_descriptives(rdm_mat):
+def get_descriptives(rdm_df):
     
-    # make array
-    mat = np.array(rdm_mat)
+    # extract values from matrix
+    mat = rdm_df.values
+    
+    # extract condition labels
+    diag_labels = rdm_df.columns.values.tolist()
 
     # extract diagonal vector and calculate mean
     diag_vals = np.diag(mat)
@@ -161,7 +176,7 @@ def get_descriptives(rdm_mat):
 
     # extract upper and lower triangle (excluding diagonal)
     upper = mat[np.triu_indices_from(mat, k=1)]
-    lower = mat[np.tril_indices_from(mat, k=1)]
+    lower = mat[np.tril_indices_from(mat, k=-1)]
     
     # calculate upper and lower triangle mean
     upper_mean = np.mean(upper)
@@ -173,6 +188,7 @@ def get_descriptives(rdm_mat):
 
     return {'diag_mean': diag_mean,
             'diag_vals': diag_vals,
+            'diag_labels': diag_labels,
             'upper_mean': upper_mean,
             'lower_mean': lower_mean,
             'rdm_mean': mat_nodiag_mean}
