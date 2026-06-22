@@ -1,7 +1,7 @@
 sharedDir	/RichardsonLab/processing
 rawDir	/RichardsonLab/rawData/RLAB_AWE1
 bidsDir	/RichardsonLab/preprocessedData/RLAB_AWE1
-derivDir	/RichardsonLab/preprocessedData/RLAB_AWE1T/derivatives
+derivDir	/RichardsonLab/preprocessedData/RLAB_AWE1/derivatives
 resultsDir	
 smoothDir	
 froiDir	
@@ -28,6 +28,7 @@ modulators	no
 contrast	emo-phys, phys-emo, pos-neg, Jealous, Disappointed, Saddevastated, Embarrassed, Disgusted, Guilty, Annoyed, Worriedapprehensive, Afraidterrified, Angryfurious, Lonely, Surprised, Nostalgia, Calmcontent, Impressed, Proud, Excited, Hopeful, Happyjoyful, Grateful, Dizzy, Full, Warm
 timecourses	no
 regressors	art, aCompCor
+leave_one_out	run
 convert_surf	
 template	MNI152NLin2009cAsym_res-02_T1w
 FS_ROI	
@@ -37,7 +38,7 @@ top_nvox	80
 mask	fROI-DMPFC, fROI-MMPFC, fROI-VMPFC, fROI-PC, fROI-LTPJ, fROI-RTPJ, fROI-RSTS
 extract	mean
 folds	yes
-normalise_rdm	no
+normalise_rdms	no
 subject_rdms	no
 model_rdms	Appraisal, BasicEmotion, ValenceArousal, ReadingEase, SyntacticComplexity
 splithalf_iterations	100

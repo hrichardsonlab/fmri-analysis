@@ -28,6 +28,7 @@ modulators
 contrast	
 timecourses	
 regressors	
+leave_one_out	
 convert_surf	
 template	MNI152NLin2009cAsym_res-02_T1w
 FS_ROI	
@@ -37,7 +38,7 @@ top_nvox
 mask	
 extract	
 folds	
-normalise_rdm	
+normalise_rdms	
 subject_rdms	
 model_rdms	
 splithalf_iterations	
