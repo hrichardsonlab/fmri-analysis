@@ -531,7 +531,7 @@ def main(argv=None):
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
     template=config_file.loc['template',1]
     top_nvox=config_file.loc['top_nvox',1]
-    normalise=config_file.loc['normalise_rdm',1]
+    normalise=config_file.loc['normalise_rdms',1]
     
     # lowercase conditions to avoid case errors - allows flexibility in how users specify events in config and contrasts files
     conditions = [c.lower() for c in conditions]
