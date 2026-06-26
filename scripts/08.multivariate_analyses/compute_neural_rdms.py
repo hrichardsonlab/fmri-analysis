@@ -15,6 +15,7 @@ import scipy.stats
 from scipy.spatial import distance
 from scipy.spatial.distance import cdist, pdist, squareform
 from scipy.spatial.distance import correlation
+from sklearn.covariance import LedoitWolf
 import os.path as op
 import os
 import glob
@@ -25,7 +26,7 @@ from nilearn import image
 from nilearn.maskers import NiftiMasker
 import nilearn
 
-def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds, splithalves, conditions, mask_opts, template, normalise, top_nvox, percent):
+def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds, multi_noise_norm, splithalves, conditions, mask_opts, template, normalise, top_nvox, percent, shrink_vals):
     
     # make output rsa directories
     rsaDir = op.join(resultsDir, '{}'.format(sub), 'rsa')
@@ -239,10 +240,14 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                 
                 masker = NiftiMasker(mask_img=mask_bin)
                 
+                # apply multivariate noise normalisation if requested
+                if multi_noise_norm == 'yes':
+                    print('Calculating whitening matrix based on residuals for multivariate noise normalisation')
+                    whitening_matrix, shrink_vals = calc_whitening_matrix(resultsDir, vectorsDir, sub, run_id, mask_opts[r], masker, shrink_vals)
+
                 # for each item/condition
                 for c in conditions:
-                    print('Extracting t-stats from {} condition'.format(c))
-                
+                    
                     # extract mask name in a format that will match contrast naming
                     if 'fROI' in mask_opts[r]:
                         mask_name = mask_opts[r].split('-')[1].lower()
@@ -254,22 +259,35 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                     else:
                         mask_name = mask_opts[r]
                     
-                    # t-stats copes file
-                    tcope_file = glob.glob(op.join(modelDir, '*_{}_tstat.nii.gz'.format(c)))[0]
-                    tcope_img = image.load_img(tcope_file)
+                    if multi_noise_norm == 'yes':
+                        print('Extracting betas from {} condition'.format(c))
+                        # copes file
+                        cope_file = glob.glob(op.join(modelDir, '*_{}_cope.nii.gz'.format(c)))[0]
+                        cope_img = image.load_img(cope_file)
+                    else:
+                        print('Extracting t-stats from {} condition'.format(c))
+                    
+                        # t-stats file
+                        cope_file = glob.glob(op.join(modelDir, '*_{}_tstat.nii.gz'.format(c)))[0]
+                        cope_img = image.load_img(cope_file)
                     
                     # squeeze the statistical map to remove the 4th singleton dimension if using anatomical/atlas ROI
                     # this dimension is not adding any information, so this is fine to do; the 3D map of stats values is preserved.
                     # this step isn't necessary for fROIs because they were defined using the functional data and also have a 4th singleton dimension
                     if not 'fROI' in mask_opts[r] and not 'FS' in mask_opts[r] and not 'aROI' in mask_opts[r]:
-                        tcope_img = image.math_img('np.squeeze(img)', img=tcope_img)
+                        cope_img = image.math_img('np.squeeze(img)', img=cope_img)
                         
                     # extract t-stats vector of voxel values
                     # mask condition image with roi image and return 2D array
-                    tvec = masker.fit_transform(tcope_img).squeeze()
+                    vec = masker.fit_transform(cope_img).squeeze()
+                    
+                    # apply multivariate noise normalisation if requested
+                    if multi_noise_norm == 'yes':
+                        print('Applying multivariate noise normalisation')
+                        vec = apply_multi_norm(whitening_matrix, vec)
                     
                     # add the pattern for this condition to the patterns variable for this roi
-                    roi_patterns.append(tvec)
+                    roi_patterns.append(vec)
                 
                 # save condition vectors for this ROI
                 save_patterns(sub, task, roi_patterns, mask_name, run_id, splithalf_id, conditions, vectorsDir)
@@ -279,7 +297,90 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                 
     # calculate dissimilarity across runs/folds (or within a run/fold)
     calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise)
-            
+
+# define function to calculate the whitening matrix to use for multivariate noise normalisation
+def calc_whitening_matrix(resultsDir, vectorsDir, sub, run_id, roi_name, roi_mask, shrink_vals):
+    
+    # read in subject fold info file to get list of runs in each fold
+    fold_info_file = op.join(resultsDir, '{}'.format(sub), 'fold_info.tsv')
+    print('Looking up runs in fold{} using: {}'.format(run_id, fold_info_file))
+    fold_info = pd.read_csv(fold_info_file, sep='\t')
+    runs_str = fold_info.loc[fold_info['fold'] == 'fold{}'.format(run_id), 'runs'].values[0]
+    fold_runs = [int(x) for x in str(runs_str).split(',')]
+    
+    # initialise fold-level residual output
+    resid_fold = []
+    
+    # loop over each run in the fold
+    for r, run in enumerate(fold_runs):
+        # load run residuals file
+        resid_file = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}'.format(run), 'res4d.nii.gz')
+        resid_img = image.load_img(resid_file)
+        
+        # extract residuals timeseries for voxels in ROI
+        resid_vec = roi_mask.fit_transform(resid_img).squeeze()
+        print('Dimensions of extracted residuals from run{} (timepoints x voxels): {}'.format(run, resid_vec.shape))
+        
+        # concatenate residuals from this run with other runs
+        resid_fold.append(resid_vec)
+   
+    # confirm dimensions of concatenated residuals
+    resid_fold = np.concatenate(resid_fold, axis=0)
+    print('Dimensions of concatenated residuals (timepoints across runs in fold x voxels): {}'.format(resid_fold.shape))
+    
+    # estimate shrinkage factor from the residual timeseries
+    lw = LedoitWolf()
+    lw.fit(resid_fold)
+    print('Estimated shrinkage factor: {}'.format(lw.shrinkage_))
+    
+    # apply shrinkage factor to variance-covariance matrix
+    cov_shrunk = lw.covariance_
+    
+    # if we want to apply the same shrinkage factor and not use a data-driven estimate
+    # # generate voxel variance-covariance matrix
+    # cov = np.cov(resid_fold, rowvar=False)
+    
+    # # extract diagonal (preserves within voxel variance, sets covariance to 0)
+    # diag_cov = np.diag(np.diag(cov))
+    
+    # # apply shrinkage factor
+    # cov_shrunk = shrinkage * diag_cov + (1-shrinkage) * cov
+    
+    # save variance-covariance matrix to vectorsDir
+    # cov_df = pd.DataFrame(cov)
+    # cov_df.to_csv(op.join(vectorsDir, 'residuals-fold{}_{}_variance-covariance.csv'.format(run_id, roi_name)), sep=',', index=False, header=False)
+    
+    cov_shrunk_df = pd.DataFrame(cov_shrunk)
+    cov_shrunk_df.to_csv(op.join(vectorsDir, 'residuals-fold{}_{}_shrunken-covariance.csv'.format(run_id, roi_name)), sep=',', index=False, header=False)
+    
+    # save shrinkage factor
+    shrink_vals.append({'sub': sub,
+                        'fold': run_id,
+                        'roi': roi_name,
+                        'shrinkage_factor': float(lw.shrinkage_),
+                        'num_runs': len(fold_runs),
+                        'num_timepoints': resid_fold.shape[0]})
+    
+    # compute whitening transform (using eigendecomposition)
+    eigvals, eigvecs = np.linalg.eigh(cov_shrunk)
+    
+    # compute the inverse square roots
+    inv_sqrt = np.diag(1 / np.sqrt(eigvals))
+    
+    # construct the whitening matrix
+    # this is the inverse square root of the shrunken covariance matrix that we use for the whitening step
+    whitening = eigvecs @ inv_sqrt @ eigvecs.T
+    
+    return whitening, shrink_vals
+    
+# define function to implement multivariate noise normalisation
+def apply_multi_norm(whitening_matrix, beta_vec):
+    
+    # normalise the betas (spatial pre-whitening)
+    whitened_beta_vec = whitening_matrix @ beta_vec
+    
+    return whitened_beta_vec
+
 # define function to wrangle and save run/fold RDM data into a useable csv format
 def save_patterns(sub, task, patterns, mask_name, run_id, splithalf_id, conditions, vectorsDir):
     patterns = np.array(patterns)
@@ -311,7 +412,7 @@ def save_patterns(sub, task, patterns, mask_name, run_id, splithalf_id, conditio
     df = pd.DataFrame(rows)
     df.to_csv(vector_file, sep=',', index=False)        
     print('Patterns saved to {}'.format(vectorsDir))  
-    
+
 # define function to calculate dissimilarity metrics
 def calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise):
     
@@ -338,12 +439,17 @@ def calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise):
                     A = patterns[(roi, fold1, splits[0])]
                     B = patterns[(roi, fold2, splits[0])]
                     
-                    # compute the correlation distance (1-correlation) and euclidean distance 
+                    # compute the correlation distance (1-correlation), euclidean distance, and squared euclidean distance               
+                    euclid_AB = cdist(A, B, metric='euclidean')
+                    euclid_BA = cdist(B, A, metric='euclidean')
+
                     rdms[roi][('fold', fold1, fold2)] = {'correlation': cdist(A, B, metric='correlation'),
-                                                         'euclidean': cdist(A, B, metric='euclidean')}
+                                                         'euclidean': euclid_AB,
+                                                         'squared_euclidean': euclid_AB ** 2}
 
                     rdms[roi][('fold', fold2, fold1)] = {'correlation': cdist(B, A, metric='correlation'),
-                                                         'euclidean': cdist(B, A, metric='euclidean')}
+                                                         'euclidean': euclid_BA,
+                                                         'squared_euclidean': euclid_BA ** 2}
                                                          
         # scenario 2: one run + splithalves - compute RDMs across splithalves
         elif len(splits) > 1:
@@ -359,11 +465,16 @@ def calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise):
                     A = patterns((roi, run, split1))
                     B = patterns((roi, run, split2))
                     
-                    # compute the correlation distance (1-correlation) and euclidean distance
+                    # compute the correlation distance (1-correlation), euclidean distance, and squared euclidean distance
+                    euclid_AB = cdist(A, B, metric='euclidean')
+                    euclid_BA = cdist(B, A, metric='euclidean')
+                    
                     rdms[roi][('split', split1, split2)] = {'correlation': cdist(A, B, metric='correlation'),
-                                                            'euclidean': cdist(A, B, metric='euclidean')}
+                                                            'euclidean': euclid_AB,
+                                                            'squared_euclidean': euclid_AB ** 2}
                     rdms[roi][('split', split2, split1)] = {'correlation': cdist(B, A, metric='correlation'),
-                                                            'euclidean': cdist(B, A, metric='euclidean')}
+                                                            'euclidean': euclid_BA,
+                                                            'squared_euclidean': euclid_BA ** 2}
                                                             
         # scenario 3: one run + no splithalves - compute RDMs within run (probably a bad idea!)
         else:
@@ -372,10 +483,13 @@ def calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise):
             
             A = patterns((roi, run, split))
             
-            # compute the correlation distance (1-correlation) and euclidean distance
+            # compute the correlation distance (1-correlation), euclidean distance, and squared euclidean distance
             # pdist is for pairwise comparisons which is why it's used in the within run case
+            euclid = squareform(pdist(A, metric='euclidean'))
+            
             rdms[roi][('within_run', run)] = {'correlation': squareform(pdist(A, metric='correlation')),
-                                              'euclidean': squareform(pdist(A, metric='euclidean'))}
+                                              'euclidean': euclid,
+                                              'squared_euclidean': euclid ** 2}
     
     # STEP 2: normalise RDMs if requested
     # initalise output
@@ -526,6 +640,7 @@ def main(argv=None):
     resultsDir=config_file.loc['resultsDir',1]
     task=config_file.loc['task',1]
     folds=config_file.loc['folds',1]
+    multi_noise_norm=config_file.loc['multi_noise_norm',1]
     splithalf=config_file.loc['splithalf',1]
     conditions=config_file.loc['events',1].replace(' ','').split(',')
     mask_opts=config_file.loc['mask',1].replace(' ','').split(',')
@@ -555,7 +670,10 @@ def main(argv=None):
     
     if not op.exists(resultsDir):
         raise IOError('Results directory {} not found.'.format(resultsDir))
-        
+    
+    # initialise outputs
+    shrink_vals = []
+    
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
         print('Computing neural RDMs for {}'.format(sub))
@@ -576,8 +694,23 @@ def main(argv=None):
             print('Multiple runs or folds were specified, so neural RDMs will be combined across runs/folds.')
             
         # create a process_subject workflow with the inputs defined above
-        generate_rdm(args.projDir, sharedDir, resultsDir, froiDir, sub, task, sub_runs, folds, splithalves, conditions, mask_opts, template, normalise, top_nvox, percent)
-
+        generate_rdm(args.projDir, sharedDir, resultsDir, froiDir, sub, task, sub_runs, folds, multi_noise_norm, splithalves, conditions, mask_opts, template, normalise, top_nvox, percent, shrink_vals)
+    
+    # save estimated shrinkage factors if multivariate noise normalisation requested
+    if multi_noise_norm == 'yes':
+        # define group rsa directory to save outputs
+        groupDir = op.join(resultsDir, 'group_rdms')
+        os.makedirs(groupDir, exist_ok=True)
+        
+        # convert shrinkage values to dataframes
+        shrink_df = pd.DataFrame(shrink_vals)
+        
+        # save results
+        shrink_file = op.join(groupDir, 'estimated_shrinkage_factors.csv')
+        shrink_df.to_csv(shrink_file, index=False)
+        
+        print('Estimated shrinkage factors saved to: {}'.format(shrink_file))
+        
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
     main()
