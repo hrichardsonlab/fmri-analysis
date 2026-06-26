@@ -44,10 +44,12 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             ## fold 1 vs fold 2
             fold1vs2_cor_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_correlation_*rdm.csv'.format(sub, roi, fold1, fold2)))
             fold1vs2_euc_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_euclidean_*rdm.csv'.format(sub, roi, fold1, fold2)))
+            fold1vs2_sqeuc_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_squared_euclidean_*rdm.csv'.format(sub, roi, fold1, fold2)))
             
             ## fold 2 vs fold 1
             fold2vs1_cor_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_correlation_*rdm.csv'.format(sub, roi, fold2, fold1)))
             fold2vs1_euc_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_euclidean_*rdm.csv'.format(sub, roi, fold2, fold1)))
+            fold2vs1_sqeuc_file = glob.glob(op.join(rdmDir, '{}_{}_fold-{}vs{}_squared_euclidean_*rdm.csv'.format(sub, roi, fold2, fold1)))
             
             # check that files are found and give informative error if not
             if not op.exists(fold1vs2_cor_file[0]):
@@ -56,11 +58,17 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             if not op.exists(fold1vs2_euc_file[0]):
                 raise IOError('Fold file not found: {}'.format(fold1vs2_euc_file))
             
+            if not op.exists(fold1vs2_sqeuc_file[0]):
+                raise IOError('Fold file not found: {}'.format(fold1vs2_sqeuc_file))
+            
             if not op.exists(fold2vs1_cor_file[0]):
                 raise IOError('Fold file not found: {}'.format(fold2vs1_cor_file))
             
             if not op.exists(fold2vs1_euc_file[0]):
-                raise IOError('Fold file not found: {}'.format(fold2vs1_euc_file))              
+                raise IOError('Fold file not found: {}'.format(fold2vs1_euc_file))
+            
+            if not op.exists(fold2vs1_sqeuc_file[0]):
+                raise IOError('Fold file not found: {}'.format(fold2vs1_sqeuc_file))  
             
             # load RDM files
             ## correlation
@@ -69,10 +77,14 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             ## euclidean
             euc_rdm = pd.read_csv(fold1vs2_euc_file[0], sep=',')
             
+            ## squared euclidean
+            sqeuc_rdm = pd.read_csv(fold1vs2_sqeuc_file[0], sep=',')
+            
             # get descriptive stats
             # it doesn't matter which direction (fold1 vs fold2; fold2 vs fold1) these stats are calculated on because the matrix contains all comparisons
             cor_stats = get_descriptives(cor_rdm)
             euc_stats = get_descriptives(euc_rdm)
+            sqeuc_stats = get_descriptives(sqeuc_rdm)
             
             # append fold 1 stats
             # correlation
@@ -109,6 +121,23 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             # append to rdm stats output
             rdm_stats.append(euc_row)
             
+            # squared euclidean
+            sqeuc_row = {'sub': sub,
+                        'roi': roi,
+                        'folds': '{}_vs_{}'.format(fold1, fold2),
+                        'metric': 'squared_euclidean',
+                        'diagonal_mean': sqeuc_stats['diag_mean'],
+                        'upper_mean': sqeuc_stats['upper_mean'],
+                        'lower_mean': sqeuc_stats['lower_mean'],
+                        'rdm_mean': sqeuc_stats['rdm_mean']}
+                       
+            # add diagonal values as separate columns with condition labels
+            for label, value in zip(sqeuc_stats['diag_labels'],
+                                    sqeuc_stats['diag_vals']): sqeuc_row[label] = value
+                
+            # append to rdm stats output
+            rdm_stats.append(sqeuc_row)
+            
             # vectorise the RDMs (this excludes the diagonal)
             ## correlation
             fold1vs2_cor = vectorise_rdm(fold1vs2_cor_file[0], diag=1)
@@ -118,20 +147,28 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
             fold1vs2_euc = vectorise_rdm(fold1vs2_euc_file[0], diag=1)
             fold2vs1_euc = vectorise_rdm(fold2vs1_euc_file[0], diag=1)
             
+            ## squared euclidean
+            fold1vs2_sqeuc = vectorise_rdm(fold1vs2_sqeuc_file[0], diag=1)
+            fold2vs1_sqeuc = vectorise_rdm(fold2vs1_sqeuc_file[0], diag=1)
+            
             # pearson correlation
             pearson_cor, _ = pearsonr(fold1vs2_cor, fold2vs1_cor)
             pearson_euc, _ = pearsonr(fold1vs2_euc, fold2vs1_euc)
+            pearson_sqeuc, _ = pearsonr(fold1vs2_sqeuc, fold2vs1_sqeuc)
             
             # spearman correlation
             spearman_cor, _ = spearmanr(fold1vs2_cor, fold2vs1_cor)
             spearman_euc, _ = spearmanr(fold1vs2_euc, fold2vs1_euc)
+            spearman_sqeuc, _ = spearmanr(fold1vs2_sqeuc, fold2vs1_sqeuc)
             
             # tau-a using custom function (should return the same values as tau-b in most cases)
             tau_cor = kendall_tau_a(fold1vs2_cor, fold2vs1_cor)
             tau_euc = kendall_tau_a(fold1vs2_euc, fold2vs1_euc)
+            tau_sqeuc = kendall_tau_a(fold1vs2_sqeuc, fold2vs1_sqeuc)
             
             print('Reliability for correlation RDMs: {}'.format(tau_cor))
             print('Reliability for euclidean RDMs: {}'.format(tau_euc))
+            print('Reliability for squared euclidean RDMs: {}'.format(tau_sqeuc))
             
             # append to fold stats
             # correlation
@@ -151,6 +188,15 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
                                'pearson': pearson_euc,
                                'spearman': spearman_euc,
                                'tau_a': tau_euc})
+            # squared euclidean
+            fold_stats.append({'sub': sub,
+                               'roi': roi,
+                               'folds': '{}_vs_{}'.format(fold1, fold2),
+                               'metric': 'squared_euclidean',
+                               'pearson': pearson_sqeuc,
+                               'spearman': spearman_sqeuc,
+                               'tau_a': tau_sqeuc})
+                               
 
 # define function to vectorise the RDMs
 def vectorise_rdm(rdm_file, diag):

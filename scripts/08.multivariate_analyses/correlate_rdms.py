@@ -95,12 +95,15 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subj
         # read in averaged neural RDMs for this ROI
         cor_rdm_file = op.join(rdmDir, '{}_{}_correlation_averaged_rdm.csv'.format(sub, roi))
         euc_rdm_file = op.join(rdmDir, '{}_{}_euclidean_averaged_rdm.csv'.format(sub, roi))
+        sqeuc_rdm_file = op.join(rdmDir, '{}_{}_squared_euclidean_averaged_rdm.csv'.format(sub, roi))
         cor_rdm = pd.read_csv(cor_rdm_file, sep=',')
         euc_rdm = pd.read_csv(euc_rdm_file, sep=',')
+        sqeuc_rdm = pd.read_csv(sqeuc_rdm_file, sep=',')
         
         # add row names to ensure the same order as model RDMs
         cor_rdm.index = cor_rdm.columns
         euc_rdm.index = euc_rdm.columns
+        sqeuc_rdm.index = sqeuc_rdm.columns
         
         # loop over models      
         for m in models:
@@ -108,12 +111,15 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subj
             order = models[m]['row_order']
             cor_aligned = cor_rdm.loc[order, order]
             euc_aligned = euc_rdm.loc[order, order]
+            sqeuc_aligned = sqeuc_rdm.loc[order, order]
             
             # vectorise neural RDMs
             cor_vec_diag = vectorise_rdm(cor_aligned, diag=0)
             cor_vec_nodiag = vectorise_rdm(cor_aligned, diag=1)
             euc_vec_diag = vectorise_rdm(euc_aligned, diag=0)        
             euc_vec_nodiag = vectorise_rdm(euc_aligned, diag=1)
+            sqeuc_vec_diag = vectorise_rdm(sqeuc_aligned, diag=0)        
+            sqeuc_vec_nodiag = vectorise_rdm(sqeuc_aligned, diag=1)
             
             # extract model vector
             model_vec_diag = models[m]['vector_diag']
@@ -124,19 +130,23 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subj
             ## including diagonal in calculation
             tau_b_cor_diag, p_cor_diag = scipy.stats.kendalltau(cor_vec_diag, model_vec_diag)
             tau_b_euc_diag, p_euc_diag = scipy.stats.kendalltau(euc_vec_diag, model_vec_diag)
+            tau_b_sqeuc_diag, p_sqeuc_diag = scipy.stats.kendalltau(sqeuc_vec_diag, model_vec_diag)
             
             ## excluding diagonal in calculation
             tau_b_cor_nodiag, p_cor_nodiag = scipy.stats.kendalltau(cor_vec_nodiag, model_vec_nodiag)
             tau_b_euc_nodiag, p_euc_nodiag = scipy.stats.kendalltau(euc_vec_nodiag, model_vec_nodiag)
+            tau_b_sqeuc_nodiag, p_sqeuc_nodiag = scipy.stats.kendalltau(sqeuc_vec_nodiag, model_vec_nodiag)
             
             # tau-a using custom function (should return the same values as tau-b in most cases)
             ## including diagonal in calculation
             tau_a_cor_diag = kendall_tau_a(cor_vec_diag, model_vec_diag)
             tau_a_euc_diag = kendall_tau_a(euc_vec_diag, model_vec_diag)
+            tau_a_sqeuc_diag = kendall_tau_a(sqeuc_vec_diag, model_vec_diag)
             
             ## excluding diagonal in calculation
             tau_a_cor_nodiag = kendall_tau_a(cor_vec_nodiag , model_vec_nodiag)
             tau_a_euc_nodiag = kendall_tau_a(euc_vec_nodiag , model_vec_nodiag)
+            tau_a_sqeuc_nodiag = kendall_tau_a(sqeuc_vec_nodiag , model_vec_nodiag)
             
             # save correlation results
             results.append({'sub': sub,
@@ -157,6 +167,16 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subj
                             'tau_a_nodiag': tau_a_euc_nodiag,
                             'tau_b_diag': tau_b_euc_diag,
                             'tau_b_nodiag': tau_b_euc_nodiag})
+                            
+            # save squared euclidean results
+            results.append({'sub': sub,
+                            'roi': roi,
+                            'model': models[m]['model'],
+                            'metric': 'squared_euclidean',
+                            'tau_a_diag': tau_a_sqeuc_diag,
+                            'tau_a_nodiag': tau_a_sqeuc_nodiag,
+                            'tau_b_diag': tau_b_sqeuc_diag,
+                            'tau_b_nodiag': tau_b_sqeuc_nodiag})
 
     # save outputs
     results_df = pd.DataFrame(results)

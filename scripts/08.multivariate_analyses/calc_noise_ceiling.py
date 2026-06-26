@@ -35,6 +35,7 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         # initalise subject RDMs dataframes
         cor_files = []
         euc_files = []
+        sqeuc_files = []
         
         # for each subject in the list of subjects
         for sub in subjects:
@@ -47,18 +48,22 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
             # read in averaged neural RDMs for this ROI
             sub_cor_file = op.join(rdmDir, '{}_{}_correlation_averaged_rdm.csv'.format(sub, roi))
             sub_euc_file = op.join(rdmDir, '{}_{}_euclidean_averaged_rdm.csv'.format(sub, roi))
+            sub_sqeuc_file = op.join(rdmDir, '{}_{}_squared_euclidean_averaged_rdm.csv'.format(sub, roi))
             
             # append subject RDM to list of files
             cor_files.append(sub_cor_file)
             euc_files.append(sub_euc_file)
+            sqeuc_files.append(sub_sqeuc_file)
         
         # convert rdms to vectors and store as array
         cor_rdms = np.array([vectorise_rdm(f, diag=0) for f in cor_files])
         euc_rdms = np.array([vectorise_rdm(f, diag=0) for f in euc_files])
+        sqeuc_rdms = np.array([vectorise_rdm(f, diag=0) for f in sqeuc_files])
         
         # rank-transform the vectors (just to calculate average across subjects)
         cor_rdms_rank = np.array([rankdata(v) for v in cor_rdms])
         euc_rdms_rank = np.array([rankdata(v) for v in euc_rdms])
+        sqeuc_rdms_rank = np.array([rankdata(v) for v in sqeuc_rdms])
         
         # print the dimensions of the stacked rdms as a data checking step
         print('Dimensions of the stacked vectors for {} [subjects X number of paired comparisons]: {}'.format(roi, cor_rdms_rank.shape))
@@ -67,22 +72,28 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         print('Averaging all {} neural RDMs to generate group RDM for upper bound calculation...'.format(roi))
         group_cor_rdm = cor_rdms_rank.mean(axis=0)
         group_euc_rdm = euc_rdms_rank.mean(axis=0)
+        group_sqeuc_rdm = sqeuc_rdms_rank.mean(axis=0)
         
         # convert vectors back to symmetric matrices
         group_cor_mat = squareform(group_cor_rdm)
         group_euc_mat = squareform(group_euc_rdm)
+        group_sqeuc_mat = squareform(group_sqeuc_rdm)
         
         # convert matrices to dataframes
         group_cor_df = pd.DataFrame(group_cor_mat)
         group_euc_df = pd.DataFrame(group_euc_mat)
+        group_sqeuc_df = pd.DataFrame(group_sqeuc_mat)
             
         # save group average RDMs
         group_cor_file = op.join(groupDir, 'group_rdm_{}-correlation.csv'.format(roi))
         group_euc_file = op.join(groupDir, 'group_rdm_{}-euclidean.csv'.format(roi))
+        group_sqeuc_file = op.join(groupDir, 'group_rdm_{}-squared_euclidean.csv'.format(roi))
         group_cor_df.to_csv(group_cor_file, index=False)
         group_euc_df.to_csv(group_euc_file, index=False)
+        group_sqeuc_df.to_csv(group_sqeuc_file, index=False)
         print('Saved {} group average RDMs to: {}'.format(roi, group_cor_file))
         print('Saved {} group average RDMs to: {}'.format(roi, group_euc_file))
+        print('Saved {} group average RDMs to: {}'.format(roi, group_sqeuc_file))
         
         # STEP 1: calculate upper bound by correlating each subject RDM with the rank-transformed group RDM
         # tau-a using custom function
@@ -94,9 +105,14 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         tau_euc_upper = [kendall_tau_a(euc_rdms[s], group_euc_rdm)
         for s in range(len(euc_rdms))]
         
+        ## squared euclidean distance
+        tau_sqeuc_upper = [kendall_tau_a(sqeuc_rdms[s], group_sqeuc_rdm)
+        for s in range(len(euc_rdms))]
+        
         # take average across subjects as the upper bound
         upper_cor = np.mean(tau_cor_upper)
         upper_euc = np.mean(tau_euc_upper)
+        upper_sqeuc = np.mean(tau_sqeuc_upper)
         
         #print('Subject correlations with average group correlation RDM: {}'.format(tau_cor_upper))
         print('Upper bound (correlation distance): {}'.format(upper_cor))
@@ -104,17 +120,21 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         #print('Subject correlations with average group Euclidean RDM: {}'.format(tau_euc_upper))
         print('Upper bound (Euclidean distance): {}'.format(upper_euc))
         
+        #print('Subject correlations with average group squared Euclidean RDM: {}'.format(tau_sqeuc_upper))
+        print('Upper bound (squared Euclidean distance): {}'.format(upper_sqeuc))
+        
         # initialise subject level outputs
         sub_stats = []
         
-        for sub, upper_cor_sub, upper_euc_sub in zip(subjects, tau_cor_upper, tau_euc_upper):
+        for sub, upper_cor_sub, upper_euc_sub, upper_sqeuc_sub in zip(subjects, tau_cor_upper, tau_euc_upper, tau_sqeuc_upper):
 
             # append subject upper bound stats to dataframe
             sub_stats.append({'sub': sub,
                               'roi': roi,
                               'type': 'upper',
                               'tau_a_cor': upper_cor_sub,
-                              'tau_a_euc': upper_euc_sub})         
+                              'tau_a_euc': upper_euc_sub,
+                              'tau_a_sqeuc': upper_sqeuc_sub})         
         
         # STEP 2: calculate lower bound by correlating each subject RDM with the leave-one-subject-out rank-transformed group RDM
         print('Generating leave-one-subject-out group RDMs for lower bound calculation...')
@@ -122,10 +142,12 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         # sum rank-transformed RDMs across all subjects
         cor_rdms_sum = cor_rdms_rank.sum(axis=0)
         euc_rdms_sum = euc_rdms_rank.sum(axis=0)
+        sqeuc_rdms_sum = sqeuc_rdms_rank.sum(axis=0)
         
         # initialise lists to store subject correlations
         tau_cor_lower = []
         tau_euc_lower = []
+        tau_sqeuc_lower = []
         
         # loop over subjects
         for s, sub in enumerate(subjects):
@@ -133,28 +155,34 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
             # calculate leave-one-subject-out average RDMs
             loso_cor_rdm = (cor_rdms_sum - cor_rdms_rank[s]) / (len(subjects) - 1)
             loso_euc_rdm = (euc_rdms_sum - euc_rdms_rank[s]) / (len(subjects) - 1)
+            loso_sqeuc_rdm = (sqeuc_rdms_sum - sqeuc_rdms_rank[s]) / (len(subjects) - 1)
             
             # correlate subject RDM with leave-one-subject-out group RDM
             tau_cor = kendall_tau_a(cor_rdms[s], loso_cor_rdm)
             tau_euc = kendall_tau_a(euc_rdms[s], loso_euc_rdm)
+            tau_sqeuc = kendall_tau_a(sqeuc_rdms[s], loso_sqeuc_rdm)
         
             # append subject statistics
             tau_cor_lower.append(tau_cor)
             tau_euc_lower.append(tau_euc)
+            tau_sqeuc_lower.append(tau_sqeuc)
             
             # append subject lower bound stats to dataframe
             sub_stats.append({'sub': sub,
                               'roi': roi,
                               'type': 'lower',
+                              'tau_a_cor': tau_cor,
                               'tau_a_euc': tau_euc,
-                              'tau_a_cor': tau_cor})
+                              'tau_a_sqeuc': tau_sqeuc,})
         
         # take average across subjects as the lower bound
         lower_cor = np.mean(tau_cor_lower)
         lower_euc = np.mean(tau_euc_lower)
+        lower_sqeuc = np.mean(tau_sqeuc_lower)
         
         print('Lower bound (correlation distance): {}'.format(lower_cor))
         print('Lower bound (Euclidean distance): {}'.format(lower_euc))
+        print('Lower bound (squared Euclidean distance): {}'.format(lower_sqeuc))
         
         # convert subject statistics to dataframe
         sub_stats_df = pd.DataFrame(sub_stats)
@@ -170,7 +198,8 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
                               'upper_cor': upper_cor,
                                'upper_euc': upper_euc,
                                'lower_cor': lower_cor,
-                               'lower_euc': lower_euc})
+                               'lower_euc': lower_euc,
+                               'lower_sqeuc': lower_sqeuc})
     
     # convert noise ceiling stats to dataframe
     ceiling_stats_df = pd.DataFrame(ceiling_stats)
