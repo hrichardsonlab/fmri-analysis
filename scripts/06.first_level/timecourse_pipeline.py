@@ -940,7 +940,13 @@ def main(argv=None):
             file_1.write('\n')
             file_1.write('Timecourses were extracted using the timecourse_pipeline.py \n')
             file_1.write('The following masks were specified in the config file: {} \n'.format(mask_opts))
-    
+            file_1.write('Smoothing kernel specified in the config file: {} \n'.format(smoothing_kernel_size))
+            file_1.write('High-pass filter specified in the config file: {} \n'.format(hpf))
+            file_1.write('Filter type specified in the config file: {} \n'.format(filter_opt))
+            file_1.write('Detrend option specified in the config file: {} \n'.format(detrend))
+            file_1.write('Standardize option specified in the config file: {} \n'.format(standardize))
+            file_1.write('Regressors specified in the config file: {} \n'.format(regressor_opts))
+            
     else: # if no resultsDir was specified        
         workDir, outDir = op.realpath(args.workDir), op.realpath(args.outDir)
         
