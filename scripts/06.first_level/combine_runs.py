@@ -1,13 +1,7 @@
 """
-Individual run analysis using outputs from firstlevel pipeline
-
-Adapted script from original notebook:
-https://github.com/poldrack/fmri-analysis-vm/blob/master/analysis/postFMRIPREPmodelling/First%20and%20Second%20Level%20Modeling%20(FSL).ipynb
+Combine runs using FSL's fixed effects workflow
 
 More information on what this script is doing - beyond the commented code - is provided on the lab's github wiki page
-Nesting of functions: main > argparser > process_subject > create_secondlevel_workflow > data_grabber > process_data_files > gen_model_info > read_contrasts > substitutes
-
-Requirement: BIDS dataset (including events.tsv), derivatives directory with fMRIPrep outputs, and modeling files
 
 """
 from nipype.interfaces import fsl
@@ -25,7 +19,7 @@ import argparse
 import shutil
 
 # define average runs workflow function
-def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, num_folds, fold_id, runs, events, contrast_opts, splithalf_id, space_name, name='{}_task-{}_combineruns_fold{}'):
+def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, num_folds, fold_id, runs, contrast_opts, splithalf_id, space_name, name='{}_task-{}_combineruns_fold{}'):
     
     # initialize workflow
     wf = Workflow(name=name.format(sub, task, fold_id),
@@ -291,7 +285,7 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
     return wf
     
 # define function to process subject level data 
-def process_subject(projDir, derivDir, resultsDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, events, contrast_opts, splithalf_id, space_name):
+def process_subject(projDir, derivDir, resultsDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, contrast_opts, splithalf_id, space_name):
 
     # define subject output directory
     subDir = op.join(resultsDir, '{}'.format(sub))
@@ -306,7 +300,7 @@ def process_subject(projDir, derivDir, resultsDir, workDir, sub, ses, task, num_
         shutil.rmtree(subworkDir)
         
     # call timecourse workflow with extracted subject-level data
-    wf = combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, events, contrast_opts, splithalf_id, space_name)  
+    wf = combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, contrast_opts, splithalf_id, space_name)  
                         
     return wf
 
@@ -354,7 +348,6 @@ def main(argv=None):
     task=config_file.loc['task',1]
     ses=config_file.loc['sessions',1]
     contrast_opts=config_file.loc['contrast',1].replace(' ','').split(',')
-    events=list(set(config_file.loc['events',1].replace(' ','').replace(',','-').split('-')))
     splithalf=config_file.loc['splithalf',1]
     space=config_file.loc['space',1]
     loocv=config_file.loc['leave_one_out',1]
@@ -362,9 +355,8 @@ def main(argv=None):
     # define working directory
     workDir = op.join(resultsDir, 'processing')
     
-    # lowercase contrast_opts and events to avoid case errors - allows flexibility in how users specify events in config and contrasts files
+    # lowercase contrast_opts to avoid case errors - allows flexibility in how users specify events in config and contrasts files
     contrast_opts = [c.lower() for c in contrast_opts]
-    events = [e.lower() for e in events]
     
     if splithalf == 'yes':
         splithalves = [1,2]
@@ -384,8 +376,9 @@ def main(argv=None):
     # add config details to project README file
     with open(readme_file, 'a') as file_1:
         file_1.write('\n')
-        file_1.write('Subject runs were averaged using the combine_runs.py script and options specified in the config file: {} \n'.format(args.config))
-
+        file_1.write('Subject runs were combined using the combine_runs.py script and options specified in the config file: {} \n'.format(args.config))
+        file_1.write('The following contrasts were specified in the config file: {} \n'.format(contrast_opts))
+        
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
         for splithalf_id in splithalves:
@@ -428,9 +421,13 @@ def main(argv=None):
                 # convert each fold into list of run integers
                 folds = [list(map(int, f.split(','))) for f in folds]
             
+            # define withheld run(s)
+            withheld = [[r for r in runs if r not in fold] for fold in folds]
+            
             # save file with run/fold information
             fold_df = pd.DataFrame({'fold': ['fold{}'.format(i+1) for i in range(len(folds))],
-                                    'runs': [','.join(map(str, r)) for r in folds]})
+                                    'runs': [','.join(map(str, r)) for r in folds],
+                                    'withheld': [','.join(map(str, w)) for w in withheld]})
             fold_df.to_csv(op.join(resultsDir, sub, 'fold_info.tsv'), sep='\t', index=False)
             
             # save number of folds
@@ -442,7 +439,7 @@ def main(argv=None):
                 fold_runs = list(map(int, fold)) # convert to integers
                 
                 # create a process_subject workflow with the inputs defined above
-                wf = process_subject(args.projDir, derivDir, resultsDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, events, contrast_opts, splithalf_id, space_name)
+                wf = process_subject(args.projDir, derivDir, resultsDir, workDir, sub, ses, task, num_folds, fold_id, fold_runs, contrast_opts, splithalf_id, space_name)
            
                 # configure workflow options
                 wf.config['execution'] = {'crashfile_format': 'txt',
