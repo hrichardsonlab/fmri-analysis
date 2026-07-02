@@ -55,10 +55,10 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
             euc_files.append(sub_euc_file)
             sqeuc_files.append(sub_sqeuc_file)
         
-        # convert rdms to vectors and store as array
-        cor_rdms = np.array([vectorise_rdm(f, diag=0) for f in cor_files])
-        euc_rdms = np.array([vectorise_rdm(f, diag=0) for f in euc_files])
-        sqeuc_rdms = np.array([vectorise_rdm(f, diag=0) for f in sqeuc_files])
+        # convert rdms to vectors and store as array (including diagonal)
+        cor_rdms = np.array([vectorise_rdm(f, include_diag='yes') for f in cor_files])
+        euc_rdms = np.array([vectorise_rdm(f, include_diag='yes') for f in euc_files])
+        sqeuc_rdms = np.array([vectorise_rdm(f, include_diag='yes') for f in sqeuc_files])
         
         # rank-transform the vectors (just to calculate average across subjects)
         cor_rdms_rank = np.array([rankdata(v) for v in cor_rdms])
@@ -99,15 +99,15 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         # tau-a using custom function
         ## correlation distance
         tau_cor_upper = [kendall_tau_a(cor_rdms[s], group_cor_rdm)
-        for s in range(len(cor_rdms))]
+                        for s in range(len(cor_rdms))]
         
         ## euclidean distance
         tau_euc_upper = [kendall_tau_a(euc_rdms[s], group_euc_rdm)
-        for s in range(len(euc_rdms))]
+                        for s in range(len(euc_rdms))]
         
         ## squared euclidean distance
         tau_sqeuc_upper = [kendall_tau_a(sqeuc_rdms[s], group_sqeuc_rdm)
-        for s in range(len(euc_rdms))]
+                          for s in range(len(sqeuc_rdms))]
         
         # take average across subjects as the upper bound
         upper_cor = np.mean(tau_cor_upper)
@@ -173,7 +173,7 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
                               'type': 'lower',
                               'tau_a_cor': tau_cor,
                               'tau_a_euc': tau_euc,
-                              'tau_a_sqeuc': tau_sqeuc,})
+                              'tau_a_sqeuc': tau_sqeuc})
         
         # take average across subjects as the lower bound
         lower_cor = np.mean(tau_cor_lower)
@@ -196,10 +196,11 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         # add mean stats to noise ceiling data
         ceiling_stats.append({'roi': roi,
                               'upper_cor': upper_cor,
-                               'upper_euc': upper_euc,
-                               'lower_cor': lower_cor,
-                               'lower_euc': lower_euc,
-                               'lower_sqeuc': lower_sqeuc})
+                              'upper_euc': upper_euc,
+                              'upper_sqeuc': upper_sqeuc,
+                              'lower_cor': lower_cor,
+                              'lower_euc': lower_euc,
+                              'lower_sqeuc': lower_sqeuc})
     
     # convert noise ceiling stats to dataframe
     ceiling_stats_df = pd.DataFrame(ceiling_stats)
@@ -209,15 +210,19 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
     ceiling_stats_df.to_csv(noise_ceiling_file, index=False)
     
     print('Saved noise ceilings to: {}'.format(noise_ceiling_file))
-    
-    
+     
 # define function to vectorise the RDMs
-def vectorise_rdm(rdm_file, diag):
+def vectorise_rdm(rdm_file, include_diag):
+    # k=0  will include diagonal; k=1 will exclude diagonal
+    if include_diag == 'yes':
+        diag = 0
+    if include_diag == 'no':
+        diag = 1
+    
     # load rdm
     rdm_mat = pd.read_csv(rdm_file, sep=',')
     
     # returns the upper triangle as vector
-    # k=0 will include diagonal; k=1 will exclude diagonal
     return rdm_mat.values[np.triu_indices_from(rdm_mat, k=diag)]
 
 # define function to calculate Kendall's tau-a

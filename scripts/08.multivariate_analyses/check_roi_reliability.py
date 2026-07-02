@@ -15,6 +15,9 @@ import os
 from itertools import combinations
 
 def calc_roi_reliability(projDir, resultsDir, subjects, mask_opts, niter, nperm):
+
+    # set random seed
+    np.random.seed(0)
     
     # check that subject list includes at least 2 subjects
     if len(subjects) < 2:
@@ -53,9 +56,9 @@ def calc_roi_reliability(projDir, resultsDir, subjects, mask_opts, niter, nperm)
             sub_sqeuc_file = op.join(rdmDir, '{}_{}_squared_euclidean_averaged_rdm.csv'.format(sub, roi))
             
             # vectorise and append subject RDM to list of files (this includes the diagonal)
-            cor_rdms.append(vectorise_rdm(sub_cor_file, diag=0))
-            euc_rdms.append(vectorise_rdm(sub_euc_file, diag=0))
-            sqeuc_rdms.append(vectorise_rdm(sub_sqeuc_file, diag=0))
+            cor_rdms.append(vectorise_rdm(sub_cor_file, include_diag='yes'))
+            euc_rdms.append(vectorise_rdm(sub_euc_file, include_diag='yes'))
+            sqeuc_rdms.append(vectorise_rdm(sub_sqeuc_file, include_diag='yes'))
             
         # stack ROI RDMs into dictionary with ROI label
         roi_data_cor[roi] = np.vstack(cor_rdms)
@@ -204,12 +207,17 @@ def calc_roi_reliability(projDir, resultsDir, subjects, mask_opts, niter, nperm)
     results_df.to_csv(op.join(relDir, 'splithalf-results.csv'), index=False)
 
 # define function to vectorise the RDMs
-def vectorise_rdm(rdm_file, diag):
+def vectorise_rdm(rdm_file, include_diag):
+    # k=0  will include diagonal; k=1 will exclude diagonal
+    if include_diag == 'yes':
+        diag = 0
+    if include_diag == 'no':
+        diag = 1
+    
     # load rdm
     rdm_mat = pd.read_csv(rdm_file, sep=',')
     
     # returns the upper triangle as vector
-    # k=0 will include diagonal; k=1 will exclude diagonal
     return rdm_mat.values[np.triu_indices_from(rdm_mat, k=diag)]
     
 # define function to calculate Kendall's tau-a
@@ -322,6 +330,17 @@ def main(argv=None):
     if not op.exists(resultsDir):
         raise IOError('Results directory {} not found.'.format(resultsDir))
     
+    # identify analysis README file
+    readme_file=op.join(resultsDir, 'README.txt')
+    
+    # add config details to project README file
+    with open(readme_file, 'a') as file_1:
+        file_1.write('\n')
+        file_1.write('ROI RDM reliability was assessed using the check_roi_reliability.py script and options specified in the config file: {} \n'.format(args.config))
+        file_1.write('The following ROIs were checked: {} \n'.format(mask_opts))
+        file_1.write('Number of iterations: {} \n'.format(niter))
+        file_1.write('Number of permutations: {} \n'.format(nperm))
+        
     # create a calc roi workflow with the inputs defined above
     calc_roi_reliability(args.projDir, resultsDir, args.subjects, mask_opts, niter, nperm)
     

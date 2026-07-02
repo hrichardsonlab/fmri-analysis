@@ -82,8 +82,8 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subj
         
         # vectorise and store column and run order
         models[m] = {'model': model_rdms[index],
-                     'vector_diag': vectorise_rdm(rdm, diag=0),
-                     'vector_nodiag': vectorise_rdm(rdm, diag=1),
+                     'vector_diag': vectorise_rdm(rdm, include_diag='yes'),
+                     'vector_nodiag': vectorise_rdm(rdm, include_diag='no'),
                      'column_order': rdm.columns.tolist(),
                      'row_order': rdm.index.tolist()}
     
@@ -114,12 +114,12 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subj
             sqeuc_aligned = sqeuc_rdm.loc[order, order]
             
             # vectorise neural RDMs
-            cor_vec_diag = vectorise_rdm(cor_aligned, diag=0)
-            cor_vec_nodiag = vectorise_rdm(cor_aligned, diag=1)
-            euc_vec_diag = vectorise_rdm(euc_aligned, diag=0)        
-            euc_vec_nodiag = vectorise_rdm(euc_aligned, diag=1)
-            sqeuc_vec_diag = vectorise_rdm(sqeuc_aligned, diag=0)        
-            sqeuc_vec_nodiag = vectorise_rdm(sqeuc_aligned, diag=1)
+            cor_vec_diag = vectorise_rdm(cor_aligned, include_diag='yes')
+            cor_vec_nodiag = vectorise_rdm(cor_aligned, include_diag='no')
+            euc_vec_diag = vectorise_rdm(euc_aligned, include_diag='yes')        
+            euc_vec_nodiag = vectorise_rdm(euc_aligned, include_diag='no')
+            sqeuc_vec_diag = vectorise_rdm(sqeuc_aligned, include_diag='yes')        
+            sqeuc_vec_nodiag = vectorise_rdm(sqeuc_aligned, include_diag='no')
             
             # extract model vector
             model_vec_diag = models[m]['vector_diag']
@@ -185,9 +185,14 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subj
     print('Saved RSA results to: {}'.format(results_file))
     
 # define function to vectorise the RDMs
-def vectorise_rdm(dat, diag):
-    # returns the upper triangle as vector
+def vectorise_rdm(dat, include_diag):
     # k=0  will include diagonal; k=1 will exclude diagonal
+    if include_diag == 'yes':
+        diag = 0
+    if include_diag == 'no':
+        diag = 1
+        
+    # returns the upper triangle as vector
     return dat.values[np.triu_indices_from(dat, k=diag)]
 
 # define function to calculate Kendall's tau-a
@@ -271,6 +276,17 @@ def main(argv=None):
     
     if not op.exists(resultsDir):
         raise IOError('Results directory {} not found.'.format(resultsDir))
+    
+    # identify analysis README file
+    readme_file=op.join(resultsDir, 'README.txt')
+    
+    # add config details to project README file
+    with open(readme_file, 'a') as file_1:
+        file_1.write('\n')
+        file_1.write('Neural and model RDMs were correlated using the correlate_rdms.py script and options specified in the config file: {} \n'.format(args.config))
+        file_1.write('The following model RDMs were evaluated: {} \n'.format(model_rdms))
+        file_1.write('RDMs were compared for the following ROIs: {} \n'.format(mask_opts))
+        file_1.write('Subject RDMs: {} \n'.format(subject_rdms))
         
     # for each subject in the list of subjects
     for index, sub in enumerate(args.subjects):
