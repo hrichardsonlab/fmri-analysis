@@ -403,11 +403,11 @@ def main(argv=None):
                 # generate leave-one-run-out folds
                 folds = [[r for r in runs if r != left_out] for left_out in runs]
                 
-                # sort folds by the single run they contain
+                # sort folds by runs they contain
                 folds = sorted(folds, key=lambda x: x[0])
             
-            elif loocv == 'pair': # combine all run pairs
-                print('Combining runs into run pair folds')
+            elif loocv == 'pair': # leave-one-pair-out
+                print('Combining runs using leave-one-pair-out approach')
                 
                 # count the number of runs to deal with cases where folds would have fewer than 2 runs
                 n_runs = len(runs)
@@ -415,11 +415,28 @@ def main(argv=None):
                 # make folds with single runs if there are only 2 runs
                 fold_size = 1 if n_runs == 2 else 2
                 
-                # generate leave-one-pair-out folds
-                folds = [list(pair) for pair in combinations(runs, fold_size)]
+                # flag to the user that the folds will only include 1 run if needed
+                if fold_size == 1:
+                    print('This participant only has 2 runs, so folds will contain only 1 run')
+                    
+                # initialise outputs and first fold number
+                folds = []
+                withheld = []
                 
-                # sort folds by the single run they contain
-                folds = sorted(folds, key=lambda x: x[0])
+                # generate leave-one-pair-out folds: this will generate folds of run pairs and folds of the remaining runs (e.g., fold1: runs - 1,2; withheld - 3,4,5)
+                # folds = [list(pair) for pair in combinations(runs, fold_size)]
+                for pair in combinations(runs, fold_size):
+
+                    pair = list(pair)
+                    test_runs = sorted(set(runs) - set(pair))
+                    
+                    # create a fold that is the pair with the test runs withheld
+                    folds.append(pair)
+                    withheld.append(test_runs)
+                    
+                    # create a fold that is the test runs with the pair withheld
+                    folds.append(test_runs)
+                    withheld.append(pair)
                 
             else:
                 # split folds first
@@ -429,16 +446,22 @@ def main(argv=None):
                 folds = [list(map(int, f.split(','))) for f in folds]
             
             # define withheld run(s)
-            withheld = [[r for r in runs if r not in fold] for fold in folds]
+            if loocv != 'pair': # withheld runs were already defined above for the leave-one-pair-out approach
+                withheld = [[r for r in runs if r not in fold] for fold in folds]
             
             # save file with run/fold information
             fold_df = pd.DataFrame({'fold': ['fold{}'.format(i+1) for i in range(len(folds))],
                                     'runs': [','.join(map(str, r)) for r in folds],
                                     'withheld': [','.join(map(str, w)) for w in withheld]})
+            
+            # drop duplicates if needed
+            fold_df = fold_df.drop_duplicates(subset=['runs', 'withheld'])
+            folds = list(map(list, dict.fromkeys(map(tuple, folds))))
+            
             fold_df.to_csv(op.join(resultsDir, sub, 'fold_info.tsv'), sep='\t', index=False)
             
             # save number of folds
-            num_folds = len(folds)
+            num_folds = len(fold_df.fold)
             print('Runs will be combined in {} fold(s)'.format(num_folds))
             
             for fold_id, fold in enumerate(folds):

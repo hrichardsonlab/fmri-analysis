@@ -78,11 +78,6 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                     # find fold comprised of withheld runs
                     withheld_fold = fold_info.loc[fold_info['runs'] == withheld_runs, 'fold'].values[0].split('fold')[1]
                     
-                    # skip duplicate comparisons
-                    if fold_id > int(withheld_fold):
-                        print('Skipping duplicate comparisons')
-                        continue
-                    
                     withheldDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs', 'fold{}'.format(withheld_fold))
                     print('Fold {} will be compared to withheld fold {} which contains run(s) {}'.format(fold_id, withheld_fold, withheld_runs))
                     
@@ -356,11 +351,16 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                 pattern_type = 'fold' if folds == 'yes' else 'run'
                 
                 # save condition vectors for this ROI
-                save_patterns(sub, task, fold_patterns, mask_name, fold_id, splithalf_id, conditions, vectorsDir, pattern_type)
-                if loocv == 'run':
+                # only save withheld patterns if loocv was requested because if multi noise norm was applied, 
+                # the betas whitened from a matrix estimated on the training set of runs included in the fold should be saved *not* betas whitened from the runs themselves
+                # if all patterns are saved, then the files will be overwritten when duplicate comparisons happen (e.g., fold1: 1,2 (3,4 withheld); fold2: 3,4 (1,2 withheld)
+                # this doesn't matter if multi noise norm wasn't used because the values will be identical
+                if loocv == 'run': # if leave-one-run-out
                     save_patterns(sub, task, withheld_patterns, mask_name, withheld_run, splithalf_id, conditions, vectorsDir, 'run')
-                if loocv == 'pair':
+                elif loocv == 'pair': # if leave-one-pair-out
                     save_patterns(sub, task, withheld_patterns, mask_name, withheld_fold, splithalf_id, conditions, vectorsDir, 'fold')
+                else: # if no cross-validation
+                    save_patterns(sub, task, fold_patterns, mask_name, fold_id, splithalf_id, conditions, vectorsDir, pattern_type)
                 
                 # store the condition vectors for this ROI and run/fold for RDM calculation
                 if loocv == 'run':
@@ -464,7 +464,7 @@ def apply_multi_norm(whitening_matrix, beta_vec):
 
 # define function to wrangle and save run/fold RDM data into a useable csv format
 def save_patterns(sub, task, patterns, mask_name, fold_id, splithalf_id, conditions, vectorsDir, pattern_type):
-
+    
     patterns = np.array(patterns)
     print('Shape of extracted vector data (conditions x voxels): {}'.format(patterns.shape))
     
