@@ -56,7 +56,7 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                 if splithalf_id == 0:
                     modelDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs', 'fold{}'.format(fold_id))
                 
-                # should the fold data be compared to a left out run
+                # should the fold data be compared to a left out run or run pair
                 if loocv == 'run':
                     # read fold info
                     fold_info_file = op.join(resultsDir, '{}'.format(sub), 'fold_info.tsv')
@@ -66,6 +66,25 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                     withheld_run = fold_info.loc[fold_info['fold'] == 'fold{}'.format(fold_id), 'withheld'].values[0]
                     withheldDir = op.join(resultsDir, '{}'.format(sub), 'model', 'run{}'.format(withheld_run))
                     print('Fold {} will be compared to withheld run {}'.format(fold_id, withheld_run))
+
+                if loocv == 'pair':
+                    # read fold info
+                    fold_info_file = op.join(resultsDir, '{}'.format(sub), 'fold_info.tsv')
+                    fold_info = pd.read_csv(fold_info_file, sep='\t')
+                
+                    # define withheld fold directory for this fold
+                    withheld_runs = fold_info.loc[fold_info['fold'] == 'fold{}'.format(fold_id), 'withheld'].values[0]
+                    
+                    # find fold comprised of withheld runs
+                    withheld_fold = fold_info.loc[fold_info['runs'] == withheld_runs, 'fold'].values[0].split('fold')[1]
+                    
+                    # skip duplicate comparisons
+                    if fold_id > int(withheld_fold):
+                        print('Skipping duplicate comparisons')
+                        continue
+                    
+                    withheldDir = op.join(resultsDir, '{}'.format(sub), 'model', 'combined_runs', 'fold{}'.format(withheld_fold))
+                    print('Fold {} will be compared to withheld fold {} which contains run(s) {}'.format(fold_id, withheld_fold, withheld_runs))
                     
             # do not treat runs as folds
             else:
@@ -208,6 +227,8 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
             print('Model directory: {}'.format(modelDir))
             if loocv == 'run':
                 print('Withheld run directory: {}'.format(withheldDir))
+            if loocv == 'pair':
+                print('Withheld fold directory: {}'.format(withheldDir))
             
             # for each ROI search space
             for r, roi in enumerate(roi_masks):
@@ -283,7 +304,7 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                         cope_img = image.load_img(cope_file)
                         
                         # if leave one out requested, load cope from left out run
-                        if loocv == 'run':
+                        if loocv == 'run' or loocv == 'pair':
                             withheld_cope_file = glob.glob(op.join(withheldDir, '*_{}_cope.nii.gz'.format(c)))[0]
                             withheld_cope_img = image.load_img(withheld_cope_file)                            
                             
@@ -294,17 +315,17 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                         cope_file = glob.glob(op.join(modelDir, '*_{}_tstat.nii.gz'.format(c)))[0]
                         cope_img = image.load_img(cope_file)
                         
-                        # if leave one out requested, load t-stats from left out run
-                        if loocv == 'run':
+                        # if leave one out requested, load t-stats from left out run or fold
+                        if loocv == 'run' or loocv == 'pair':
                             withheld_cope_file = glob.glob(op.join(withheldDir, '*_{}_tstat.nii.gz'.format(c)))[0]
-                            withheld_cope_img = image.load_img(withheld_cope_file) 
-                    
+                            withheld_cope_img = image.load_img(withheld_cope_file)
+                            
                     # squeeze the statistical map to remove the 4th singleton dimension if using anatomical/atlas ROI
                     # this dimension is not adding any information, so this is fine to do; the 3D map of stats values is preserved.
                     # this step isn't necessary for fROIs because they were defined using the functional data and also have a 4th singleton dimension
                     if not 'fROI' in mask_opts[r] and not 'FS' in mask_opts[r] and not 'aROI' in mask_opts[r]:
                         cope_img = image.math_img('np.squeeze(img)', img=cope_img)
-                        if loocv == 'run':
+                        if loocv == 'run' or loocv == 'pair':
                             withheld_cope_img = image.math_img('np.squeeze(img)', img=withheld_cope_img)
                         
                     # extract stats vector of voxel values
@@ -312,7 +333,7 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                     vec = masker.fit_transform(cope_img).squeeze()
                     
                     # extract vector from withheld run if requested
-                    if loocv == 'run':
+                    if loocv == 'run' or loocv == 'pair':
                         withheld_vec = masker.fit_transform(withheld_cope_img).squeeze()
                     
                     # apply multivariate noise normalisation if requested
@@ -321,14 +342,14 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                         vec = apply_multi_norm(whitening_matrix, vec)
                         
                         # apply the whitening matrix estimated on the fold data to the withheld run if leave one out requested
-                        if loocv == 'run':
+                        if loocv == 'run' or loocv == 'pair':
                             withheld_vec = apply_multi_norm(whitening_matrix, withheld_vec)
                     
                     # add the pattern for this condition to the patterns variable for this roi
                     fold_patterns.append(vec)
                     
                     # save withheld run pattern if requested
-                    if loocv == 'run':
+                    if loocv == 'run' or loocv == 'pair':
                         withheld_patterns.append(withheld_vec)
                 
                 # define pattern type label for naming output files
@@ -338,15 +359,20 @@ def generate_rdm(projDir, sharedDir, resultsDir, froiDir, sub, task, runs, folds
                 save_patterns(sub, task, fold_patterns, mask_name, fold_id, splithalf_id, conditions, vectorsDir, pattern_type)
                 if loocv == 'run':
                     save_patterns(sub, task, withheld_patterns, mask_name, withheld_run, splithalf_id, conditions, vectorsDir, 'run')
+                if loocv == 'pair':
+                    save_patterns(sub, task, withheld_patterns, mask_name, withheld_fold, splithalf_id, conditions, vectorsDir, 'fold')
                 
                 # store the condition vectors for this ROI and run/fold for RDM calculation
                 if loocv == 'run':
                     patterns[(mask_name, fold_id, splithalf_id)] = {'fold': np.array(fold_patterns), 
                                                                     'withheld': np.array(withheld_patterns),
                                                                     'withheld_run': withheld_run}
+                elif loocv == 'pair':
+                    patterns[(mask_name, fold_id, splithalf_id)] = {'fold': np.array(fold_patterns), 
+                                                                    'withheld': np.array(withheld_patterns),
+                                                                    'withheld_fold': withheld_fold}
                 else:
                     patterns[(mask_name, fold_id, splithalf_id)] = np.array(fold_patterns)
-                    
                 
     # calculate dissimilarity across runs/folds (or within a run/fold)
     calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise, loocv)
@@ -497,21 +523,45 @@ def calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise, loocv
                 # extract patterns for the fold and withheld run
                 A = fold_data['fold']
                 B = fold_data['withheld']
-                run = fold_data['withheld_run']
+                loo_run = fold_data['withheld_run']
 
                 # compute the correlation distance (1-correlation), euclidean distance, and squared euclidean distance               
                 euclid_AB = cdist(A, B, metric='euclidean')
                 euclid_BA = cdist(B, A, metric='euclidean')
 
-                rdms[roi][('fold-run', fold, run)] = {'correlation': cdist(A, B, metric='correlation'),
-                                                  'euclidean': euclid_AB,
-                                                  'squared_euclidean': euclid_AB ** 2}
+                rdms[roi][('fold-run', fold, loo_run)] = {'correlation': cdist(A, B, metric='correlation'),
+                                                          'euclidean': euclid_AB,
+                                                          'squared_euclidean': euclid_AB ** 2}
 
-                rdms[roi][('run-fold', run, fold)] = {'correlation': cdist(B, A, metric='correlation'),
-                                                  'euclidean': euclid_BA,
-                                                  'squared_euclidean': euclid_BA ** 2}
-                                                         
-        # scenario 2: multiple runs/folds - compute RDMs across runs/folds 
+                rdms[roi][('run-fold', loo_run, fold)] = {'correlation': cdist(B, A, metric='correlation'),
+                                                          'euclidean': euclid_BA,
+                                                          'squared_euclidean': euclid_BA ** 2}
+        
+        # scenario 2: leave-one-pair/fold-out, compare fold patterns to withheld fold patterns
+        elif loocv == 'pair':
+            for fold in folds:
+                
+                # extract the data associated with this fold
+                fold_data = patterns[(roi, fold, splits[0])]
+                
+                # extract patterns for the fold and withheld run
+                A = fold_data['fold']
+                B = fold_data['withheld']
+                loo_fold = fold_data['withheld_fold']
+                
+                # compute the correlation distance (1-correlation), euclidean distance, and squared euclidean distance               
+                euclid_AB = cdist(A, B, metric='euclidean')
+                euclid_BA = cdist(B, A, metric='euclidean')
+
+                rdms[roi][('fold', fold, loo_fold)] = {'correlation': cdist(A, B, metric='correlation'),
+                                                       'euclidean': euclid_AB,
+                                                       'squared_euclidean': euclid_AB ** 2}
+
+                rdms[roi][('fold', loo_fold, fold)] = {'correlation': cdist(B, A, metric='correlation'),
+                                                       'euclidean': euclid_BA,
+                                                       'squared_euclidean': euclid_BA ** 2}
+                                                                 
+        # scenario 3: multiple runs/folds - compute RDMs across runs/folds 
         elif len(folds) > 1: 
             for i, fold1 in enumerate(folds):
                 for fold2 in folds[i+1:]:
@@ -531,7 +581,7 @@ def calc_dissimilarity(sub, task, patterns, conditions, rdmDir, normalise, loocv
                                                          'euclidean': euclid_BA,
                                                          'squared_euclidean': euclid_BA ** 2}
         
-        # scenario 3: one run + splithalves - compute RDMs across splithalves
+        # scenario 4: one run + splithalves - compute RDMs across splithalves
         elif len(splits) > 1:
             run = folds[0]
             

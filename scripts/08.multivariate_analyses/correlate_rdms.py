@@ -186,7 +186,7 @@ def correlate_rdms(projDir, sharedDir, dataset, resultsDir, sub, mask_opts, subj
     
 # define function to vectorise the RDMs
 def vectorise_rdm(dat, include_diag):
-    # k=0  will include diagonal; k=1 will exclude diagonal
+    # k=0 will include diagonal; k=1 will exclude diagonal
     if include_diag == 'yes':
         diag = 0
     if include_diag == 'no':

@@ -26,13 +26,29 @@ def calc_fold_reliability(projDir, resultsDir, sub, sub_runs, mask_opts, fold_st
     if not op.exists(rdmDir):
         raise IOError('neural RDM directory {} not found.'.format(rdmDir))
     
-    # define fold pairs depending on whether leave one run out was specified
+    # define fold pairs depending on whether leave one run or fold out was specified
     if loocv == 'run': # define fold-run pairs
         # read in subject fold info file to get list of runs in each fold
         fold_info_file = op.join(resultsDir, '{}'.format(sub), 'fold_info.tsv')
         fold_info = pd.read_csv(fold_info_file, sep='\t')
         fold_pairs = [(int(row.fold.replace('fold', '')), int(row.withheld)) for _, row in fold_info.iterrows()]
+    
+    elif loocv == 'pair': # define fold pairs
+        # read in subject fold info file to get list of runs in each fold
+        fold_info_file = op.join(resultsDir, '{}'.format(sub), 'fold_info.tsv')
+        fold_info = pd.read_csv(fold_info_file, sep='\t')
+        fold_pairs = []
         
+        for r, row in fold_info.iterrows():
+
+            fold1 = int(row.fold.replace('fold', ''))
+
+            # find the fold corresponding to the withheld runs
+            fold2 = int(fold_info.loc[fold_info['runs'] == row.withheld, 'fold'].iloc[0].replace('fold', ''))
+
+            # skip duplicate comparisons
+            if fold1 < fold2:
+                fold_pairs.append((fold1, fold2))
     else:
         # all possible fold pairs
         fold_pairs = list(combinations(sub_runs, 2))
