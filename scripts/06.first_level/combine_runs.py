@@ -407,9 +407,16 @@ def main(argv=None):
                 folds = sorted(folds, key=lambda x: x[0])
             
             elif loocv == 'pair': # combine all run pairs
-                print('Combining runs using all-run-pairs approach')
+                print('Combining runs into run pair folds')
+                
+                # count the number of runs to deal with cases where folds would have fewer than 2 runs
+                n_runs = len(runs)
+                
+                # make folds with single runs if there are only 2 runs
+                fold_size = 1 if n_runs == 2 else 2
+                
                 # generate leave-one-pair-out folds
-                folds = [list(pair) for pair in combinations(runs, 2)]
+                folds = [list(pair) for pair in combinations(runs, fold_size)]
                 
                 # sort folds by the single run they contain
                 folds = sorted(folds, key=lambda x: x[0])
