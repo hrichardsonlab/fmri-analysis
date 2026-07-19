@@ -918,6 +918,10 @@ def main(argv=None):
         percent = 'no'
         top_nvox = int(top_nvox)
     
+    # remove psc flag if present
+    if extract_opt.endswith('-psc'):
+        extract_opt = extract_opt.replace('-psc', '')
+        
     if space == 'MNI':
         space_name = 'MNI152NLin2009cAsym'
         print('Pipeline will be run using outputs in {} space'.format(space_name))
