@@ -13,7 +13,6 @@ import argparse
 import os.path as op
 import os
 from scipy.stats import rankdata
-from scipy.spatial.distance import squareform
 
 def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mask_opts):
     
@@ -40,7 +39,7 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         # for each subject in the list of subjects
         for sub in subjects:
             # define subject RDM directory and check that it exists
-            rdmDir = op.join(resultsDir, '{}'.format(sub), 'rsa', 'neural_rdms')
+            rdmDir = op.join(resultsDir, '{}'.format(sub), 'rsa', 'loro', 'tomloc-mnn', 'neural_rdms')
             
             if not op.exists(rdmDir):
                 raise IOError('neural RDM directory {} not found.'.format(rdmDir))
@@ -75,9 +74,26 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         group_sqeuc_rdm = sqeuc_rdms_rank.mean(axis=0)
         
         # convert vectors back to symmetric matrices
-        group_cor_mat = squareform(group_cor_rdm)
-        group_euc_mat = squareform(group_euc_rdm)
-        group_sqeuc_mat = squareform(group_sqeuc_rdm)
+        # can't use a simple squareform function because the diagonal is included in the vectors
+        n_conditions = len(conditions)
+
+        # initialise the output matrices
+        group_cor_mat = np.zeros((n_conditions, n_conditions))
+        group_euc_mat = np.zeros((n_conditions, n_conditions))
+        group_sqeuc_mat = np.zeros((n_conditions, n_conditions))
+        
+        # get the indices of the upper triangle including the diagonal
+        upper_idx = np.triu_indices(n_conditions, k=0)
+        
+        # populate the upper triangle of the initialised matrices
+        group_cor_mat[upper_idx] = group_cor_rdm
+        group_euc_mat[upper_idx] = group_euc_rdm
+        group_sqeuc_mat[upper_idx] = group_sqeuc_rdm
+
+        # populate the lower triangle by reflecting the upper triangle and excluding the diagonal
+        group_cor_mat = group_cor_mat + np.triu(group_cor_mat, k=1).T
+        group_euc_mat = group_euc_mat + np.triu(group_euc_mat, k=1).T
+        group_sqeuc_mat = group_sqeuc_mat + np.triu(group_sqeuc_mat, k=1).T
         
         # convert matrices to dataframes
         group_cor_df = pd.DataFrame(group_cor_mat)
