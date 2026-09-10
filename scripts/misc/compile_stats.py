@@ -1,7 +1,7 @@
 """
 Compiles stats csv files within a results directory into a single csv file
 
-At the moment, this script will process any *mean* stats (skipping voxelwise stats files) for every
+At the moment, this script will process any stats for every
 subject in the resultsDir provided in the config file. The output is a single compiled_stats.csv file in the resultsDir.
 
 """
@@ -14,7 +14,7 @@ import glob
 import sys
 
 # define compilation function
-def compile_stats(projDir, resultsDir, extract_opt):
+def compile_stats(projDir, resultsDir, extract_opt, folds):
     
     print('Searching for {} stats files in {}'.format(extract_opt, resultsDir))
 
@@ -48,9 +48,15 @@ def compile_stats(projDir, resultsDir, extract_opt):
             
     # concatenate and sort dataframes
     if extract_opt == 'voxelwise':
-        compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'run', 'contrast', 'mask', 'voxel_index']).reset_index(drop=True)
+        if folds == 'yes':
+            compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'fold', 'contrast', 'mask', 'voxel_index']).reset_index(drop=True)
+        else:
+            compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'run', 'contrast', 'mask', 'voxel_index']).reset_index(drop=True)
     else:
-        compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'run', 'contrast', 'mask']).reset_index(drop=True)
+        if folds == 'yes':
+            compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'fold', 'contrast', 'mask']).reset_index(drop=True)
+        else:
+            compiled_df = pd.concat(compiled_stats, ignore_index=True).sort_values(by=['sub', 'task', 'run', 'contrast', 'mask']).reset_index(drop=True)
     
     # save as csv file in resultsDir
     compiled_file = op.join(resultsDir, 'compiled_stats.csv')
@@ -85,12 +91,13 @@ def main(argv=None):
     config_file=pd.read_csv(args.config, sep='\t', header=None, index_col=0).replace({np.nan: None})
     extract_opt=config_file.loc['extract',1]
     resultsDir=config_file.loc['resultsDir',1]
+    folds=config_file.loc['folds',1]
     
     # remove percent signal change flag if in config file
     extract_opt = extract_opt.replace('-psc', '')
     
     # pass inputs defined above to main resampling function
-    compile_stats(args.projDir, resultsDir, extract_opt)
+    compile_stats(args.projDir, resultsDir, extract_opt, folds)
    
 # execute code when file is run as script (the conditional statement is TRUE when script is run in python)
 if __name__ == '__main__':
