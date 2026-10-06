@@ -156,7 +156,7 @@ def process_subject(projDir, sharedDir, resultsDir, froiDir, sub, runs, folds, t
                         print('ERROR: unable to locate fROI file. Make sure a resultsDir or froiDir is provided in the config file!')
                     else:
                         roi_name = m.split('fROI-')[1]
-                        roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*{}_*.nii.gz'.format(sub, roi_name)))
+                        roi_file = glob.glob(op.join('{}'.format(froi_prefix),'{}_*_{}_*.nii.gz'.format(sub, roi_name)))
                         
                         # if there are multiple roi_files that match criteria, use stricter criteria
                         if len(roi_file) > 1:
