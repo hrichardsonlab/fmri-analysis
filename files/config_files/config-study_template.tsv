@@ -38,6 +38,7 @@ top_nvox
 mask	
 extract	
 folds	
+multi_noise_norm	
 normalise_rdms	
 subject_rdms	
 model_rdms	
