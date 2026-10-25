@@ -227,8 +227,8 @@ def combine_runs_workflow(projDir, derivDir, resultsDir, subDir, workDir, sub, s
             newvarcopes = newrun.varcopes
         
         # keep only the cope/varcope for the current condition
-        newcopes = [c for c in newcopes if any(cn in op.basename(c) for cn in contrast_opts)]
-        newvarcopes = [v for v in newvarcopes if any(cn in op.basename(v) for cn in contrast_opts)]
+        newcopes = [c for c in newcopes if any(op.basename(c).endswith('_{}_cope.nii.gz'.format(cn)) for cn in contrast_opts)]
+        newvarcopes = [v for v in newvarcopes if any(op.basename(v).endswith('_{}_varcope.nii.gz'.format(cn)) for cn in contrast_opts)]
 
         # append run data on each loop
         copes.append(newcopes)
