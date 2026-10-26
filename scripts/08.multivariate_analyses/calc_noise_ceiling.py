@@ -39,7 +39,7 @@ def calc_noise_ceiling(projDir, sharedDir, resultsDir, subjects, conditions, mas
         # for each subject in the list of subjects
         for sub in subjects:
             # define subject RDM directory and check that it exists
-            rdmDir = op.join(resultsDir, '{}'.format(sub), 'rsa', 'loro', 'tomloc-mnn', 'neural_rdms')
+            rdmDir = op.join(resultsDir, '{}'.format(sub), 'rsa', 'neural_rdms')
             
             if not op.exists(rdmDir):
                 raise IOError('neural RDM directory {} not found.'.format(rdmDir))
